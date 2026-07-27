@@ -495,17 +495,13 @@
 
                 this.isSubmitting = true;
 
-                // Build Form Data matching backend expectation
-                const formData = new FormData();
+                // Build Payload
+                const payload = {};
                 fields.forEach(f => {
-                    formData.append(f, this.form[f]);
+                    payload[f] = this.form[f] || '';
                 });
 
-                axios.post(this.updateUrl, formData, {
-                    headers: {
-                        'X-HTTP-Method-Override': 'PUT'
-                    }
-                }).then(({
+                axios.put(this.updateUrl, payload).then(({
                     data
                 }) => {
                     this.isSubmitting = false;

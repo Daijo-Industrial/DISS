@@ -24,10 +24,10 @@ class EvaluationApprovalService
      */
     public function grade(EvaluationData $record, array $scores, User $grader): void
     {
-        $record->update(array_merge($scores, [
+        $record->fill(array_merge($scores, [
             'pengawas' => $grader->name,
             'approval_status' => 'graded',
-        ]));
+        ]))->save();
     }
 
     /**
@@ -111,13 +111,13 @@ class EvaluationApprovalService
      */
     public function regrade(EvaluationData $record, array $scores, User $grader): void
     {
-        $record->update(array_merge($scores, [
+        $record->fill(array_merge($scores, [
             'pengawas' => $grader->name,
             'depthead' => null,   // clear rejection marker
             'generalmanager' => null,
             'remark' => null,
             'approval_status' => 'graded',
-        ]));
+        ]))->save();
     }
 
     /**

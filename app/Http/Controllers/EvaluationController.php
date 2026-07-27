@@ -170,9 +170,7 @@ class EvaluationController extends Controller
             // the evaluation record so the penalty calculator uses correct values.
             $attendance = $this->aggregateAttendance($nik, $month, $year);
 
-            $record->pe_id          = null;
-            $record->department_id  = $employee->department->id ?? null;
-            $record->level          = $employee->level ?? 5;
+            $record->dept           = $employee->dept_code ?? null;
             $record->evaluation_type = $record->evaluationType();
             $record->Alpha          = $attendance['alpha'];
             $record->Telat          = $attendance['telat'];
