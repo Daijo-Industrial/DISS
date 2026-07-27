@@ -372,7 +372,7 @@ class Index extends Component
             $query->orderBy('id', 'desc')->chunk(1000, function ($rows) use ($out) {
                 foreach ($rows as $fot) {
                     fputcsv($out, [
-                        $fot->id, optional($fot->user)->name, optional($fot->department)->name, $fot->branch,
+                        $fot->id, optional($fot->user)->name, optional($fot->department)->name, $fot->branch?->value ?? $fot->branch,
                         optional($fot->first_overtime_date)?->format('Y-m-d'), $fot->workflow_status,
                         $fot->is_planned ? 'Planned' : 'Urgent', $fot->is_after_hour ? 'Yes' : 'No',
                         $fot->approved_count, $fot->rejected_count, $fot->pending_count, $fot->created_at?->format('Y-m-d'),

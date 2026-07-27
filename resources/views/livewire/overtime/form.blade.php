@@ -103,8 +103,8 @@
                                 <select wire:model.live="branch"
                                     class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 font-bold focus:ring-4 focus:ring-indigo-500/10 transition-all {{ $errors->has('branch') ? 'border-rose-300' : '' }}">
                                     <option value="">— Select —</option>
-                                    <option value="Jakarta">Jakarta</option>
-                                    <option value="Karawang">Karawang</option>
+                                    <option value="JAKARTA">Jakarta</option>
+                                    <option value="KARAWANG">Karawang</option>
                                 </select>
                                 @error('branch')
                                     <p class="mt-2 text-[10px] font-bold text-rose-500 uppercase tracking-tight"><x-bx-error-circle class="" /> {{ $message }}</p>

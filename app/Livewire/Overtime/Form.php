@@ -229,7 +229,7 @@ class Form extends Component
     public function rules(): array
     {
         $rules = [
-            'branch' => 'required|in:Jakarta,Karawang',
+            'branch' => ['required', Rule::enum(\App\Enums\Branch::class)],
             'design' => 'nullable|in:0,1',
             'is_after_hour' => 'required|in:0,1',
             'description' => 'nullable|string|max:500',
@@ -328,7 +328,7 @@ class Form extends Component
     {
         $rules = [
             'dept_id' => 'required|exists:departments,id',
-            'branch' => 'required|in:Jakarta,Karawang',
+            'branch' => ['required', Rule::enum(\App\Enums\Branch::class)],
             'is_after_hour' => 'required|in:0,1',
         ];
 
@@ -345,7 +345,7 @@ class Form extends Component
 
         $rules = [
             'dept_id' => 'required|exists:departments,id',
-            'branch' => 'required|string',
+            'branch' => ['required', Rule::enum(\App\Enums\Branch::class)],
             'global_overtime_date' => 'required|date',
             'global_start_date' => 'required|date',
             'global_job_desc' => 'required|string|min:3',

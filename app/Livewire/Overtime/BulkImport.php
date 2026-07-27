@@ -155,7 +155,7 @@ class BulkImport extends Component
                     // Legacy format: Branch | Department | Session | NIK | OT Date | Start Date | Start Time | End Date | End Time | Break | Task | Remarks
                     $this->stagedData[] = [
                         'original_index' => $index + 2,
-                        'branch' => trim($row[0] ?? ''),
+                        'branch' => strtoupper(trim($row[0] ?? '')),
                         'department' => trim($row[1] ?? ''),
                         'session_type' => trim($row[2] ?? ''),
                         'nik' => $this->normalizeNik($row[3] ?? ''),
@@ -433,7 +433,7 @@ class BulkImport extends Component
                 // 2. Trigger Approval Flow for each created header
                 $context = [
                     'department_id' => (int) $form->dept_id,
-                    'branch' => $form->branch,
+                    'branch' => $form->branch instanceof \App\Enums\Branch ? $form->branch->value : $form->branch,
                     'is_design' => false,
                 ];
 

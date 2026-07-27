@@ -10,7 +10,7 @@ final class OvertimeApprovalContextBuilder
     {
         return [
             'department_id' => (int) $form->dept_id,
-            'branch' => (string) $form->branch,
+            'branch' => $form->branch?->value ?? '',
             'is_design' => (bool) $form->is_design,
         ];
     }

@@ -25,6 +25,10 @@ class OvertimeForm extends Model implements Approvable
         'is_after_hour',
     ];
 
+    protected $casts = [
+        'branch' => \App\Enums\Branch::class,
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'id');
@@ -89,7 +93,7 @@ class OvertimeForm extends Model implements Approvable
 
     public function getApprovableBranchValue(): ?string
     {
-        return (string) $this->branch;
+        return $this->branch?->value;
     }
 
     /**

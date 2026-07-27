@@ -47,7 +47,7 @@ class OvertimeFormService
             // Submit to Unified Approval Engine
             $context = [
                 'department_id' => (int) $header->dept_id,
-                'branch' => $header->branch,
+                'branch' => $header->branch instanceof \App\Enums\Branch ? $header->branch->value : $header->branch,
                 'is_design' => (bool) $header->is_design,
             ];
 
