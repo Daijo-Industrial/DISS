@@ -24,6 +24,7 @@
     "mallardduck/blade-boxicons": "^2.5",
     "pusher/pusher-php-server": "^7.2",
     "ramsey/uuid": "^4.7",
+    "setasign/fpdf": "^1.9",
     "spatie/laravel-activitylog": "^4.10",
     "spatie/laravel-permission": "^6.23",
     "twbs/bootstrap": "^5.3",
