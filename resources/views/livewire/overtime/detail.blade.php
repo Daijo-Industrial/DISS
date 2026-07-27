@@ -246,6 +246,7 @@
                             <th class="px-4 py-3 whitespace-nowrap text-center">End</th>
                             <th class="px-4 py-3 whitespace-nowrap text-center" title="Break Duration">BRK</th>
                             <th class="px-4 py-3 max-w-[200px]">Job Desc</th>
+                            <th class="px-4 py-3 max-w-[200px]">Remarks</th>
                             @if ($canReview)
                                 <th class="px-4 py-3 whitespace-nowrap text-center border-l border-slate-200/60"
                                     colspan="3">Actual Logs (In / Out / Net)</th>
@@ -294,6 +295,9 @@
                                 </td>
                                 <td class="px-4 py-3 text-slate-600 max-w-[200px]" title="{{ $detail->job_desc }}">
                                     <div class="truncate text-[11px] leading-tight">{{ $detail->job_desc }}</div>
+                                </td>
+                                <td class="px-4 py-3 text-slate-600 max-w-[200px]" title="{{ $detail->job_desc }}">
+                                    <div class="truncate text-[11px] leading-tight">{{ $detail->remarks }}</div>
                                 </td>
 
                                 {{-- Actual attendance --}}

@@ -52,11 +52,11 @@ class PurchasingDetailController extends Controller
 
         $allmonth = [];
         foreach ($materials as $material) {
-            $decodedMonths = json_decode($material->months, true);
-            $stringMonths = json_decode($decodedMonths, true);
-            $decodedForecast = json_decode($material->quantity_forecast, true);
+            // $decodedMonths = json_decode($material->months, true);
+            $stringMonths = json_decode($material->months, true);
+            // $decodedForecast = json_decode($material->quantity_forecast, true);
             // dd($decodedForecast);
-            $stringForecast = json_decode($decodedForecast, true);
+            $stringForecast = json_decode($material->quantity_forecast, true);
             // dd($stringForecast);
             $truevalue[] = $stringMonths;
 
@@ -66,7 +66,7 @@ class PurchasingDetailController extends Controller
             // }
             $decodedForecast = json_decode($material->quantity_forecast, true);
             // dd($decodedForecast);
-            $stringForecast = json_decode($decodedForecast, true);
+            $stringForecast = json_decode($material->quantity_forecast, true);
             // dd($stringForecast);
             $monthm[] = array_keys($stringMonths);
             $values[] = array_values($stringMonths);
@@ -121,11 +121,11 @@ class PurchasingDetailController extends Controller
 
         $allmonth = [];
         foreach ($materials as $material) {
-            $decodedMonths = json_decode($material->months, true);
-            $stringMonths = json_decode($decodedMonths, true);
-            $decodedForecast = json_decode($material->quantity_forecast, true);
+            // $decodedMonths = json_decode($material->months, true);
+            $stringMonths = json_decode($material->months, true);
+            // $decodedForecast = json_decode($material->quantity_forecast, true);
             // dd($decodedForecast);
-            $stringForecast = json_decode($decodedForecast, true);
+            $stringForecast = json_decode($material->quantity_forecast, true);
             // dd($stringForecast);
             $truevalue[] = $stringMonths;
 
@@ -133,9 +133,9 @@ class PurchasingDetailController extends Controller
             //     // Handle JSON decoding error
             //     dd('JSON Decoding Error:', json_last_error_msg());
             // }
-            $decodedForecast = json_decode($material->quantity_forecast, true);
+            // $decodedForecast = json_decode($material->quantity_forecast, true);
             // dd($decodedForecast);
-            $stringForecast = json_decode($decodedForecast, true);
+            $stringForecast = json_decode($material->quantity_forecast, true);
             // dd($stringForecast);
             $monthm[] = array_keys($stringMonths);
             $values[] = array_values($stringMonths);
@@ -201,11 +201,11 @@ class PurchasingDetailController extends Controller
 
         $allmonth = [];
         foreach ($materials as $material) {
-            $decodedMonths = json_decode($material->months, true);
-            $stringMonths = json_decode($decodedMonths, true);
-            $decodedForecast = json_decode($material->quantity_forecast, true);
+            // $decodedMonths = json_decode($material->months, true);
+            $stringMonths = json_decode($material->months, true);
+            // $decodedForecast = json_decode($material->quantity_forecast, true);
             // dd($decodedForecast);
-            $stringForecast = json_decode($decodedForecast, true);
+            $stringForecast = json_decode($material->quantity_forecast, true);
             // dd($stringForecast);
             $truevalue[] = $stringMonths;
 
@@ -213,9 +213,9 @@ class PurchasingDetailController extends Controller
             //     // Handle JSON decoding error
             //     dd('JSON Decoding Error:', json_last_error_msg());
             // }
-            $decodedForecast = json_decode($material->quantity_forecast, true);
+            // $decodedForecast = json_decode($material->quantity_forecast, true);
             // dd($decodedForecast);
-            $stringForecast = json_decode($decodedForecast, true);
+            $stringForecast = json_decode($material->quantity_forecast, true);
             // dd($stringForecast);
             $monthm[] = array_keys($stringMonths);
             $values[] = array_values($stringMonths);
@@ -313,11 +313,11 @@ class PurchasingDetailController extends Controller
 
         $allmonth = [];
         foreach ($materials as $material) {
-            $decodedMonths = json_decode($material->months, true);
-            $stringMonths = json_decode($decodedMonths, true);
-            $decodedForecast = json_decode($material->quantity_forecast, true);
+            // $decodedMonths = json_decode($material->months, true);
+            $stringMonths = json_decode($material->months, true);
+            // $decodedForecast = json_decode($material->quantity_forecast, true);
             // dd($decodedForecast);
-            $stringForecast = json_decode($decodedForecast, true);
+            $stringForecast = json_decode($material->quantity_forecast, true);
             // dd($stringForecast);
             $truevalue[] = $stringMonths;
 
@@ -325,9 +325,9 @@ class PurchasingDetailController extends Controller
             //     // Handle JSON decoding error
             //     dd('JSON Decoding Error:', json_last_error_msg());
             // }
-            $decodedForecast = json_decode($material->quantity_forecast, true);
+            // $decodedForecast = json_decode($material->quantity_forecast, true);
             // dd($decodedForecast);
-            $stringForecast = json_decode($decodedForecast, true);
+            $stringForecast = json_decode($material->quantity_forecast, true);
             // dd($stringForecast);
             $monthm[] = array_keys($stringMonths);
             $values[] = array_values($stringMonths);

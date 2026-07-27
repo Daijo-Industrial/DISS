@@ -75,12 +75,12 @@ class PurchasingController extends Controller
         $materials = DB::table('forecast_material_predictions')->paginate(10);
         $allmonth = [];
         foreach ($materials as $material) {
-            $decodedForecast = json_decode($material->quantity_forecast, true);
+            // $decodedForecast = json_decode($material->quantity_forecast, true);
             // dd($decodedForecast);
-            $stringForecast = json_decode($decodedForecast, true);
+            $stringForecast = json_decode($material->quantity_forecast, true);
             // dd($stringForecast);
-            $decodedMonths = json_decode($material->months, true);
-            $stringMonths = json_decode($decodedMonths, true);
+            // $decodedMonths = json_decode($material->months, true);
+            $stringMonths = json_decode($material->months, true);
             $truevalue[] = $stringMonths;
 
             $monthm[] = array_keys($stringMonths);
