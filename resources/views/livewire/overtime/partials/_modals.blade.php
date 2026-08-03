@@ -123,7 +123,7 @@
                                 <div class="pt-3 border-t border-rose-200/50 space-y-3">
                                     <p class="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Resolve Before Approving</p>
 
-                                    <div class="flex flex-col sm:flex-row gap-2">
+                                    <div class="flex flex-col sm:flex-row flex-wrap gap-2">
                                         @if (!empty($conflictingFormIds))
                                             <button type="button" wire:click="excludeConflictingForms"
                                                 wire:loading.attr="disabled"
@@ -134,6 +134,21 @@
                                                     Exclude {{ count($conflictingFormIds) }} Conflicting {{ count($conflictingFormIds) === 1 ? 'Form' : 'Forms' }}
                                                 </span>
                                                 <span wire:loading wire:target="excludeConflictingForms">
+                                                    <x-bx-loader-alt class="animate-spin w-4 h-4" /> Updating…
+                                                </span>
+                                            </button>
+                                        @endif
+
+                                        @if (!empty($highIntensityFormIds))
+                                            <button type="button" wire:click="excludeHighIntensityForms"
+                                                wire:loading.attr="disabled"
+                                                wire:target="excludeHighIntensityForms"
+                                                class="flex-1 h-10 rounded-xl bg-white border border-rose-200 text-[10px] font-black text-rose-700 uppercase tracking-widest hover:bg-rose-100 transition-all flex items-center justify-center gap-2">
+                                                <span wire:loading.remove wire:target="excludeHighIntensityForms">
+                                                    <x-bx-time-five class="w-4 h-4 text-rose-500" />
+                                                    Exclude {{ count($highIntensityFormIds) }} High-Duration {{ count($highIntensityFormIds) === 1 ? 'Form' : 'Forms' }}
+                                                </span>
+                                                <span wire:loading wire:target="excludeHighIntensityForms">
                                                     <x-bx-loader-alt class="animate-spin w-4 h-4" /> Updating…
                                                 </span>
                                             </button>

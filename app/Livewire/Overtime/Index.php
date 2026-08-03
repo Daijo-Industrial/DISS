@@ -72,6 +72,8 @@ class Index extends Component
 
     public array $conflictingFormIds = [];
 
+    public array $highIntensityFormIds = [];
+
     public bool $warningsAcknowledged = false;
 
     public bool $isProcessingBulk = false;
@@ -443,6 +445,7 @@ class Index extends Component
     {
         $this->warnings = [];
         $this->conflictingFormIds = [];
+        $this->highIntensityFormIds = [];
         $this->warningsAcknowledged = false;
 
         // 1. Session Overlap Check (within selected batch)
@@ -504,6 +507,7 @@ class Index extends Component
         });
 
         if ($highIntensity->count() > 0) {
+            $this->highIntensityFormIds = array_values(array_unique($highIntensity->pluck('header_id')->toArray()));
             $this->warnings['intensity'] = "{$highIntensity->count()} sessions exceed 12 hours of duration.";
         }
     }
@@ -526,6 +530,31 @@ class Index extends Component
         if (empty($this->selectedIds)) {
             $this->showSnapshot = false;
             $this->dispatch('flash', type: 'info', message: 'All selected forms had conflicts. Selection cleared.');
+            return;
+        }
+
+        // Reload snapshot with cleaned selection
+        $this->loadSnapshot();
+    }
+
+    /**
+     * Exclude all forms that have sessions exceeding 12 hours of duration,
+     * then reload the snapshot with the remaining forms.
+     */
+    public function excludeHighIntensityForms(): void
+    {
+        if (empty($this->highIntensityFormIds)) {
+            return;
+        }
+
+        $this->selectedIds = array_values(
+            array_diff($this->selectedIds, array_map('strval', $this->highIntensityFormIds))
+        );
+
+        // If no forms left, close the drawer
+        if (empty($this->selectedIds)) {
+            $this->showSnapshot = false;
+            $this->dispatch('flash', type: 'info', message: 'All selected forms had high-duration sessions (>12h). Selection cleared.');
             return;
         }
 
