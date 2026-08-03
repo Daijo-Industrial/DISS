@@ -161,15 +161,15 @@
                         @php
                             $presets = $this->mimePresets();
                             $icons = [
-                                'pdf' => 'bx-file-pdf text-rose-500',
-                                'images' => 'bx-image text-emerald-500',
-                                'word' => 'bx-file text-blue-500',
-                                'excel' => 'bx-table text-emerald-600',
-                                'ppt' => 'bx-slideshow text-orange-500',
-                                'text' => 'bx-text text-slate-500',
-                                'zip' => 'bx-archive text-amber-500',
-                                'visio' => 'bx-network-chart text-sky-500',
-                                'cad' => 'bx-cube text-indigo-500',
+                                'pdf' => ['icon' => 'bxs-file-pdf', 'color' => 'text-rose-500'],
+                                'images' => ['icon' => 'bx-image', 'color' => 'text-emerald-500'],
+                                'word' => ['icon' => 'bx-file', 'color' => 'text-blue-500'],
+                                'excel' => ['icon' => 'bx-table', 'color' => 'text-emerald-600'],
+                                'ppt' => ['icon' => 'bx-slideshow', 'color' => 'text-orange-500'],
+                                'text' => ['icon' => 'bx-text', 'color' => 'text-slate-500'],
+                                'zip' => ['icon' => 'bx-archive', 'color' => 'text-amber-500'],
+                                'visio' => ['icon' => 'bx-network-chart', 'color' => 'text-sky-500'],
+                                'cad' => ['icon' => 'bx-cube', 'color' => 'text-indigo-500'],
                             ];
                         @endphp
                         @foreach ($presets as $key => $p)
@@ -189,7 +189,7 @@
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-1.5 mb-1">
-                                        <x-icon :name="$icons[$key] ?? 'bx-file'" class="w-4 h-4" />
+                                        <x-icon :name="$icons[$key]['icon'] ?? 'bx-file'" class="w-4 h-4 {{ $icons[$key]['color'] ?? 'text-slate-500' }}" />
                                         <span
                                             class="text-sm font-semibold {{ $isActive ? 'text-indigo-900' : 'text-slate-700' }}">{{ $p['label'] }}</span>
                                     </div>

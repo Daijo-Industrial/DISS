@@ -232,18 +232,18 @@
                     @foreach ($importantDoc->files as $file)
                         @php
                             $extension = strtolower(pathinfo($file->name, PATHINFO_EXTENSION));
-                            $icon = match (true) {
-                                in_array($extension, ['pdf']) => 'bxs-file-pdf text-rose-500',
-                                in_array($extension, ['xls', 'xlsx', 'csv']) => 'bxs-spread-sheet text-emerald-500',
-                                in_array($extension, ['png', 'jpg', 'jpeg']) => 'bxs-image text-indigo-500',
-                                in_array($extension, ['doc', 'docx']) => 'bxs-file-doc text-blue-500',
-                                default => 'bxs-file text-slate-400',
+                            $iconData = match (true) {
+                                in_array($extension, ['pdf']) => ['icon' => 'bxs-file-pdf', 'color' => 'text-rose-500'],
+                                in_array($extension, ['xls', 'xlsx', 'csv']) => ['icon' => 'bxs-spread-sheet', 'color' => 'text-emerald-500'],
+                                in_array($extension, ['png', 'jpg', 'jpeg']) => ['icon' => 'bxs-image', 'color' => 'text-indigo-500'],
+                                in_array($extension, ['doc', 'docx']) => ['icon' => 'bxs-file-doc', 'color' => 'text-blue-500'],
+                                default => ['icon' => 'bxs-file', 'color' => 'text-slate-400'],
                             };
                         @endphp
 
                         <div
                             class="group relative flex flex-col items-center p-4 rounded-xl border border-slate-100 bg-slate-50/30 hover:bg-white hover:border-indigo-100 hover:shadow-md transition-all">
-                            <x-icon :name="$icon" class="w-8 h-8 mb-2" />
+                            <x-icon :name="$iconData['icon']" class="w-8 h-8 mb-2 {{ $iconData['color'] }}" />
                             <div class="text-center min-w-0 w-full">
                                 <p class="text-[11px] font-bold text-slate-700 truncate px-2"
                                     title="{{ $file->name }}">{{ $file->name }}</p>
