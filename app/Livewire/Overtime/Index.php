@@ -647,7 +647,7 @@ class Index extends Component
                     'total_forms' => $headers->count(),
                     'total_details' => $headers->sum('details_count'),
                     'departments' => $headers->pluck('department.name')->unique()->filter()->implode(', '),
-                    'branches' => $headers->pluck('branch')->unique()->implode(', '),
+                    'branches' => $headers->pluck('branch')->map(fn ($b) => $b?->value ?? (string) $b)->filter()->unique()->implode(', '),
                     'creators' => $headers->pluck('user.name')->unique()->implode(', '),
 
                     'consolidated_status' => $consolidatedStatus,
