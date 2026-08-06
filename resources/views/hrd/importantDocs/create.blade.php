@@ -3,7 +3,7 @@
 @section('content')
     <div class="max-w-4xl mx-auto px-4 py-6 space-y-4" x-data="{
         typeId: '{{ old('type_id', '') }}',
-        get isOther() { return this.typeId === '1' },
+        get isOther() { return this.typeId === 'other' },
         selectedFiles: []
     }">
         {{-- Slim Header --}}
@@ -53,6 +53,7 @@
                             @foreach ($types as $type)
                                 <option value="{{ $type->id }}">{{ $type->name }}</option>
                             @endforeach
+                            <option value="other" class="font-bold text-indigo-600">+ Specify Other Category...</option>
                         </select>
                         @error('type_id')
                             <p class="text-[10px] font-bold text-rose-600">{{ $message }}</p>

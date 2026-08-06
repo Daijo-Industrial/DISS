@@ -57,15 +57,25 @@ class ImportantDocController extends Controller
         $request->validate([
             'name' => 'required|max:255',
             'type_id' => 'required',
+            'other' => 'required_if:type_id,other|max:255|nullable',
             'expired_date' => 'required',
             'files.*' => 'file|max:2048|nullable',
             'document_id' => 'string|max:255|nullable',
             'description' => 'string|max:255|nullable',
         ]);
 
+        $typeId = $request->type_id;
+
+        if ($typeId === 'other' && $request->filled('other')) {
+            $newType = ImportantDocType::firstOrCreate([
+                'name' => $request->other
+            ]);
+            $typeId = $newType->id;
+        }
+
         $importantDoc = ImportantDoc::create([
             'name' => $request->name,
-            'type_id' => $request->type_id,
+            'type_id' => $typeId,
             'expired_date' => $request->expired_date,
             'document_id' => $request->document_id,
             'description' => $request->description,
@@ -123,17 +133,27 @@ class ImportantDocController extends Controller
         $request->validate([
             'name' => 'required|max:255',
             'type_id' => 'required',
+            'other' => 'required_if:type_id,other|max:255|nullable',
             'expired_date' => 'required',
             'document_id' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:255',
             'files.*' => 'nullable|file|max:2048',
         ]);
 
+        $typeId = $request->type_id;
+
+        if ($typeId === 'other' && $request->filled('other')) {
+            $newType = ImportantDocType::firstOrCreate([
+                'name' => $request->other
+            ]);
+            $typeId = $newType->id;
+        }
+
         $importantDoc = ImportantDoc::findOrFail($id);
 
         $importantDoc->update([
             'name' => $request->name,
-            'type_id' => $request->type_id,
+            'type_id' => $typeId,
             'expired_date' => $request->expired_date,
             'document_id' => $request->document_id,
             'description' => $request->description,
