@@ -23,9 +23,9 @@
 
     // Color thresholds
     $colorClass = match (true) {
-        $clampedPercent >= 80 => 'text-emerald-500 stroke-emerald-500',
-        $clampedPercent >= 60 => 'text-amber-500 stroke-amber-500',
-        default => 'text-rose-500 stroke-rose-500',
+        $clampedPercent >= 80 => 'text-emerald-600 stroke-emerald-600',
+        $clampedPercent >= 60 => 'text-amber-600 stroke-amber-600',
+        default => 'text-rose-600 stroke-rose-600',
     };
 
     $gradientId = 'progress-ring-gradient-' . Str::random(8);
@@ -58,7 +58,7 @@
             cy="{{ $dimensions['px'] / 2 }}"
             r="{{ $r }}"
             stroke-width="{{ $strokeWidth }}"
-            class="stroke-slate-100 dark:stroke-slate-800"
+            class="stroke-slate-100"
             fill="transparent"
         />
 

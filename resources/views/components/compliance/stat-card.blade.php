@@ -11,45 +11,45 @@
 @php
     $accentMap = [
         'emerald' => [
-            'bg' => 'bg-emerald-50 dark:bg-emerald-950/30',
-            'text' => 'text-emerald-600 dark:text-emerald-400',
-            'border' => 'border-emerald-200/60 dark:border-emerald-800/40',
-            'iconBg' => 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-emerald-200 dark:shadow-emerald-900/40',
+            'bg' => 'bg-emerald-50',
+            'text' => 'text-emerald-600',
+            'border' => 'border-emerald-200/60',
+            'iconBg' => 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-emerald-200',
             'glow' => 'from-emerald-500/10 to-teal-500/5',
         ],
         'blue' => [
-            'bg' => 'bg-blue-50 dark:bg-blue-950/30',
-            'text' => 'text-blue-600 dark:text-blue-400',
-            'border' => 'border-blue-200/60 dark:border-blue-800/40',
-            'iconBg' => 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-blue-200 dark:shadow-blue-900/40',
+            'bg' => 'bg-blue-50',
+            'text' => 'text-blue-600',
+            'border' => 'border-blue-200/60',
+            'iconBg' => 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-blue-200',
             'glow' => 'from-blue-500/10 to-indigo-500/5',
         ],
         'amber' => [
-            'bg' => 'bg-amber-50 dark:bg-amber-950/30',
-            'text' => 'text-amber-600 dark:text-amber-400',
-            'border' => 'border-amber-200/60 dark:border-amber-800/40',
-            'iconBg' => 'bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-amber-200 dark:shadow-amber-900/40',
+            'bg' => 'bg-amber-50',
+            'text' => 'text-amber-600',
+            'border' => 'border-amber-200/60',
+            'iconBg' => 'bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-amber-200',
             'glow' => 'from-amber-500/10 to-orange-500/5',
         ],
         'rose' => [
-            'bg' => 'bg-rose-50 dark:bg-rose-950/30',
-            'text' => 'text-rose-600 dark:text-rose-400',
-            'border' => 'border-rose-200/60 dark:border-rose-800/40',
-            'iconBg' => 'bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-rose-200 dark:shadow-rose-900/40',
+            'bg' => 'bg-rose-50',
+            'text' => 'text-rose-600',
+            'border' => 'border-rose-200/60',
+            'iconBg' => 'bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-rose-200',
             'glow' => 'from-rose-500/10 to-red-500/5',
         ],
         'violet' => [
-            'bg' => 'bg-violet-50 dark:bg-violet-950/30',
-            'text' => 'text-violet-600 dark:text-violet-400',
-            'border' => 'border-violet-200/60 dark:border-violet-800/40',
-            'iconBg' => 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-violet-200 dark:shadow-violet-900/40',
+            'bg' => 'bg-violet-50',
+            'text' => 'text-violet-600',
+            'border' => 'border-violet-200/60',
+            'iconBg' => 'bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-violet-200',
             'glow' => 'from-violet-500/10 to-purple-500/5',
         ],
         'indigo' => [
-            'bg' => 'bg-indigo-50 dark:bg-indigo-950/30',
-            'text' => 'text-indigo-600 dark:text-indigo-400',
-            'border' => 'border-indigo-200/60 dark:border-indigo-800/40',
-            'iconBg' => 'bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-indigo-200 dark:shadow-indigo-900/40',
+            'bg' => 'bg-indigo-50',
+            'text' => 'text-indigo-600',
+            'border' => 'border-indigo-200/60',
+            'iconBg' => 'bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-indigo-200',
             'glow' => 'from-indigo-500/10 to-blue-500/5',
         ],
     ];
@@ -57,21 +57,21 @@
     $style = $accentMap[$accent] ?? $accentMap['blue'];
 @endphp
 
-<div {{ $attributes->merge(['class' => "relative overflow-hidden rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 p-5 shadow-sm hover:shadow-md transition-all duration-300 group"]) }}>
+<div {{ $attributes->merge(['class' => "relative overflow-hidden rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all duration-300 group"]) }}>
     {{-- Ambient gradient glow background --}}
     <div class="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-to-br {{ $style['glow'] }} blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
 
     <div class="relative z-10 flex items-start justify-between gap-4">
         <div class="space-y-1 min-w-0">
-            <p class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">
+            <p class="text-xs font-bold uppercase tracking-wider text-slate-500 truncate">
                 {{ $title }}
             </p>
             <div class="flex items-baseline gap-2.5 flex-wrap">
-                <span class="text-2xl lg:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                <span class="text-2xl lg:text-3xl font-extrabold tracking-tight text-slate-900">
                     {{ $value }}
                 </span>
                 @if($trend !== null)
-                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold {{ $trendType === 'up' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400' : ($trendType === 'down' ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400') }}">
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold {{ $trendType === 'up' ? 'bg-emerald-100 text-emerald-700' : ($trendType === 'down' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600') }}">
                         @if($trendType === 'up')
                             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0l-7 7m7-7l7 7"/></svg>
                         @elseif($trendType === 'down')
@@ -82,7 +82,7 @@
                 @endif
             </div>
             @if($subtitle)
-                <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                <p class="text-xs text-slate-500 font-medium">
                     {{ $subtitle }}
                 </p>
             @endif

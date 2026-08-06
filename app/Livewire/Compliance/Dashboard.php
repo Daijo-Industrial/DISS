@@ -21,6 +21,8 @@ class Dashboard extends Component
 
     public bool $hideComplete = false;
 
+    public int $trendMonths = 12;    // 6 or 12
+
     public array $sparklines = []; // [deptId => [p1,p2,...]]
 
     protected function loadSparklinesFor(array $deptIds, int $months = 6): void
@@ -64,11 +66,20 @@ class Dashboard extends Component
         $this->search = session('dashboard.search', '');
         $this->bucket = session('dashboard.bucket', '');
         $this->hideComplete = session('dashboard.hideComplete', false);
+        $this->trendMonths = session('dashboard.trendMonths', 12);
     }
 
     public function updated($field)
     {
         session()->put("dashboard.$field", $this->$field);
+    }
+
+    public function setTrendMonths(int $months): void
+    {
+        if (in_array($months, [6, 12], true)) {
+            $this->trendMonths = $months;
+            session()->put('dashboard.trendMonths', $months);
+        }
     }
 
     public function exportCsv() // keep name, but will download .xlsx
@@ -123,8 +134,9 @@ class Dashboard extends Component
         // Last updated (max snapshot time)
         $lastUpdated = $snap->max('generated_at');
 
-        // Trend last 12 months (avg percent overall)
-        $start = Carbon::now()->startOfMonth()->subMonths(11);
+        // Trend last N months (avg percent overall)
+        $monthsCount = in_array($this->trendMonths, [6, 12], true) ? $this->trendMonths : 12;
+        $start = Carbon::now()->startOfMonth()->subMonths($monthsCount - 1);
         $trendRaw = DepartmentComplianceMonthly::query()
             ->where('month', '>=', $start->toDateString())
             ->get()
@@ -135,14 +147,29 @@ class Dashboard extends Component
         $labels = [];
         $values = [];
         $cursor = $start->copy();
-        for ($i = 0; $i < 12; $i++) {
+        for ($i = 0; $i < $monthsCount; $i++) {
             $m = $cursor->toDateString();
             $labels[] = $cursor->format('M Y');
             $values[] = $trendRaw[$m] ?? 0;
             $cursor->addMonth();
         }
 
-        // Bottom/Top 10 (global – not filtered, but you can apply filters if desired)
+        $trendDatasets = [
+            [
+                'label' => 'Avg Compliance %',
+                'data' => $values,
+                'fill' => true,
+                'tension' => 0.4,
+                'borderColor' => '#6366f1',
+                'backgroundColor' => 'rgba(99, 102, 241, 0.08)',
+                'pointBackgroundColor' => '#6366f1',
+                'pointRadius' => 4,
+                'pointHoverRadius' => 6,
+                'borderWidth' => 2.5,
+            ]
+        ];
+
+        // Bottom/Top 10
         $bottom = DepartmentComplianceSnapshot::with('department')
             ->orderBy('percent')->take(10)->get();
 
@@ -190,6 +217,7 @@ class Dashboard extends Component
             'kpi' => compact('count', 'avg', 'complete', 'half99', 'below50'),
             'trendLabels' => $labels,
             'trendValues' => $values,
+            'trendDatasets' => $trendDatasets,
             'bottom' => $bottom,
             'top' => $top,
             'pending' => $pending,
@@ -200,3 +228,4 @@ class Dashboard extends Component
         ]);
     }
 }
+
