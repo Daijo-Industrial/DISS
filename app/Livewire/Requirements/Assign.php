@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Requirements;
 
-use App\Infrastructure\Persistence\Eloquent\Models\Department;
+use App\Models\ComplianceDepartment;
 use App\Models\Requirement;
 use App\Models\RequirementAssignment;
 use Illuminate\Database\Eloquent\Collection;
@@ -38,7 +38,7 @@ class Assign extends Component
 
     public function selectAll(): void
     {
-        $this->department_ids = Department::pluck('id')->all();
+        $this->department_ids = ComplianceDepartment::pluck('id')->all();
         $this->recountPreview();
     }
 
@@ -56,7 +56,7 @@ class Assign extends Component
 
     public function selectUnassigned(): void
     {
-        $all = Department::pluck('id')->all();
+        $all = ComplianceDepartment::pluck('id')->all();
         $this->department_ids = array_values(array_diff($all, $this->assignedDeptIds));
         $this->recountPreview();
     }
@@ -81,7 +81,7 @@ class Assign extends Component
             RequirementAssignment::updateOrCreate(
                 [
                     'requirement_id' => $req->id,
-                    'scope_type' => Department::class,
+                    'scope_type' => ComplianceDepartment::class,
                     'scope_id' => $deptId,
                 ],
                 ['is_mandatory' => $this->is_mandatory]
@@ -103,7 +103,7 @@ class Assign extends Component
 
         RequirementAssignment::query()
             ->where('requirement_id', $this->requirement_id)
-            ->where('scope_type', Department::class)
+            ->where('scope_type', ComplianceDepartment::class)
             ->whereIn('scope_id', $this->department_ids)
             ->delete();
 
@@ -127,7 +127,7 @@ class Assign extends Component
 
         $this->assignedDeptIds = RequirementAssignment::query()
             ->where('requirement_id', $this->requirement_id)
-            ->where('scope_type', Department::class)
+            ->where('scope_type', ComplianceDepartment::class)
             ->pluck('scope_id')
             ->all();
     }
@@ -152,8 +152,8 @@ class Assign extends Component
         // Data sources
         $requirements = Requirement::orderBy('name')->get();
 
-        /** @var Collection<int,Department> $departments */
-        $departments = Department::query()
+        /** @var Collection<int,ComplianceDepartment> $departments */
+        $departments = ComplianceDepartment::query()
             ->when($this->deptSearch !== '', function ($q) {
                 $term = '%' . $this->deptSearch . '%';
                 $q->where(fn ($qq) => $qq->where('name', 'like', $term)->orWhere('code', 'like', $term));
@@ -168,9 +168,9 @@ class Assign extends Component
         $recent = collect();
         if ($req) {
             $recent = RequirementAssignment::query()
-                ->with('scope') // scope is Department
+                ->with('scope') // scope is ComplianceDepartment
                 ->where('requirement_id', $req->id)
-                ->where('scope_type', Department::class)
+                ->where('scope_type', ComplianceDepartment::class)
                 ->latest()
                 ->take(8)
                 ->get();

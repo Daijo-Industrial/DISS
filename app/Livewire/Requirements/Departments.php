@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Requirements;
 
-use App\Infrastructure\Persistence\Eloquent\Models\Department;
+use App\Models\ComplianceDepartment;
 use App\Models\Requirement;
 use App\Models\RequirementAssignment;
 use App\Models\RequirementUpload;
@@ -45,13 +45,13 @@ class Departments extends Component
     }
 
     /** compute valid uploads for dept against this requirement */
-    private function validCountFor(Department $dept): int
+    private function validCountFor(ComplianceDepartment $dept): int
     {
         $today = Carbon::today();
 
         $q = RequirementUpload::query()
             ->where('requirement_id', $this->requirement->id)
-            ->where('scope_type', Department::class)
+            ->where('scope_type', ComplianceDepartment::class)
             ->where('scope_id', $dept->id);
 
         // Approval gate
@@ -74,10 +74,10 @@ class Departments extends Component
     {
         $assignedDeptIds = RequirementAssignment::query()
             ->where('requirement_id', $this->requirement->id)
-            ->where('scope_type', Department::class)
+            ->where('scope_type', ComplianceDepartment::class)
             ->pluck('scope_id');
 
-        $departments = Department::query()
+        $departments = ComplianceDepartment::query()
             ->whereIn('id', $assignedDeptIds)
             ->when($this->search !== '', function ($q) {
                 $term = "%{$this->search}%";
@@ -89,7 +89,7 @@ class Departments extends Component
             ->orderBy('name')
             ->paginate($this->perPage);
 
-        $rows = $departments->getCollection()->map(function (Department $d) {
+        $rows = $departments->getCollection()->map(function (ComplianceDepartment $d) {
             $valid = $this->validCountFor($d);
             $min = $this->requirement->min_count;
             $status = $valid >= $min ? 'OK' : 'Missing';
@@ -98,7 +98,7 @@ class Departments extends Component
             if ($this->requirement->requires_approval) {
                 $pending = RequirementUpload::where([
                     'requirement_id' => $this->requirement->id,
-                    'scope_type' => Department::class,
+                    'scope_type' => ComplianceDepartment::class,
                     'scope_id' => $d->id,
                     'status' => 'pending',
                 ])->count();

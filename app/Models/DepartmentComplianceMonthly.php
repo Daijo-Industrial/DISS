@@ -10,6 +10,6 @@ class DepartmentComplianceMonthly extends Model
 
     public function department()
     {
-        return $this->belongsTo(\App\Infrastructure\Persistence\Eloquent\Models\Department::class);
+        return $this->belongsTo(\App\Models\ComplianceDepartment::class, 'department_id');
     }
 }

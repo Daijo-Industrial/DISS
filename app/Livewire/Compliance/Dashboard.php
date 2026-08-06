@@ -3,7 +3,7 @@
 namespace App\Livewire\Compliance;
 
 use App\Exports\Compliance\DashboardExport;
-use App\Infrastructure\Persistence\Eloquent\Models\Department;
+use App\Models\ComplianceDepartment;
 use App\Models\DepartmentComplianceMonthly;
 use App\Models\DepartmentComplianceSnapshot;
 use App\Models\RequirementUpload;
@@ -159,13 +159,13 @@ class Dashboard extends Component
         $pending = RequirementUpload::query()
             ->select([
                 'requirement_uploads.*',
-                'departments.name as dept_name',
+                'compliance_departments.name as dept_name',
                 'requirements.name as req_name',
                 'requirements.code as req_code',
             ])
             ->join('requirements', 'requirements.id', '=', 'requirement_uploads.requirement_id')
-            ->join('departments', 'departments.id', '=', 'requirement_uploads.scope_id')
-            ->where('scope_type', Department::class)
+            ->join('compliance_departments', 'compliance_departments.id', '=', 'requirement_uploads.scope_id')
+            ->where('scope_type', ComplianceDepartment::class)
             ->where('status', 'pending')
             ->latest()->take(10)->get();
 
@@ -173,13 +173,13 @@ class Dashboard extends Component
         $expiring = RequirementUpload::query()
             ->select([
                 'requirement_uploads.*',
-                'departments.name as dept_name',
+                'compliance_departments.name as dept_name',
                 'requirements.name as req_name',
                 'requirements.code as req_code',
             ])
             ->join('requirements', 'requirements.id', '=', 'requirement_uploads.requirement_id')
-            ->join('departments', 'departments.id', '=', 'requirement_uploads.scope_id')
-            ->where('scope_type', Department::class)
+            ->join('compliance_departments', 'compliance_departments.id', '=', 'requirement_uploads.scope_id')
+            ->where('scope_type', ComplianceDepartment::class)
             ->where('status', 'approved')
             ->whereNotNull('valid_until')
             ->whereBetween('valid_until', [now(), now()->addDays(30)])

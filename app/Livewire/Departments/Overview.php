@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Departments;
 
-use App\Infrastructure\Persistence\Eloquent\Models\Department;
+use App\Models\ComplianceDepartment;
 use App\Services\ComplianceService;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -79,7 +79,7 @@ class Overview extends Component
     public function render(ComplianceService $svc)
     {
         // Base list (DB filter only for search)
-        $page = Department::query()
+        $page = ComplianceDepartment::query()
             ->when($this->search !== '', function ($q) {
                 $term = "%{$this->search}%";
                 $q->where(function ($qq) use ($term) {
@@ -91,7 +91,7 @@ class Overview extends Component
             ->paginate($this->perPage);
 
         // Compute percent on current page
-        $rows = $page->getCollection()->map(function (Department $d) use ($svc) {
+        $rows = $page->getCollection()->map(function (ComplianceDepartment $d) use ($svc) {
             $percent = (int) round($svc->getScopeCompliancePercent($d));
 
             return [

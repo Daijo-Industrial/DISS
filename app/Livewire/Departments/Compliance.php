@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Departments;
 
-use App\Infrastructure\Persistence\Eloquent\Models\Department;
+use App\Models\ComplianceDepartment;
 use App\Models\RequirementUpload;
 use App\Services\ComplianceService;
 use Carbon\Carbon;
@@ -12,7 +12,7 @@ use Livewire\Component;
 
 class Compliance extends Component
 {
-    public Department $department;
+    public ComplianceDepartment $department;
 
     public array $rows = [];
 
@@ -28,7 +28,7 @@ class Compliance extends Component
 
     public bool $onlyUnmet = false; // quick toggle
 
-    private function loadCompliance(Department $department, ComplianceService $svc): void
+    private function loadCompliance(ComplianceDepartment $department, ComplianceService $svc): void
     {
         $list = $svc->getScopeCompliance($department);
 
@@ -42,7 +42,7 @@ class Compliance extends Component
             if ($req->requires_approval) {
                 $pending = RequirementUpload::where([
                     'requirement_id' => $req->id,
-                    'scope_type' => Department::class,
+                    'scope_type' => ComplianceDepartment::class,
                     'scope_id' => $department->id,
                     'status' => 'pending',
                 ])->count();
@@ -53,7 +53,7 @@ class Compliance extends Component
             $latest = RequirementUpload::query()
                 ->where([
                     'requirement_id' => $req->id,
-                    'scope_type' => Department::class,
+                    'scope_type' => ComplianceDepartment::class,
                     'scope_id' => $department->id,
                 ])
                 ->when($req->requires_approval, fn ($q) => $q->where('status', 'approved'))
@@ -133,7 +133,7 @@ class Compliance extends Component
         $this->dispatch('open-recent-uploads', $requirementId, $this->department->id);
     }
 
-    public function mount(Department $department, ComplianceService $svc): void
+    public function mount(ComplianceDepartment $department, ComplianceService $svc): void
     {
         $this->department = $department;
         $this->loadCompliance($department, $svc);
