@@ -3,6 +3,7 @@
 namespace App\Livewire\Departments;
 
 use App\Models\ComplianceDepartment;
+use App\Models\DepartmentComplianceSnapshot;
 use App\Services\ComplianceService;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -25,7 +26,9 @@ class Overview extends Component
 
     public string $dir = 'asc';            // asc|desc
 
-    public int $perPage = 10;
+    public string $viewMode = 'grid';       // 'grid' | 'list'
+
+    public int $perPage = 12;
 
     protected $queryString = [
         'search' => ['except' => ''],
@@ -33,13 +36,31 @@ class Overview extends Component
         'bucket' => ['except' => ''],
         'sort' => ['except' => 'name'],
         'dir' => ['except' => 'asc'],
-        'perPage' => ['except' => 10],
+        'viewMode' => ['except' => 'grid'],
+        'perPage' => ['except' => 12],
     ];
+
+    public function mount()
+    {
+        $this->viewMode = session('departments.viewMode', 'grid');
+        $this->perPage = session('departments.perPage', 12);
+    }
 
     public function updated($field)
     {
         if (in_array($field, ['search', 'status', 'bucket', 'perPage'])) {
             $this->resetPage();
+        }
+        if ($field === 'perPage') {
+            session()->put('departments.perPage', $this->perPage);
+        }
+    }
+
+    public function setViewMode(string $mode): void
+    {
+        if (in_array($mode, ['grid', 'list'], true)) {
+            $this->viewMode = $mode;
+            session()->put('departments.viewMode', $mode);
         }
     }
 
@@ -57,19 +78,6 @@ class Overview extends Component
         $this->resetPage();
     }
 
-    public function sortIcon(string $field): string
-    {
-        if ($this->sort !== $field) {
-            // Not active sort column → neutral icon
-            return '<i class="bi bi-arrow-down-up text-muted small ms-1"></i>';
-        }
-
-        // Active sort column → show asc/desc arrow
-        return $this->dir === 'asc'
-            ? '<i class="bi bi-arrow-up text-primary small ms-1"></i>'
-            : '<i class="bi bi-arrow-down text-primary small ms-1"></i>';
-    }
-
     public function toggleDir(): void
     {
         $this->dir = $this->dir === 'asc' ? 'desc' : 'asc';
@@ -78,30 +86,32 @@ class Overview extends Component
 
     public function render(ComplianceService $svc)
     {
-        // Base list (DB filter only for search)
-        $page = ComplianceDepartment::query()
+        // Snapshot pre-computed map for instant query performance (zero N+1)
+        $snapshots = DepartmentComplianceSnapshot::pluck('percent', 'department_id')->all();
+
+        $query = ComplianceDepartment::query()
             ->when($this->search !== '', function ($q) {
                 $term = "%{$this->search}%";
                 $q->where(function ($qq) use ($term) {
                     $qq->where('name', 'like', $term)
                         ->orWhere('code', 'like', $term);
                 });
-            })
-            ->orderBy('name') // preliminary order; we’ll re-sort after computing percent if needed
-            ->paginate($this->perPage);
+            });
 
-        // Compute percent on current page
-        $rows = $page->getCollection()->map(function (ComplianceDepartment $d) use ($svc) {
-            $percent = (int) round($svc->getScopeCompliancePercent($d));
+        // Compute percent for all matching departments efficiently
+        $allDepts = $query->get();
+
+        $rows = $allDepts->map(function (ComplianceDepartment $d) use ($snapshots, $svc) {
+            $percent = $snapshots[$d->id] ?? (int) round($svc->getScopeCompliancePercent($d));
 
             return [
                 'dept' => $d,
-                'percent' => $percent,
+                'percent' => (int)$percent,
                 'status' => $percent >= 100 ? 'Complete' : 'Incomplete',
             ];
         });
 
-        // Status filter (view-level)
+        // Status filter
         if ($this->status !== 'all') {
             $want = $this->status === 'complete' ? 'Complete' : 'Incomplete';
             $rows = $rows->filter(fn ($r) => $r['status'] === $want);
@@ -118,8 +128,8 @@ class Overview extends Component
             $rows = $rows->filter(fn ($r) => $r['percent'] >= $lo && $r['percent'] <= $hi);
         }
 
-        // Sorting (client-side) on the current page
-        $rows = $rows->sortBy(function ($r) {
+        // Sorting
+        $sortedRows = $rows->sortBy(function ($r) {
             return match ($this->sort) {
                 'code' => $r['dept']->code ?? '',
                 'percent' => $r['percent'],
@@ -127,18 +137,32 @@ class Overview extends Component
             };
         }, SORT_REGULAR, $this->dir === 'desc')->values();
 
-        // KPIs for current page after filters
-        $count = $rows->count();
-        $complete = $rows->where('percent', 100)->count();
-        $incomplete = $count - $complete;
-        $avg = $count ? (int) round($rows->avg('percent')) : 0;
-        $kpi = compact('count', 'complete', 'incomplete', 'avg');
+        // KPIs calculated on full filtered set
+        $totalCount = $sortedRows->count();
+        $completeCount = $sortedRows->where('percent', 100)->count();
+        $incompleteCount = $totalCount - $completeCount;
+        $avgPercent = $totalCount ? (int) round($sortedRows->avg('percent')) : 0;
+        $kpi = [
+            'count' => $totalCount,
+            'complete' => $completeCount,
+            'incomplete' => $incompleteCount,
+            'avg' => $avgPercent,
+        ];
 
-        // Swap paginator’s collection with our decorated, sorted rows
-        $page->setCollection($rows);
+        // Manual pagination on sorted collection
+        $currentPage = $this->getPage();
+        $pagedSlice = $sortedRows->slice(($currentPage - 1) * $this->perPage, $this->perPage)->values();
+
+        $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
+            $pagedSlice,
+            $totalCount,
+            $this->perPage,
+            $currentPage,
+            ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath()]
+        );
 
         return view('livewire.departments.overview', [
-            'items' => $page,
+            'items' => $paginator,
             'kpi' => $kpi,
         ]);
     }

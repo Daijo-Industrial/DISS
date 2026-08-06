@@ -1,208 +1,171 @@
 {{-- Department Compliance Detail — Livewire component view --}}
-{{-- Tailwind, synced with new.layouts.app --}}
-
 @section('title', $department->name . ' — Compliance')
 @section('page-title', $department->name)
-@section('page-subtitle', 'Document compliance requirements')
+@section('page-subtitle', 'Document compliance requirements breakdown')
 
-<div>
-    {{-- Page header --}}
-    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div class="flex items-center gap-3">
-            <div
-                class="h-12 w-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg shadow-indigo-200 shrink-0 font-bold text-white text-base">
+<div class="space-y-6">
+
+    {{-- ─── 1. Page Header ───────────────────────────────────────────── --}}
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3.5">
+            <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-blue-600 shadow-lg shadow-indigo-200 shrink-0 font-extrabold text-white text-lg">
                 {{ strtoupper(mb_substr($department->name, 0, 2)) }}
             </div>
             <div>
-                <h1 class="text-xl font-bold text-slate-800">{{ $department->name }}</h1>
-                @if ($department->code)
-                    <p class="text-sm text-slate-500 mt-0.5">{{ $department->code }}</p>
-                @endif
+                <div class="flex items-center gap-2">
+                    <h1 class="text-2xl font-extrabold tracking-tight text-slate-900">{{ $department->name }}</h1>
+                    @if ($department->code)
+                        <span class="px-2 py-0.5 rounded text-xs font-mono font-bold uppercase bg-slate-100 text-slate-600">
+                            {{ $department->code }}
+                        </span>
+                    @endif
+                </div>
+                <p class="text-xs font-medium text-slate-500 mt-0.5">Assigned document requirements and validation status</p>
             </div>
         </div>
-        <div class="flex items-center gap-3">
-            {{-- Overall compliance bar --}}
-            <div class="flex items-center gap-2">
-                <div class="w-32 h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div class="h-full rounded-full transition-all {{ $percent >= 100 ? 'bg-emerald-500' : ($percent < 50 ? 'bg-rose-500' : 'bg-amber-500') }}"
-                        style="width: {{ $percent }}%"></div>
+
+        <div class="flex items-center gap-4">
+            {{-- Department Overall Score Ring --}}
+            <div class="flex items-center gap-3 p-2 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+                <x-compliance.progress-ring
+                    :percent="$percent"
+                    size="md"
+                    :strokeWidth="7"
+                />
+                <div class="pr-2">
+                    <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Overall Score</span>
+                    <span class="text-sm font-extrabold {{ $percent >= 80 ? 'text-emerald-600' : ($percent < 50 ? 'text-rose-600' : 'text-amber-600') }}">
+                        {{ $percent >= 80 ? 'Compliant' : ($percent < 50 ? 'Critical' : 'Warning') }}
+                    </span>
                 </div>
-                <span
-                    class="text-sm font-bold {{ $percent >= 100 ? 'text-emerald-600' : ($percent < 50 ? 'text-rose-600' : 'text-amber-600') }}">
-                    {{ $percent }}%
-                </span>
             </div>
+
             <a href="{{ route('departments.index') }}"
-                class="inline-flex items-center gap-2 rounded-xl bg-white border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 shadow-sm transition-all">
-                <x-bx-arrow-back class="w-4 h-4" /> Departments
+                class="inline-flex items-center gap-2 rounded-xl bg-white border border-slate-200/80 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-sm transition-all active:scale-95">
+                <svg class="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
+                Departments
             </a>
         </div>
     </div>
 
-    {{-- Toolbar --}}
-    <div class="glass-card px-5 py-4 mb-5 flex flex-wrap items-center gap-3">
-        {{-- Search --}}
-        <div class="relative flex-1 min-w-[180px]">
-            <x-bx-search class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-            <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search by code or name…"
-                class="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none">
+    {{-- ─── 2. Filter Toolbar ────────────────────────────────────────── --}}
+    <div class="rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200/80 p-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
+        {{-- Search Input --}}
+        <div class="relative flex-1 min-w-[220px]">
+            <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
+            <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search requirement by code or name…"
+                class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all">
         </div>
 
-        {{-- Status filter chips --}}
-        <div class="flex flex-wrap gap-2">
-            @foreach (['all' => 'All', 'ok' => 'OK', 'pending' => 'Pending', 'missing' => 'Missing'] as $val => $label)
-                @php
-                    $active = $status === $val;
-                    $colors = match ($val) {
-                        'ok' => $active
-                            ? 'bg-emerald-500 text-white border-emerald-500'
-                            : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50',
-                        'pending' => $active
-                            ? 'bg-amber-500 text-white border-amber-500'
-                            : 'border-amber-200 text-amber-600 hover:bg-amber-50',
-                        'missing' => $active
-                            ? 'bg-rose-500 text-white border-rose-500'
-                            : 'border-rose-200 text-rose-600 hover:bg-rose-50',
-                        default => $active
-                            ? 'bg-slate-700 text-white border-slate-700'
-                            : 'border-slate-200 text-slate-600 hover:bg-slate-50',
-                    };
-                @endphp
-                <button wire:click="$set('status', '{{ $val }}')"
-                    class="rounded-full border px-3 py-1 text-xs font-semibold transition-all {{ $colors }}">
-                    {{ $label }}
-                </button>
-            @endforeach
-        </div>
+        {{-- Filter Chips --}}
+        <x-compliance.filter-chips
+            :options="[
+                ['value' => 'all', 'label' => 'All Status', 'count' => count($this->filteredSortedRows)],
+                ['value' => 'missing', 'label' => 'Action Needed', 'count' => count($this->urgentRows), 'color' => 'rose'],
+                ['value' => 'pending', 'label' => 'Pending Review', 'count' => count($this->pendingRows), 'color' => 'amber'],
+                ['value' => 'ok', 'label' => 'Compliant', 'count' => count($this->okRows), 'color' => 'emerald']
+            ]"
+            :selected="$status"
+            wireModel="status"
+        />
 
-        {{-- Sort --}}
-        <div class="flex items-center gap-2">
-            <select wire:model.live="sort"
-                class="rounded-xl border border-slate-200 text-sm py-2 px-3 focus:ring-2 focus:ring-indigo-400 outline-none">
-                <option value="code">Code</option>
-                <option value="name">Name</option>
-                <option value="percent">% Complete</option>
-                <option value="expires">Expires</option>
+        <div class="flex items-center gap-3">
+            {{-- Sort Select --}}
+            <select wire:model.live="sort" class="rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 py-2 px-3 outline-none focus:ring-2 focus:ring-indigo-500/20">
+                <option value="code">Sort by Code</option>
+                <option value="name">Sort by Name</option>
+                <option value="percent">Sort by %</option>
+                <option value="expires">Sort by Expiration</option>
             </select>
-            <button wire:click="sortBy('{{ $sort }}')"
-                class="h-9 w-9 flex items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors">
-                <x-icon :name="$dir === 'asc' ? 'bx-sort-up' : 'bx-sort-down'" class="w-5 h-5" />
+
+            {{-- Unmet Toggle Switch --}}
+            <label class="flex items-center gap-2.5 cursor-pointer select-none pl-2 border-l border-slate-200">
+                <div class="relative">
+                    <input type="checkbox" wire:model.live="onlyUnmet" class="sr-only peer">
+                    <div class="w-9 h-5 rounded-full bg-slate-200 peer-checked:bg-rose-600 transition-colors"></div>
+                    <div class="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-4"></div>
+                </div>
+                <span class="text-xs font-bold text-slate-600">Unmet Only</span>
+            </label>
+        </div>
+    </div>
+
+    {{-- ─── 3. Requirements Progressive Urgency Grouping ────────────── --}}
+
+    {{-- SECTION 1: Action Needed / Missing Requirements --}}
+    @if(count($this->urgentRows) > 0)
+        <div class="rounded-2xl bg-white/90 backdrop-blur-xl border border-rose-200/80 overflow-hidden shadow-sm">
+            <div class="px-5 py-3.5 bg-rose-50/60 border-b border-rose-100 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="h-2.5 w-2.5 rounded-full bg-rose-500 animate-ping"></span>
+                    <h3 class="text-xs font-extrabold text-rose-800 uppercase tracking-wider">Action Needed ({{ count($this->urgentRows) }})</h3>
+                </div>
+                <span class="text-[11px] font-bold text-rose-600">Upload document required to reach compliance</span>
+            </div>
+
+            <div class="divide-y divide-slate-100">
+                @foreach($this->urgentRows as $r)
+                    @include('livewire.departments.partials.requirement-row', ['r' => $r, 'department' => $department])
+                @endforeach
+            </div>
+        </div>
+    @endif
+
+    {{-- SECTION 2: Pending Approval Submissions --}}
+    @if(count($this->pendingRows) > 0)
+        <div class="rounded-2xl bg-white/90 backdrop-blur-xl border border-amber-200/80 overflow-hidden shadow-sm">
+            <div class="px-5 py-3.5 bg-amber-50/60 border-b border-amber-100 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="h-2.5 w-2.5 rounded-full bg-amber-500"></span>
+                    <h3 class="text-xs font-extrabold text-amber-800 uppercase tracking-wider">Pending Review ({{ count($this->pendingRows) }})</h3>
+                </div>
+                <span class="text-[11px] font-bold text-amber-600">Under admin review</span>
+            </div>
+
+            <div class="divide-y divide-slate-100">
+                @foreach($this->pendingRows as $r)
+                    @include('livewire.departments.partials.requirement-row', ['r' => $r, 'department' => $department])
+                @endforeach
+            </div>
+        </div>
+    @endif
+
+    {{-- SECTION 3: Compliant & Met Requirements --}}
+    @if(count($this->okRows) > 0)
+        <div class="rounded-2xl bg-white/90 backdrop-blur-xl border border-emerald-200/80 overflow-hidden shadow-sm">
+            <div class="px-5 py-3.5 bg-emerald-50/60 border-b border-emerald-100 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+                    <h3 class="text-xs font-extrabold text-emerald-800 uppercase tracking-wider">Compliant Requirements ({{ count($this->okRows) }})</h3>
+                </div>
+                <span class="text-[11px] font-bold text-emerald-600">Requirement met</span>
+            </div>
+
+            <div class="divide-y divide-slate-100">
+                @foreach($this->okRows as $r)
+                    @include('livewire.departments.partials.requirement-row', ['r' => $r, 'department' => $department])
+                @endforeach
+            </div>
+        </div>
+    @endif
+
+    {{-- Empty State --}}
+    @if(count($this->filteredSortedRows) === 0)
+        <div class="py-16 text-center rounded-2xl bg-white/90 border border-slate-200/80 shadow-sm">
+            <svg class="mx-auto h-10 w-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607Z"/></svg>
+            <p class="text-sm font-bold text-slate-700 mt-2">No requirements match your filters</p>
+            <p class="text-xs text-slate-400 mt-1">Try clearing your search term or selecting a different status filter.</p>
+            <button type="button" wire:click="$set('search', ''); $set('status', 'all'); $set('onlyUnmet', false)"
+                class="mt-4 px-3.5 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 text-xs font-bold hover:bg-indigo-100 transition-colors">
+                Clear all filters
             </button>
         </div>
+    @endif
 
-        {{-- Unmet toggle --}}
-        <label class="flex items-center gap-2 cursor-pointer select-none">
-            <div class="relative">
-                <input type="checkbox" wire:model.live="onlyUnmet" class="sr-only peer">
-                <div class="w-9 h-5 rounded-full bg-slate-200 peer-checked:bg-rose-500 transition-colors"></div>
-                <div
-                    class="absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4">
-                </div>
-            </div>
-            <span class="text-xs font-medium text-slate-600">Unmet only</span>
-        </label>
-    </div>
-
-    {{-- Requirements list --}}
-    <div class="glass-card overflow-hidden">
-        <div class="divide-y divide-slate-50">
-            @php $rows = $this->filteredSortedRows; @endphp
-            @forelse($rows as $r)
-                @php
-                    $p = (int) $r['percent'];
-                    $expires = $r['last_valid_until']?->format('d M Y');
-                    $due = $r['next_due']?->format('d M Y');
-                    $statusColors = [
-                        'OK' => ['bg-emerald-100', 'text-emerald-700'],
-                        'Pending' => ['bg-amber-100', 'text-amber-700'],
-                        'Missing' => ['bg-rose-100', 'text-rose-700'],
-                    ];
-                    [$sbg, $stxt] = $statusColors[$r['status']] ?? ['bg-slate-100', 'text-slate-600'];
-                    $barColor = $p >= 100 ? 'bg-emerald-500' : ($p < 50 ? 'bg-rose-500' : 'bg-amber-400');
-                @endphp
-                <div class="px-5 py-4 hover:bg-slate-50/50 transition-colors" wire:key="req-{{ $r['id'] }}">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-
-                        {{-- Requirement info --}}
-                        <div class="min-w-0 flex-1">
-                            <div class="flex flex-wrap items-center gap-2 mb-1">
-                                <span class="text-xs font-mono font-semibold text-slate-400">{{ $r['code'] }}</span>
-                                <span
-                                    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold {{ $sbg }} {{ $stxt }}">
-                                    {{ $r['status'] }}
-                                </span>
-                                @if ($r['pending'] > 0)
-                                    <span
-                                        class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-200">
-                                        {{ $r['pending'] }} pending
-                                    </span>
-                                @endif
-                                @if ($r['requires_approval'])
-                                    <span
-                                        class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs bg-indigo-50 text-indigo-600 border border-indigo-200">
-                                        <x-bx-shield-quarter class="w-3 h-3" /> Approval required
-                                    </span>
-                                @endif
-                            </div>
-                            <p class="text-sm font-semibold text-slate-800" title="{{ $r['allowed_summary'] }}">
-                                {{ $r['name'] }}</p>
-                            <p class="text-xs text-slate-400 mt-0.5">Min {{ $r['min'] }} document(s)</p>
-                        </div>
-
-                        {{-- Progress + actions --}}
-                        <div class="flex flex-col items-end gap-3 shrink-0">
-                            {{-- Progress bar --}}
-                            <div class="flex items-center gap-2 w-44">
-                                <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                                    <div class="{{ $barColor }} h-full rounded-full transition-all"
-                                        style="width: {{ $p }}%"></div>
-                                </div>
-                                <span class="text-xs font-semibold text-slate-500 w-12 text-right">
-                                    {{ $r['valid_count'] }}/{{ $r['min'] }}
-                                </span>
-                            </div>
-
-                            {{-- Expiry / due --}}
-                            @if ($expires)
-                                <span class="text-xs text-slate-400">Expires
-                                    <strong>{{ $expires }}</strong></span>
-                            @elseif($due)
-                                <span class="text-xs font-semibold text-rose-500">Due {{ $due }}</span>
-                            @endif
-
-                            {{-- Actions --}}
-                            <div class="flex gap-2" x-data>
-                                <button type="button"
-                                    @click="$dispatch('trigger-upload-modal', { reqId: {{ $r['id'] }}, deptId: {{ $department->id }} })"
-                                    class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-xs font-semibold shadow-sm shadow-indigo-200 transition-all">
-                                    <x-bx-upload class="w-4 h-4" /> Upload
-                                </button>
-                                <button type="button"
-                                    @click="$dispatch('trigger-history-modal', { reqId: {{ $r['id'] }}, deptId: {{ $department->id }} })"
-                                    class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 px-3 py-1.5 text-xs font-semibold transition-all">
-                                    <x-bx-history class="w-4 h-4" /> History
-                                    @if ($r['pending'] > 0)
-                                        <span
-                                            class="inline-flex items-center justify-center h-4 w-4 rounded-full bg-amber-400 text-white text-[10px] font-bold">{{ $r['pending'] }}</span>
-                                    @endif
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            @empty
-                <div class="py-16 text-center">
-                    <x-bx-search class="w-9 h-9 text-slate-300" />
-                    <p class="text-sm text-slate-400 mt-2">No requirements match your filters.</p>
-                    <button wire:click="$set('search', ''); $set('status', 'all'); $set('onlyUnmet', false)"
-                        class="mt-3 text-xs text-indigo-600 hover:underline">Clear filters</button>
-                </div>
-            @endforelse
-        </div>
-    </div>
 </div>
+
 @push('modals')
-    {{-- Sub-components (upload slide-over, recent uploads modal) --}}
+    {{-- Sub-components (upload modal, recent uploads modal) --}}
     <livewire:requirements.upload :key="'uploader-' . $department->id" />
     <livewire:requirements.recent-uploads />
 @endpush

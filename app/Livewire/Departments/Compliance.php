@@ -37,7 +37,7 @@ class Compliance extends Component
             $validCount = (int) $r['valid_count'];
             $min = (int) $req->min_count;
 
-            // Pending count (only meaningful if requires approval)
+            // Pending count
             $pending = 0;
             if ($req->requires_approval) {
                 $pending = RequirementUpload::where([
@@ -60,23 +60,21 @@ class Compliance extends Component
                 ->where(function ($q) use ($today) {
                     $q->whereNull('valid_until')->orWhere('valid_until', '>=', $today);
                 })
-                ->max('valid_until'); // null if none with expiry
+                ->max('valid_until');
 
             $lastValidUntil = $latest ? Carbon::parse($latest) : null;
 
-            // Heuristic “next due” based on frequency & validity_days
+            // Next due date
             $nextDue = null;
             if ($req->frequency !== 'once') {
                 if ($lastValidUntil) {
-                    // When it expires, the next due is that date (or next cycle)
                     $nextDue = $lastValidUntil;
                 } elseif ($validCount < $min) {
-                    // If missing, it’s effectively “now”
                     $nextDue = $today;
                 }
             }
 
-            // Allowed types (for tooltip)
+            // Allowed types
             $allowed = $req->allowed_mimetypes ?? [];
             $allowedSummary = empty($allowed)
                 ? 'Any file'
@@ -169,6 +167,30 @@ class Compliance extends Component
         }, SORT_REGULAR, $this->dir === 'desc');
 
         return $rows->values()->all();
+    }
+
+    public function getUrgentRowsProperty(): array
+    {
+        return collect($this->filteredSortedRows)
+            ->filter(fn ($r) => $r['status'] === 'Missing')
+            ->values()
+            ->all();
+    }
+
+    public function getPendingRowsProperty(): array
+    {
+        return collect($this->filteredSortedRows)
+            ->filter(fn ($r) => $r['status'] === 'Pending')
+            ->values()
+            ->all();
+    }
+
+    public function getOkRowsProperty(): array
+    {
+        return collect($this->filteredSortedRows)
+            ->filter(fn ($r) => $r['status'] === 'OK')
+            ->values()
+            ->all();
     }
 
     public function render()
