@@ -43,6 +43,12 @@
                                 // Target by name is safer than hardcoded index
                                 table.column('status_type:name').search(status).draw();
                             }
+                        },
+                        filterCategory(category) {
+                            const table = window.LaravelDataTables['importantdocument-table'];
+                            if (table) {
+                                table.column(1).search(category).draw();
+                            }
                         }
                     })
                 })
@@ -183,7 +189,7 @@
                                     class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors">
                                     <x-bx-tag-alt class="" />
                                 </div>
-                                <select id="typeFilter"
+                                <select id="typeFilter" @change="$store.docLibrary.filterCategory($event.target.value)"
                                     class="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all appearance-none">
                                     <option value="">All Categories</option>
                                     @foreach ($types as $type)
@@ -297,13 +303,4 @@
 
 @push('scripts')
     {!! $dataTable->scripts() !!}
-    <script>
-        $(document).ready(function() {
-            // Category Filter integration - Use column name for robustness
-            $('#typeFilter').on('change', function() {
-                window.LaravelDataTables['importantdocument-table'].column('type:name').search($(this)
-                .val()).draw();
-            });
-        });
-    </script>
 @endpush

@@ -163,7 +163,7 @@ class ImportantDocumentDataTable extends DataTable
             $query->where('expired_date', '<=', $warningDate);
         }
 
-        return $query->newQuery();
+        return $query;
     }
 
     /**
