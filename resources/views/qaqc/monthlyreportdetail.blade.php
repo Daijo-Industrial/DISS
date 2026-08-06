@@ -73,7 +73,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach ($report->details as $detail)
+                                    @foreach ($report->items as $detail)
                                         @php
                                             $partDetails = explode('/', $detail->part_name, 2);
                                             $partNumber = $partDetails[0];
@@ -104,8 +104,8 @@
                                                             <tr>
 
                                                                 <td>{{ $defect->quantity }}</td>
-                                                                <td>{{ $defect->category->name ?? '' }}</td>
-                                                                <td>{{ $defect->remarks }}</td>
+                                                                <td>{{ $defect->name ?? '' }}</td>
+                                                                <td>{{ $defect->notes }}</td>
 
                                                             </tr>
                                                         @endforeach

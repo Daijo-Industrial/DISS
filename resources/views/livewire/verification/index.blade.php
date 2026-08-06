@@ -27,6 +27,9 @@
                      x-transition:leave-end="transform opacity-0 scale-95" 
                      class="absolute right-0 mt-1.5 w-48 origin-top-right rounded-lg bg-white shadow-lg border border-slate-100 focus:outline-hidden z-30 py-1"
                      style="display: none;">
+                    <a href="{{ route('qaqc.summarymonth') }}" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition">
+                        <i class="bi bi-file-earmark-text text-slate-400"></i> Monthly Report VQC
+                    </a>
                     <a href="{{ route('verification.export') }}" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 transition">
                         <i class="bi bi-list-task text-slate-400"></i> Export All Reports
                     </a>

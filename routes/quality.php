@@ -6,6 +6,7 @@ use App\Exports\VerificationReportsExport;
 use App\Exports\MonthlyVerificationExport;
 use App\Http\Controllers\AdjustFormQcController;
 use App\Http\Controllers\DefectCategoryController;
+use App\Http\Controllers\QaqcReportController;
 use App\Livewire\Admin\Verification\Defects\CatalogEdit;
 use App\Livewire\Admin\Verification\Defects\CatalogIndex;
 use App\Livewire\InspectionForm;
@@ -83,10 +84,10 @@ Route::middleware('auth')->group(function () {
 
     Route::put('/qaqc/reports/{id}/updateDoNumber', fn() => redirect()->back())->name('update.do.number');
 
-    // Legacy monthly report — redirect to new monthly export
-    Route::get('/qaqc/monthlyreport', fn() => redirect()->route('verification.index'))->name('qaqc.summarymonth');
-    Route::post('/monthlyreport', fn() => redirect()->back())->name('monthlyreport.details');
-    Route::post('/monthlyreport/export', fn() => redirect()->back())->name('monthlyreport.export');
+    // Legacy monthly report VQC
+    Route::get('/qaqc/monthlyreport', [QaqcReportController::class, 'monthlyreport'])->name('qaqc.summarymonth');
+    Route::post('/monthlyreport', [QaqcReportController::class, 'showDetails'])->name('monthlyreport.details');
+    Route::post('/monthlyreport/export', [QaqcReportController::class, 'export'])->name('monthlyreport.export');
 
     Route::get('/qaqc/defectcategory', \App\Livewire\Qaqc\DefectCategoryManager::class)->name('qaqc.defectcategory');
 
