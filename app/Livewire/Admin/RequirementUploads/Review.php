@@ -2,13 +2,15 @@
 
 namespace App\Livewire\Admin\RequirementUploads;
 
-use App\Infrastructure\Persistence\Eloquent\Models\Department;
 use App\Models\RequirementUpload;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
+use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
 
+#[Layout('new.layouts.app')]
 class Review extends Component
 {
     use WithPagination;
@@ -19,7 +21,7 @@ class Review extends Component
 
     public ?string $q = null;
 
-    // new filters
+    // Filter properties
     public ?string $date_from = null;
 
     public ?string $date_to = null;
@@ -28,16 +30,18 @@ class Review extends Component
 
     public bool $only_expiring = false;
 
-    // selection & sorting
+    // View mode & selection
+    public string $viewMode = 'kanban'; // kanban | table
+
     public array $selected = [];
 
-    public int $perPage = 10;
+    public int $perPage = 12;
 
     public string $sort = 'created_at';   // column
 
     public string $dir = 'desc';          // asc|desc
 
-    // modal
+    // Modal / Slide-over state
     public ?int $uploadId = null;
 
     public ?string $review_notes = null;
@@ -53,13 +57,27 @@ class Review extends Component
         'only_expiring' => ['except' => false],
         'sort' => ['except' => 'created_at'],
         'dir' => ['except' => 'desc'],
-        'perPage' => ['except' => 10],
+        'viewMode' => ['except' => 'kanban'],
+        'perPage' => ['except' => 12],
     ];
+
+    public function mount()
+    {
+        $this->viewMode = session('review.viewMode', 'kanban');
+    }
 
     public function updating($field)
     {
         if (in_array($field, ['status', 'q', 'date_from', 'date_to', 'mime_like', 'only_expiring', 'perPage'])) {
             $this->resetPage();
+        }
+    }
+
+    public function setViewMode(string $mode): void
+    {
+        if (in_array($mode, ['kanban', 'table'], true)) {
+            $this->viewMode = $mode;
+            session()->put('review.viewMode', $mode);
         }
     }
 
@@ -74,22 +92,10 @@ class Review extends Component
         $this->resetPage();
     }
 
-    public function sortIcon(string $col): string
-    {
-        if ($this->sort !== $col) {
-            return '<i class="bi bi-arrow-down-up text-muted small"></i>';
-        }
-
-        return $this->dir === 'asc'
-            ? '<i class="bi bi-arrow-up text-primary small"></i>'
-            : '<i class="bi bi-arrow-down text-primary small"></i>';
-    }
-
     public function togglePageSelection(bool $checked): void
     {
         if (! $checked) {
             $this->selected = [];
-
             return;
         }
 
@@ -140,21 +146,30 @@ class Review extends Component
         $this->uploadId = $id;
         $this->review_notes = $u->review_notes;
 
+        $downloadUrl = URL::signedRoute('uploads.download', ['upload' => $u->id]);
+        $previewUrl = URL::signedRoute('uploads.download', ['upload' => $u->id, 'preview' => 1]);
+
         $this->active = [
+            'id' => $u->id,
             'original_name' => $u->original_name,
             'mime_type' => $u->mime_type,
             'size' => $u->size,
             'req_name' => $u->req_name,
             'req_code' => $u->req_code,
-            'dept_name' => $u->dept_name,
-            'dept_code' => $u->dept_code,
+            'dept_name' => $u->dept_name ?? 'General',
+            'dept_code' => $u->dept_code ?? '—',
             'valid_from' => optional($u->valid_from)->format('Y-m-d'),
             'valid_until' => optional($u->valid_until)->format('Y-m-d'),
-            'download_url' => URL::signedRoute('uploads.download', ['upload' => $u->id]),
-            'preview_url' => method_exists($u, 'previewUrl') ? $u->previewUrl() : '#',
+            'download_url' => $downloadUrl,
+            'preview_url' => $previewUrl,
         ];
 
         $this->dispatch('open-decision-modal');
+    }
+
+    public function applyPresetReason(string $reason): void
+    {
+        $this->review_notes = $reason;
     }
 
     public function approve(int $id): void
@@ -167,7 +182,7 @@ class Review extends Component
 
         $this->dispatch('upload:done');
         $this->reset(['uploadId', 'review_notes', 'active']);
-        $this->dispatch('toast', type: 'success', message: 'Upload approved.');
+        $this->dispatch('toast', type: 'success', message: 'Upload approved successfully.');
     }
 
     public function reject(int $id): void
@@ -181,6 +196,18 @@ class Review extends Component
         $this->dispatch('upload:done');
         $this->reset(['uploadId', 'review_notes', 'active']);
         $this->dispatch('toast', type: 'warning', message: 'Upload rejected.');
+    }
+
+    public function quickReject(int $id, string $reason): void
+    {
+        Gate::authorize('approve-requirements');
+        $u = RequirementUpload::findOrFail($id);
+        $u->status = 'rejected';
+        $u->review_notes = $reason;
+        $u->save();
+
+        $this->dispatch('upload:done');
+        $this->dispatch('toast', type: 'warning', message: 'Upload rejected with note: '.$reason);
     }
 
     public function bulkApprove(): void
@@ -208,8 +235,8 @@ class Review extends Component
         $cols = [
             'requirements.code as req_code',
             'requirements.name as req_name',
-            'departments.code as dept_code',
-            'departments.name as dept_name',
+            DB::raw('COALESCE(cd.code, d.code) as dept_code'),
+            DB::raw('COALESCE(cd.name, d.name) as dept_name'),
             'requirement_uploads.original_name',
             'requirement_uploads.mime_type',
             'requirement_uploads.size',
@@ -226,7 +253,7 @@ class Review extends Component
             fputcsv($out, ['Requirement Code', 'Requirement', 'Dept Code', 'Department', 'File', 'MIME', 'Size', 'Status', 'Valid From', 'Valid Until', 'Uploaded']);
             foreach ($data as $r) {
                 fputcsv($out, [
-                    $r->req_code, $r->req_name, $r->dept_code, $r->dept_name,
+                    $r->req_code, $r->req_name, $r->dept_code ?? '—', $r->dept_name ?? 'General',
                     $r->original_name, $r->mime_type, $r->size, $r->status,
                     optional($r->valid_from)?->toDateString(), optional($r->valid_until)?->toDateString(),
                     $r->created_at->toDateTimeString(),
@@ -238,19 +265,23 @@ class Review extends Component
 
     private function baseQuery()
     {
-        // Join requirement + department for richer display & search
+        // Join requirement + both compliance_departments and legacy departments using COALESCE
         $q = RequirementUpload::query()
             ->select([
                 'requirement_uploads.*',
                 'requirements.name as req_name',
                 'requirements.code as req_code',
-                'departments.name as dept_name',
-                'departments.code as dept_code',
+                DB::raw('COALESCE(cd.name, d.name, "General") as dept_name'),
+                DB::raw('COALESCE(cd.code, d.code, "—") as dept_code'),
             ])
             ->join('requirements', 'requirements.id', '=', 'requirement_uploads.requirement_id')
-            ->leftJoin('departments', function ($j) {
-                $j->on('departments.id', '=', 'requirement_uploads.scope_id')
-                    ->where('requirement_uploads.scope_type', '=', Department::class);
+            ->leftJoin('compliance_departments as cd', function ($j) {
+                $j->on('cd.id', '=', 'requirement_uploads.scope_id')
+                    ->where('requirement_uploads.scope_type', '=', \App\Models\ComplianceDepartment::class);
+            })
+            ->leftJoin('departments as d', function ($j) {
+                $j->on('d.id', '=', 'requirement_uploads.scope_id')
+                    ->where('requirement_uploads.scope_type', '=', \App\Infrastructure\Persistence\Eloquent\Models\Department::class);
             });
 
         if ($this->status !== 'all') {
@@ -263,8 +294,10 @@ class Review extends Component
                 $qq->where('requirement_uploads.original_name', 'like', $term)
                     ->orWhere('requirements.name', 'like', $term)
                     ->orWhere('requirements.code', 'like', $term)
-                    ->orWhere('departments.name', 'like', $term)
-                    ->orWhere('departments.code', 'like', $term);
+                    ->orWhere('cd.name', 'like', $term)
+                    ->orWhere('cd.code', 'like', $term)
+                    ->orWhere('d.name', 'like', $term)
+                    ->orWhere('d.code', 'like', $term);
             });
         }
 
@@ -285,7 +318,7 @@ class Review extends Component
         }
 
         // sorting
-        $allowed = ['requirements.name', 'departments.name', 'status', 'valid_until', 'created_at'];
+        $allowed = ['requirements.name', 'dept_name', 'status', 'valid_until', 'created_at'];
         $col = in_array($this->sort, $allowed, true) ? $this->sort : 'created_at';
         $dir = $this->dir === 'asc' ? 'asc' : 'desc';
         $q->orderBy($col, $dir);
@@ -297,6 +330,28 @@ class Review extends Component
     {
         $rows = $this->baseQuery()->paginate($this->perPage);
 
-        return view('livewire.admin.requirement-uploads.review', compact('rows'));
+        // Fetch counts per status for filter badges & Kanban columns
+        $counts = [
+            'pending' => RequirementUpload::where('status', 'pending')->count(),
+            'approved' => RequirementUpload::where('status', 'approved')->count(),
+            'rejected' => RequirementUpload::where('status', 'rejected')->count(),
+            'all' => RequirementUpload::count(),
+        ];
+
+        // Kanban datasets if in kanban view mode
+        $kanbanColumns = [];
+        if ($this->viewMode === 'kanban') {
+            $kanbanColumns = [
+                'pending' => $this->baseQuery()->clone()->where('requirement_uploads.status', 'pending')->take(15)->get(),
+                'approved' => $this->baseQuery()->clone()->where('requirement_uploads.status', 'approved')->take(15)->get(),
+                'rejected' => $this->baseQuery()->clone()->where('requirement_uploads.status', 'rejected')->take(15)->get(),
+            ];
+        }
+
+        return view('livewire.admin.requirement-uploads.review', [
+            'rows' => $rows,
+            'counts' => $counts,
+            'kanbanColumns' => $kanbanColumns,
+        ]);
     }
 }

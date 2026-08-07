@@ -192,12 +192,81 @@
             </div>
 
             {{-- Chart.js Alpine Component Wrapper --}}
-            <x-compliance.chart-wrapper
-                type="line"
-                :labels="$trendLabels"
-                :datasets="$trendDatasets"
-                :height="230"
-            />
+            <div wire:ignore x-data="{
+                chart: null,
+                initTrendChart() {
+                    const ChartObj = window.Chart || (typeof Chart !== 'undefined' ? Chart : null);
+                    if (!ChartObj) {
+                        setTimeout(() => this.initTrendChart(), 100);
+                        return;
+                    }
+                    const canvas = this.$refs.canvas;
+                    if (!canvas) return;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) return;
+
+                    if (this.chart) {
+                        try {
+                            this.chart.stop();
+                            this.chart.destroy();
+                        } catch(e) {}
+                        this.chart = null;
+                    }
+
+                    const labels = $wire.trendLabels || [];
+                    const datasets = $wire.trendDatasets || [];
+
+                    try {
+                        this.chart = new ChartObj(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: datasets
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                animation: {
+                                    duration: 150
+                                },
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: {
+                                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                                        titleFont: { family: 'Plus Jakarta Sans', size: 12, weight: '700' },
+                                        bodyFont: { family: 'Plus Jakarta Sans', size: 12 },
+                                        padding: 12,
+                                        cornerRadius: 12
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        grid: { display: false },
+                                        ticks: { font: { family: 'Plus Jakarta Sans', size: 11 } }
+                                    },
+                                    y: {
+                                        grid: { color: 'rgba(226, 232, 240, 0.6)' },
+                                        ticks: { font: { family: 'Plus Jakarta Sans', size: 11 } },
+                                        beginAtZero: true,
+                                        max: 100
+                                    }
+                                }
+                            }
+                        });
+                    } catch(err) {
+                        console.warn('Trend chart render deferred:', err);
+                    }
+                }
+            }"
+            x-init="
+                $nextTick(() => initTrendChart());
+                $watch('$wire.trendMonths', () => {
+                    $nextTick(() => initTrendChart());
+                });
+            "
+            class="relative w-full h-[230px]">
+                <canvas x-ref="canvas"></canvas>
+            </div>
         </div>
     </div>
 

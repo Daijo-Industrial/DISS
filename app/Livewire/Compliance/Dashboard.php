@@ -23,6 +23,10 @@ class Dashboard extends Component
 
     public int $trendMonths = 12;    // 6 or 12
 
+    public array $trendLabels = [];
+
+    public array $trendDatasets = [];
+
     public array $sparklines = []; // [deptId => [p1,p2,...]]
 
     protected function loadSparklinesFor(array $deptIds, int $months = 6): void
@@ -144,13 +148,19 @@ class Dashboard extends Component
             ->map(fn ($g) => (int) round($g->avg('percent')))
             ->toArray();
 
+        // Current month fallback
+        $currentMonthKey = Carbon::now()->startOfMonth()->toDateString();
+        if (! isset($trendRaw[$currentMonthKey])) {
+            $trendRaw[$currentMonthKey] = $avg;
+        }
+
         $labels = [];
         $values = [];
         $cursor = $start->copy();
         for ($i = 0; $i < $monthsCount; $i++) {
             $m = $cursor->toDateString();
             $labels[] = $cursor->format('M Y');
-            $values[] = $trendRaw[$m] ?? 0;
+            $values[] = $trendRaw[$m] ?? $avg;
             $cursor->addMonth();
         }
 
@@ -168,6 +178,9 @@ class Dashboard extends Component
                 'borderWidth' => 2.5,
             ]
         ];
+
+        $this->trendLabels = $labels;
+        $this->trendDatasets = $trendDatasets;
 
         // Bottom/Top 10
         $bottom = DepartmentComplianceSnapshot::with('department')

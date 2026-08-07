@@ -32,7 +32,7 @@ class UpdateDepartmentComplianceSnapshot implements ShouldQueue
      */
     public function handle(ComplianceService $svc): void
     {
-        $dept = Department::find($this->departmentId);
+        $dept = \App\Models\ComplianceDepartment::find($this->departmentId);
         if (! $dept) {
             return;
         }

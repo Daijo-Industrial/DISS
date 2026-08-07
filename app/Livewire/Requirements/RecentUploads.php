@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Requirements;
 
-use App\Infrastructure\Persistence\Eloquent\Models\Department;
+use App\Models\ComplianceDepartment;
 use App\Models\Requirement;
 use App\Models\RequirementUpload;
 use Livewire\Attributes\On;
@@ -10,7 +10,7 @@ use Livewire\Component;
 
 class RecentUploads extends Component
 {
-    public ?Department $department = null;
+    public $department = null;
 
     public ?Requirement $requirement = null;
 
@@ -18,6 +18,7 @@ class RecentUploads extends Component
     public $uploads;
 
     #[On('open-recent-uploads')]
+    #[On('trigger-history-modal')]
     public function open($reqId = null, $deptId = null): void
     {
         // Handle Alpine JS object payload or direct Livewire positional args
@@ -30,7 +31,8 @@ class RecentUploads extends Component
         }
 
         if ($departmentId && $requirementId) {
-            $this->department = Department::findOrFail($departmentId);
+            $this->department = ComplianceDepartment::find($departmentId)
+                ?? \App\Infrastructure\Persistence\Eloquent\Models\Department::findOrFail($departmentId);
             $this->requirement = Requirement::findOrFail($requirementId);
             $this->load();
         }
@@ -40,10 +42,15 @@ class RecentUploads extends Component
 
     public function load(): void
     {
+        if (!$this->requirement || !$this->department) {
+            $this->uploads = collect();
+            return;
+        }
+
         $this->uploads = RequirementUpload::query()
             ->with('uploadedBy')
             ->where('requirement_id', $this->requirement->id)
-            ->where('scope_type', Department::class)
+            ->where('scope_type', $this->department::class)
             ->where('scope_id', $this->department->id)
             ->latest()
             ->take(20)

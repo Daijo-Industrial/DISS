@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Requirements;
 
-use App\Infrastructure\Persistence\Eloquent\Models\Department;
+use App\Models\ComplianceDepartment;
 use App\Models\Requirement;
 use App\Models\RequirementUpload;
 use Illuminate\Support\Facades\Auth;
@@ -15,7 +15,7 @@ class Upload extends Component
 {
     use WithFileUploads;
 
-    public ?Department $department = null; // scope
+    public $department = null; // scope model
 
     public ?int $requirementId = null;
 
@@ -25,9 +25,9 @@ class Upload extends Component
     public $valid_from;
 
     #[On('open-upload')]
+    #[On('trigger-upload-modal')]
     public function open($reqId = null, $deptId = null): void
     {
-        \Illuminate\Support\Facades\Log::info('Upload modal triggered via event.', ['reqId' => $reqId, 'deptId' => $deptId]);
         // Handle Alpine JS object payload or direct Livewire positional args
         if (is_array($reqId)) {
             $this->requirementId = $reqId['reqId'] ?? null;
@@ -43,7 +43,8 @@ class Upload extends Component
         $this->valid_from = now()->toDateString();
 
         if ($departmentId) {
-            $this->department = Department::findOrFail($departmentId);
+            $this->department = ComplianceDepartment::find($departmentId)
+                ?? \App\Infrastructure\Persistence\Eloquent\Models\Department::findOrFail($departmentId);
         }
 
         $this->dispatch('show-upload-modal');
@@ -59,18 +60,21 @@ class Upload extends Component
         }
 
         $disk = 'public';
+        $scopeClass = $this->department ? $this->department::class : ComplianceDepartment::class;
+        $scopeId = $this->department ? $this->department->id : 0;
+
         $folder = sprintf(
             'requirements/%s/%d/%s',
-            str_replace('\\', '_', $this->department::class),
-            $this->department->id,
+            str_replace('\\', '_', $scopeClass),
+            $scopeId,
             $req->code
         );
         $path = $this->file->store($folder, $disk);
 
         $upload = RequirementUpload::create([
             'requirement_id' => $req->id,
-            'scope_type' => $this->department::class,
-            'scope_id' => $this->department->id,
+            'scope_type' => $scopeClass,
+            'scope_id' => $scopeId,
             'path' => $path,
             'original_name' => $this->file->getClientOriginalName(),
             'mime_type' => $this->file->getMimeType(),
@@ -83,7 +87,7 @@ class Upload extends Component
 
         $this->dispatch('hide-upload-modal');
         $this->dispatch('upload:done');
-        $this->dispatch('toast', type: 'success', message: 'File uploaded');
+        $this->dispatch('toast', type: 'success', message: 'File uploaded successfully');
     }
 
     public function render()

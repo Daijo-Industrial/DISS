@@ -1,59 +1,42 @@
 {{-- Requirements Form (Create/Edit) — Livewire component view --}}
-{{-- Tailwind, synced with new.layouts.app --}}
-
 @section('title', $requirement?->exists ? 'Edit Requirement' : 'New Requirement')
 @section('page-title', $requirement?->exists ? 'Edit Requirement' : 'New Requirement')
 @section('page-subtitle', 'Configure compliance definitions, cadences, and allowed file types.')
 
-<div x-data="{ showDeleteModal: false, showCustomMimes: false, showMimePeek: false }" @hide-delete-modal.window="showDeleteModal = false">
+<div x-data="{ showDeleteModal: false, showCustomMimes: false, showMimePeek: false }" @hide-delete-modal.window="showDeleteModal = false" class="space-y-6">
 
     {{-- Header / Breadcrumbs --}}
-    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-4">
         <nav class="flex" aria-label="Breadcrumb">
-            <ol class="inline-flex items-center space-x-1 md:space-x-3">
-                <li class="inline-flex items-center">
-                    <a href="{{ route('requirements.index') }}"
-                        class="inline-flex items-center text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors">
+            <ol class="inline-flex items-center space-x-1 md:space-x-2 text-xs font-bold">
+                <li>
+                    <a href="{{ route('requirements.index') }}" class="text-slate-500 hover:text-indigo-600 transition-colors">
                         Requirements
                     </a>
                 </li>
-                <li aria-current="page">
-                    <div class="flex items-center">
-                        <x-bx-chevron-right class="text-slate-400 w-5 h-5" />
-                        <span
-                            class="ml-1 text-sm font-medium text-slate-800 md:ml-2">{{ $requirement?->exists ? 'Edit' : 'Create' }}</span>
+                <li>
+                    <div class="flex items-center text-slate-400">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+                        <span class="ml-1 text-slate-900">{{ $requirement?->exists ? 'Edit' : 'Create' }}</span>
                     </div>
                 </li>
             </ol>
         </nav>
 
         @if ($requirement?->exists)
-            <button @click="showDeleteModal = true"
-                class="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 px-4 py-2 text-sm font-semibold transition-all">
-                <x-bx-trash class="w-4 h-4" /> Delete
+            <button type="button" @click="showDeleteModal = true"
+                class="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 px-4 py-2 text-xs font-bold transition-all active:scale-95">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                Delete Requirement
             </button>
         @endif
     </div>
 
     {{-- Alerts --}}
     @if (session('success'))
-        <div class="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-100 flex items-start gap-3">
-            <x-bx-check-circle class="text-emerald-500 w-5 h-5 mt-0.5" />
-            <p class="text-sm font-medium text-emerald-800">{{ session('success') }}</p>
-        </div>
-    @endif
-
-    @if ($errors->any())
-        <div class="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-100 flex items-start gap-3">
-            <x-bx-x-circle class="text-rose-500 w-5 h-5 mt-0.5" />
-            <div>
-                <p class="text-sm font-bold text-rose-800">Please fix the following issues:</p>
-                <ul class="mt-1 list-disc list-inside text-xs font-medium text-rose-700">
-                    @foreach ($errors->keys() as $field)
-                        <li>{{ Str::headline(Str::afterLast($field, '.')) }} has an issue.</li>
-                    @endforeach
-                </ul>
-            </div>
+        <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center gap-3">
+            <svg class="h-5 w-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <p class="text-xs font-bold text-emerald-900">{{ session('success') }}</p>
         </div>
     @endif
 
@@ -62,13 +45,13 @@
 
         {{-- Left: Form --}}
         <div class="flex-1 w-full lg:w-2/3 space-y-6">
-            <div class="glass-card p-6">
-                <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
-                    <h2 class="text-lg font-bold text-slate-800">Requirement
-                        {{ $requirement?->exists ? 'Editor' : 'Creator' }}</h2>
+            <div class="rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200/80 p-6 shadow-sm">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+                    <h2 class="text-base font-extrabold text-slate-900">
+                        Requirement {{ $requirement?->exists ? 'Editor' : 'Definition' }}
+                    </h2>
                     @if ($requirement?->exists)
-                        <span
-                            class="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500 border border-slate-200">
+                        <span class="inline-flex items-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-mono font-bold text-slate-600">
                             #{{ $requirement->id }}
                         </span>
                     @endif
@@ -77,444 +60,163 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {{-- Code --}}
                     <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Code <span
-                                class="text-rose-500">*</span></label>
-                        <div
-                            class="flex rounded-xl overflow-hidden border {{ $errors->has('code') ? 'border-rose-300' : 'border-slate-200' }} focus-within:ring-2 focus-within:ring-indigo-400 focus-within:border-indigo-400">
-                            <span class="flex items-center px-3 bg-slate-50 border-r border-slate-200 text-slate-400">
-                                <x-bx-tag class="w-5 h-5" />
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Requirement Code <span class="text-rose-500">*</span></label>
+                        <div class="flex rounded-xl overflow-hidden border {{ $errors->has('code') ? 'border-rose-300' : 'border-slate-200' }} focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all">
+                            <span class="flex items-center px-3 bg-slate-50 border-r border-slate-200 text-slate-400 font-mono text-xs font-bold">
+                                CODE
                             </span>
                             <input type="text" wire:model.live.debounce.400ms="code"
-                                wire:keydown.debounce.400ms="checkCodeUnique" placeholder="ORG_STRUCTURE"
-                                class="w-full py-2 px-3 text-sm outline-none">
-                            <button type="button"
-                                class="flex items-center px-3 bg-slate-50 border-l border-slate-200 text-slate-500 hover:text-indigo-600 hover:bg-white transition-colors"
-                                onclick="navigator.clipboard.writeText('{{ $code }}')" title="Copy Code">
-                                <x-bx-copy class="" />
-                            </button>
+                                wire:keydown.debounce.400ms="checkCodeUnique" placeholder="ISO_9001_CERT"
+                                class="w-full py-2.5 px-3 text-xs font-bold font-mono text-slate-900 bg-white outline-none">
                         </div>
-                        <p class="text-xs text-slate-400 mt-1.5">Uppercase, digits, /, _ or -.</p>
+                        <p class="text-[10px] text-slate-400 mt-1">Uppercase letters, digits, and underscores.</p>
 
                         @if (!is_null($code_is_unique))
-                            <p
-                                class="text-xs font-semibold mt-1 flex items-center gap-1 {{ $code_is_unique ? 'text-emerald-500' : 'text-rose-500' }}">
-                                <x-icon :name="$code_is_unique ? 'bx-check-circle' : 'bx-x-circle'" />
-                                {{ $code_is_unique ? 'Available' : 'Already used' }}
+                            <p class="text-xs font-bold mt-1 flex items-center gap-1 {{ $code_is_unique ? 'text-emerald-600' : 'text-rose-600' }}">
+                                {{ $code_is_unique ? '✓ Code available' : '✗ Code already taken' }}
                             </p>
                         @endif
                         @error('code')
-                            <p class="text-rose-500 text-xs mt-1">{{ $message }}</p>
+                            <p class="text-rose-600 text-xs mt-1 font-bold">{{ $message }}</p>
                         @enderror
                     </div>
 
                     {{-- Name --}}
                     <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Name <span
-                                class="text-rose-500">*</span></label>
-                        <input type="text" wire:model.live.debounce.300ms="name" placeholder="Organization Structure"
-                            class="w-full rounded-xl border {{ $errors->has('name') ? 'border-rose-300 focus:ring-rose-400' : 'border-slate-200 focus:ring-indigo-400' }} text-sm py-2 px-3 focus:ring-2 outline-none transition-all">
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Requirement Name <span class="text-rose-500">*</span></label>
+                        <input type="text" wire:model.live.debounce.300ms="name" placeholder="ISO 9001 Audit Certificate"
+                            class="w-full rounded-xl border {{ $errors->has('name') ? 'border-rose-300 focus:ring-rose-400' : 'border-slate-200 focus:ring-indigo-500/20 focus:border-indigo-500' }} text-xs font-bold text-slate-900 py-2.5 px-3 outline-none transition-all">
                         @error('name')
-                            <p class="text-rose-500 text-xs mt-1">{{ $message }}</p>
+                            <p class="text-rose-600 text-xs mt-1 font-bold">{{ $message }}</p>
                         @enderror
                     </div>
 
                     {{-- Description --}}
                     <div class="md:col-span-2">
-                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Description</label>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Description & Scope</label>
                         <textarea rows="3" wire:model.live.debounce.300ms="description"
-                            placeholder="Explain what files satisfy this requirement, who maintains them, renewal cadence, etc."
-                            class="w-full rounded-xl border {{ $errors->has('description') ? 'border-rose-300 focus:ring-rose-400' : 'border-slate-200 focus:ring-indigo-400' }} text-sm py-2 px-3 focus:ring-2 outline-none transition-all"></textarea>
+                            placeholder="Detailed explanation of required files, compliance scope, and verification guidelines..."
+                            class="w-full rounded-xl border {{ $errors->has('description') ? 'border-rose-300' : 'border-slate-200' }} text-xs font-medium text-slate-800 placeholder-slate-400 py-2.5 px-3 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"></textarea>
                         @error('description')
-                            <p class="text-rose-500 text-xs mt-1">{{ $message }}</p>
+                            <p class="text-rose-600 text-xs mt-1 font-bold">{{ $message }}</p>
                         @enderror
                     </div>
                 </div>
 
-                {{-- Categories & Presets --}}
+                {{-- Preset Mime Types --}}
                 <div class="mt-8 border-t border-slate-100 pt-6">
                     <div class="flex items-center justify-between mb-3">
-                        <label class="block text-sm font-semibold text-slate-700">Allowed file types</label>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Allowed File Format Presets</label>
                         <div class="flex items-center gap-2">
-                            <button type="button" wire:click="selectAllPresets"
-                                class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">Select
-                                all</button>
+                            <button type="button" wire:click="selectAllPresets" class="text-xs font-bold text-indigo-600 hover:underline">Select All</button>
                             <span class="text-slate-300">|</span>
-                            <button type="button" wire:click="clearPresets"
-                                class="text-xs font-semibold text-slate-500 hover:text-slate-700 hover:underline">Clear</button>
+                            <button type="button" wire:click="clearPresets" class="text-xs font-bold text-slate-400 hover:text-slate-700">Clear</button>
                         </div>
                     </div>
 
-                    <div class="flex flex-wrap gap-2 mb-4">
-                        @foreach ($this->selected_preset_meta as $p)
-                            <span
-                                class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 border border-slate-200">
-                                {{ $p['label'] }}
-                                <button type="button" wire:click="removePreset('{{ $p['key'] }}')"
-                                    class="text-slate-400 hover:text-rose-500 transition-colors ml-1 leading-none rounded-full">
-                                    <x-bx-x class="w-4 h-4" />
-                                </button>
-                            </span>
-                        @endforeach
-                    </div>
-
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        @php
-                            $presets = $this->mimePresets();
-                            $icons = [
-                                'pdf' => ['icon' => 'bxs-file-pdf', 'color' => 'text-rose-500'],
-                                'images' => ['icon' => 'bx-image', 'color' => 'text-emerald-500'],
-                                'word' => ['icon' => 'bx-file', 'color' => 'text-blue-500'],
-                                'excel' => ['icon' => 'bx-table', 'color' => 'text-emerald-600'],
-                                'ppt' => ['icon' => 'bx-slideshow', 'color' => 'text-orange-500'],
-                                'text' => ['icon' => 'bx-text', 'color' => 'text-slate-500'],
-                                'zip' => ['icon' => 'bx-archive', 'color' => 'text-amber-500'],
-                                'visio' => ['icon' => 'bx-network-chart', 'color' => 'text-sky-500'],
-                                'cad' => ['icon' => 'bx-cube', 'color' => 'text-indigo-500'],
-                            ];
-                        @endphp
+                        @php $presets = $this->mimePresets(); @endphp
                         @foreach ($presets as $key => $p)
                             @php $isActive = in_array($key, $selected_presets); @endphp
-                            <label
-                                class="relative flex items-start gap-3 p-3 rounded-xl border {{ $isActive ? 'border-indigo-500 bg-indigo-50/30 shadow-sm shadow-indigo-100/50' : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300' }} cursor-pointer transition-all group">
-                                <div class="mt-0.5 relative flex items-center justify-center">
-                                    <input type="checkbox" wire:model="selected_presets"
-                                        wire:click.prevent="togglePreset('{{ $key }}')"
-                                        value="{{ $key }}" class="sr-only">
-                                    <div
-                                        class="w-4 h-4 rounded border {{ $isActive ? 'bg-indigo-500 border-indigo-500' : 'bg-white border-slate-300' }} transition-colors flex items-center justify-center">
-                                        @if ($isActive)
-                                            <x-bx-check class="text-white w-3 h-3" />
-                                        @endif
-                                    </div>
+                            <label class="flex items-start gap-3 p-3 rounded-xl border {{ $isActive ? 'border-indigo-500 bg-indigo-50/40 shadow-2xs' : 'border-slate-200/90 bg-white hover:bg-slate-50' }} cursor-pointer transition-all">
+                                <input type="checkbox" wire:model="selected_presets" wire:click.prevent="togglePreset('{{ $key }}')" value="{{ $key }}" class="sr-only">
+                                <div class="w-4 h-4 rounded border mt-0.5 {{ $isActive ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-300' }} flex items-center justify-center shrink-0 transition-colors">
+                                    @if ($isActive)
+                                        <svg class="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                    @endif
                                 </div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-center gap-1.5 mb-1">
-                                        <x-icon :name="$icons[$key]['icon'] ?? 'bx-file'" class="w-4 h-4 {{ $icons[$key]['color'] ?? 'text-slate-500' }}" />
-                                        <span
-                                            class="text-sm font-semibold {{ $isActive ? 'text-indigo-900' : 'text-slate-700' }}">{{ $p['label'] }}</span>
-                                    </div>
-                                    <div class="text-[10px] text-slate-400 leading-tight">Opens with:
-                                        {{ $p['apps'] }}</div>
+                                <div>
+                                    <span class="text-xs font-extrabold {{ $isActive ? 'text-indigo-900' : 'text-slate-800' }}">{{ $p['label'] }}</span>
+                                    <p class="text-[10px] text-slate-400 leading-tight mt-0.5">{{ $p['apps'] }}</p>
                                 </div>
                             </label>
                         @endforeach
                     </div>
-
-                    {{-- Advanced specific types --}}
-                    <div class="mt-4">
-                        <button type="button" @click="showCustomMimes = !showCustomMimes"
-                            class="text-xs font-semibold text-slate-500 hover:text-indigo-600 flex items-center gap-1 transition-colors">
-                            Advanced: add specific custom types
-                            <x-bx-chevron-up class="w-4 h-4 inline" x-show="showCustomMimes" x-cloak />
-                            <x-bx-chevron-down class="w-4 h-4 inline" x-show="!showCustomMimes" x-cloak />
-                        </button>
-                        <div x-show="showCustomMimes" class="mt-3 p-4 rounded-xl bg-slate-50 border border-slate-200"
-                            x-collapse>
-                            <div class="flex flex-wrap gap-2 mb-3">
-                                @forelse($custom_mimes as $i => $m)
-                                    <span
-                                        class="inline-flex items-center gap-1 rounded bg-white px-2 py-1 text-xs font-mono font-medium text-slate-600 border border-slate-200 shadow-sm">
-                                        {{ $m }}
-                                        <button type="button" wire:click="removeCustom({{ $i }})"
-                                            class="text-slate-400 hover:text-rose-500 transition-colors ml-1">
-                                            <x-bx-x class="" />
-                                        </button>
-                                    </span>
-                                @empty
-                                    <span class="text-[11px] text-slate-400 italic">No custom types added.</span>
-                                @endforelse
-                            </div>
-                            <div
-                                class="flex rounded-lg overflow-hidden border border-slate-300 focus-within:ring-2 focus-within:ring-indigo-400 focus-within:border-indigo-400">
-                                <span
-                                    class="flex items-center px-3 bg-slate-100 border-r border-slate-200 text-slate-500">
-                                    <x-bx-plus class="" />
-                                </span>
-                                <input type="text" wire:model.defer="custom_input"
-                                    wire:keydown.enter.prevent="addCustom"
-                                    placeholder="e.g. application/json or pdf/jpg/xlsx"
-                                    class="w-full py-1.5 px-3 text-sm outline-none bg-white">
-                                <button type="button" wire:click="addCustom"
-                                    class="px-4 bg-slate-100 hover:bg-slate-200 border-l border-slate-200 text-sm font-semibold text-slate-700 transition-colors">
-                                    Add
-                                </button>
-                            </div>
-                            <p class="text-[10px] text-slate-400 mt-2">Tip: you can type short forms like
-                                <code>pdf</code>, <code>jpg</code>, <code>xlsx</code> or full MIME types.</p>
-                        </div>
-                    </div>
-                    @error('allowed_mimetypes')
-                        <p class="text-rose-500 text-xs mt-2">{{ $message }}</p>
-                    @enderror
                 </div>
 
                 {{-- Numbers & Cadence --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8 border-t border-slate-100 pt-6">
                     <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Min files <span
-                                class="text-rose-500">*</span></label>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Min Files Required <span class="text-rose-500">*</span></label>
                         <input type="number" min="1" max="20" wire:model.live="min_count"
-                            class="w-full rounded-xl border {{ $errors->has('min_count') ? 'border-rose-300' : 'border-slate-200' }} text-sm py-2 px-3 focus:ring-2 focus:ring-indigo-400 outline-none">
-                        @error('min_count')
-                            <p class="text-rose-500 text-xs mt-1">{{ $message }}</p>
-                        @enderror
+                            class="w-full rounded-xl border border-slate-200 text-xs font-bold text-slate-900 py-2.5 px-3 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Validity (days)</label>
-                        <input type="number" min="1" max="3650" wire:model.live="validity_days"
-                            placeholder="e.g. 365"
-                            class="w-full rounded-xl border {{ $errors->has('validity_days') ? 'border-rose-300' : 'border-slate-200' }} text-sm py-2 px-3 focus:ring-2 focus:ring-indigo-400 outline-none">
-                        <p class="text-[10px] text-slate-400 mt-1">Leave empty for no expiry.</p>
-                        @error('validity_days')
-                            <p class="text-rose-500 text-xs mt-1">{{ $message }}</p>
-                        @enderror
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Validity Period (Days)</label>
+                        <input type="number" min="1" max="3650" wire:model.live="validity_days" placeholder="365"
+                            class="w-full rounded-xl border border-slate-200 text-xs font-bold text-slate-900 py-2.5 px-3 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none">
                     </div>
 
                     <div class="lg:col-span-2">
-                        <label class="block text-sm font-semibold text-slate-700 mb-1.5">Frequency</label>
-                        <div class="flex bg-slate-100 p-1 rounded-xl border border-slate-200 w-full">
-                            @foreach (['once' => 'Once', 'yearly' => 'Yearly', 'quarterly' => 'Quarterly', 'monthly' => 'Monthly'] as $val => $label)
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Renewal Frequency</label>
+                        <div class="flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/70">
+                            @foreach (['once' => 'One-time', 'yearly' => 'Yearly', 'quarterly' => 'Quarterly', 'monthly' => 'Monthly'] as $val => $label)
                                 <button type="button" wire:click="$set('frequency', '{{ $val }}')"
-                                    class="flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all {{ $frequency === $val ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/50' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-200/50' }}">
+                                    class="flex-1 rounded-lg py-1.5 text-xs font-bold transition-all {{ $frequency === $val ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-600 hover:text-slate-900' }}">
                                     {{ $label }}
                                 </button>
                             @endforeach
                         </div>
-                        @error('frequency')
-                            <p class="text-rose-500 text-xs mt-1">{{ $message }}</p>
-                        @enderror
                     </div>
 
                     <div class="col-span-full">
-                        <label
-                            class="flex items-start gap-4 p-4 rounded-xl border border-amber-200 bg-amber-50 cursor-pointer group hover:bg-amber-100/50 transition-colors">
-                            <div class="relative flex items-center mt-0.5">
-                                <input type="checkbox" wire:model="requires_approval" class="sr-only peer">
-                                <div
-                                    class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500">
-                                </div>
-                            </div>
-                            <div class="flex-1">
-                                <p class="text-sm font-bold text-amber-900">Requires admin approval to count</p>
-                                <p class="text-[11px] text-amber-700 leading-relaxed mt-1">Uploaded documents strictly
-                                    require manual review by an admin to be marked 'OK' and count towards compliance
-                                    score.</p>
+                        <label class="flex items-start gap-3.5 p-4 rounded-2xl border border-amber-200 bg-amber-50/60 cursor-pointer">
+                            <input type="checkbox" wire:model="requires_approval" class="rounded border-amber-300 text-amber-600 focus:ring-amber-500 w-4 h-4 mt-0.5">
+                            <div>
+                                <p class="text-xs font-extrabold text-amber-900">Requires Admin Approval</p>
+                                <p class="text-[11px] text-amber-700 mt-0.5">Uploaded files must be manually verified by a compliance admin before counting towards department score.</p>
                             </div>
                         </label>
                     </div>
                 </div>
 
-                {{-- Action buttons --}}
+                {{-- Save CTA Button --}}
                 <div class="mt-8 flex items-center justify-end gap-3 pt-6 border-t border-slate-100">
-                    <a href="{{ route('requirements.index') }}"
-                        class="px-5 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
+                    <a href="{{ route('requirements.index') }}" class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800">
                         Cancel
                     </a>
-                    <button wire:click="save" wire:loading.attr="disabled"
-                        class="px-6 py-2 rounded-xl text-sm font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 shadow-sm transition-all flex items-center gap-1.5">
-                        <x-bx-check class="w-5 h-5" />
-                        <span wire:loading.remove wire:target="save">Save Requirement</span>
-                        <span wire:loading wire:target="save">Saving…</span>
+                    <button type="button" wire:click="save" wire:loading.attr="disabled"
+                        class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm shadow-indigo-200 transition-all active:scale-95">
+                        Save Requirement
                     </button>
                 </div>
             </div>
         </div>
 
-        {{-- Right: Live Summary --}}
-        <div class="w-full lg:w-1/3 flex flex-col gap-5">
-            <div class="glass-card p-6 sticky top-6">
-                <p
-                    class="text-xs font-bold text-slate-400 uppercase tracking-wide border-b border-slate-100 pb-2 mb-4">
-                    Live Summary</p>
+        {{-- Right: Live Summary Panel --}}
+        <div class="w-full lg:w-1/3 space-y-5">
+            <div class="rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200/80 p-5 shadow-sm sticky top-6 space-y-4">
+                <h3 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-3">Live Policy Summary</h3>
 
-                <div class="mb-5">
-                    <p class="text-xs font-semibold text-indigo-500 uppercase tracking-wide">Requirement Name</p>
-                    <p class="text-base font-bold text-slate-800 mt-1 leading-tight">{{ $name ?: '—' }}</p>
-                    <p class="text-xs text-slate-400 font-mono mt-0.5">{{ $code ?: '—' }}</p>
+                <div>
+                    <span class="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Requirement</span>
+                    <p class="text-sm font-extrabold text-slate-900 leading-tight">{{ $name ?: 'Requirement Name' }}</p>
+                    <span class="font-mono text-xs font-bold text-slate-500">{{ $code ?: 'CODE' }}</span>
                 </div>
 
-                <div class="mb-5">
-                    <p class="text-xs font-semibold text-indigo-500 uppercase tracking-wide mb-2">Allowed file types
-                    </p>
-                    <div class="flex flex-wrap gap-1.5">
-                        @forelse($this->selected_preset_meta as $p)
-                            <span
-                                class="inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 border border-slate-200">
-                                {{ $p['label'] }}
-                            </span>
-                        @empty
-                            <span class="text-[11px] text-slate-400 italic">Any format allowed</span>
-                        @endforelse
-                    </div>
-                    @if (count($this->selected_preset_meta))
-                        <p class="text-[10px] text-slate-400 mt-2 leading-tight">
-                            Opens with:
-                            {{ collect($this->selected_preset_meta)->pluck('apps')->unique()->implode(', ') }}
-                        </p>
-                    @endif
+                <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-100">
+                    <span class="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Policy Statement</span>
+                    <p class="text-xs font-bold text-indigo-900 mt-1 leading-snug">{{ $this->policy_line }}</p>
                 </div>
 
-                <div class="mb-5 rounded-lg bg-indigo-50 border border-indigo-100 p-3">
-                    <p class="text-[10px] font-bold text-indigo-500 uppercase tracking-wide mb-1">What Counts</p>
-                    <p class="text-sm font-semibold text-indigo-900 leading-snug">{{ $this->policy_line }}</p>
-                </div>
-
-                <div class="space-y-3">
-                    <div class="flex items-center justify-between py-2 border-b border-slate-50">
-                        <span class="text-sm font-medium text-slate-500">Minimum files</span>
-                        <span
-                            class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold bg-indigo-100 text-indigo-700">
-                            {{ $min_count ?: '—' }}
-                        </span>
+                <div class="space-y-2 text-xs">
+                    <div class="flex justify-between py-1.5 border-b border-slate-100">
+                        <span class="text-slate-500 font-bold">Min Files</span>
+                        <span class="font-extrabold text-slate-900">{{ $min_count }}</span>
                     </div>
-                    <div class="flex items-center justify-between py-2 border-b border-slate-50">
-                        <span class="text-sm font-medium text-slate-500">Validity</span>
-                        <span
-                            class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                            {{ $validity_days ? $validity_days . ' days' : 'No expiry' }}
-                        </span>
+                    <div class="flex justify-between py-1.5 border-b border-slate-100">
+                        <span class="text-slate-500 font-bold">Validity</span>
+                        <span class="font-extrabold text-slate-900">{{ $validity_days ? $validity_days . ' days' : 'No expiry' }}</span>
                     </div>
-                    <div class="flex items-center justify-between py-2 border-b border-slate-50">
-                        <span class="text-sm font-medium text-slate-500">Frequency</span>
-                        <span
-                            class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200">
-                            {{ $this->frequencyLabel() }}
-                        </span>
-                    </div>
-                    <div class="flex items-center justify-between py-2 border-b border-slate-50">
-                        <span class="text-sm font-medium text-slate-500">Approval</span>
-                        @if ($requires_approval)
-                            <span
-                                class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                                <x-bx-shield-alt-2 class="" /> Required
-                            </span>
-                        @else
-                            <span
-                                class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                Not required
-                            </span>
-                        @endif
-                    </div>
-                </div>
-
-                {{-- Technical Peek --}}
-                <div class="mt-4 pt-4 border-t border-slate-100 text-center">
-                    <button type="button" @click="showMimePeek = !showMimePeek"
-                        class="text-[11px] font-semibold text-slate-400 hover:text-indigo-600 transition-colors">
-                        Show technical details ({{ count($allowed_mimetypes) }}
-                        type{{ count($allowed_mimetypes) == 1 ? '' : 's' }})
-                    </button>
-                    <div x-show="showMimePeek" class="mt-3 text-left" x-collapse>
-                        <div class="flex flex-wrap gap-1">
-                            @forelse($allowed_mimetypes as $m)
-                                <span
-                                    class="inline-flex rounded text-[10px] font-mono font-medium bg-slate-50 text-slate-500 px-1.5 py-0.5 border border-slate-200 truncate max-w-full"
-                                    title="{{ $m }}">
-                                    {{ $m }}
-                                </span>
-                            @empty
-                                <span class="text-[10px] text-slate-400 italic">No MIME types</span>
-                            @endforelse
-                        </div>
+                    <div class="flex justify-between py-1.5 border-b border-slate-100">
+                        <span class="text-slate-500 font-bold">Frequency</span>
+                        <span class="font-extrabold text-slate-900">{{ $this->frequencyLabel() }}</span>
                     </div>
                 </div>
             </div>
         </div>
+
     </div>
 
-    {{-- Alpine Delete Modal Slide-up/Overlay --}}
-    @if ($requirement?->exists)
-        <template x-teleport="body">
-            <div x-show="showDeleteModal" class="relative z-[100]" x-cloak>
-                <div x-show="showDeleteModal" x-transition:enter="ease-out duration-300"
-                    x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-                    x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100"
-                    x-transition:leave-end="opacity-0"
-                    class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity"
-                    @click="showDeleteModal = false"></div>
-
-                <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
-                    <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-                        <div x-show="showDeleteModal" x-transition:enter="ease-out duration-300"
-                            x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                            x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-                            x-transition:leave="ease-in duration-200"
-                            x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-                            x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                            class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-md">
-
-                            <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4 border-b-4 border-rose-500">
-                                <div class="sm:flex sm:items-start">
-                                    <div
-                                        class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-rose-100 sm:mx-0 sm:h-10 sm:w-10">
-                                        <x-bx-error class="w-5 h-5 text-rose-600" />
-                                    </div>
-                                    <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-                                        <h3 class="text-lg font-bold leading-6 text-slate-900">Delete Requirement</h3>
-                                        <div class="mt-2 text-sm text-slate-600 space-y-3">
-                                            <p>You’re about to permanently delete
-                                                <strong>{{ $requirement->name }}</strong>
-                                                (<code>{{ $requirement->code }}</code>).</p>
-
-                                            <div class="rounded-xl border border-rose-200 bg-rose-50 p-4">
-                                                <div class="flex items-center justify-between mb-2">
-                                                    <span class="font-semibold text-rose-900">Assignments</span>
-                                                    <span
-                                                        class="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-white text-rose-700 font-bold border border-rose-200">{{ $usage['assignments'] }}</span>
-                                                </div>
-                                                <div class="flex items-center justify-between mb-3">
-                                                    <span class="font-semibold text-rose-900">Uploads</span>
-                                                    <span
-                                                        class="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-white text-rose-700 font-bold border border-rose-200">{{ $usage['uploads'] }}</span>
-                                                </div>
-                                                @if ($usage['assignments'] || $usage['uploads'])
-                                                    <p
-                                                        class="text-xs font-bold text-rose-700 bg-rose-100/50 p-2 rounded border border-rose-200/60 leading-tight">
-                                                        You must detach all assignments and remove uploads before
-                                                        deletion can proceed.
-                                                    </p>
-                                                @else
-                                                    <p
-                                                        class="text-xs font-medium text-emerald-700 bg-emerald-50 p-2 rounded border border-emerald-200 leading-tight">
-                                                        No assignments or uploads detected. Safe to delete.
-                                                    </p>
-                                                @endif
-                                            </div>
-
-                                            <div>
-                                                <label class="block text-xs font-bold text-slate-700 mb-1">Type the
-                                                    code to confirm</label>
-                                                <input type="text" wire:model.defer="delete_confirm_input"
-                                                    placeholder="{{ $requirement->code }}"
-                                                    class="w-full rounded-lg border-slate-300 shadow-sm focus:border-rose-500 focus:ring-rose-500 sm:text-sm outline-none px-3 py-2 border font-mono">
-                                                @error('delete_confirm_input')
-                                                    <p class="text-rose-500 text-xs mt-1 font-medium">{{ $message }}
-                                                    </p>
-                                                @enderror
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="bg-slate-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-                                <button type="button" wire:click="deleteRequirement" @disabled($usage['assignments'] || $usage['uploads'])
-                                    class="inline-flex w-full justify-center rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed sm:ml-3 sm:w-auto transition-colors">
-                                    @if ($usage['assignments'] || $usage['uploads'])
-                                        Resolve usage first
-                                    @else
-                                        Delete Permanently
-                                    @endif
-                                </button>
-                                <button type="button" @click="showDeleteModal = false"
-                                    class="mt-3 inline-flex w-full justify-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 sm:mt-0 sm:w-auto transition-colors">
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </template>
-    @endif
 </div>

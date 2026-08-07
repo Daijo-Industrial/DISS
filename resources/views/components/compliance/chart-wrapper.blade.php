@@ -6,22 +6,34 @@
     'options' => null,
 ])
 
-@php
-    $chartId = 'chart-' . Str::random(8);
-@endphp
-
 <div
+    wire:ignore
     x-data="{
         chart: null,
-        initChart() {
-            if (!window.Chart) return;
-            if (this.chart) {
-                this.chart.destroy();
+        renderChart() {
+            const ChartObj = window.Chart || (typeof Chart !== 'undefined' ? Chart : null);
+            if (!ChartObj) {
+                setTimeout(() => this.renderChart(), 100);
+                return;
             }
-            const ctx = this.$refs.canvas.getContext('2d');
+            const canvas = this.$refs.canvas;
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            if (this.chart) {
+                try {
+                    this.chart.stop();
+                    this.chart.destroy();
+                } catch (e) {}
+                this.chart = null;
+            }
+
             const defaultOptions = {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: { duration: 150 },
                 plugins: {
                     legend: {
                         display: {{ $type === 'doughnut' ? 'true' : 'false' }},
@@ -55,27 +67,26 @@
                 }' }}
             };
 
-            const customOptions = @json($options ?? []);
+            const customOptions = @js($options ?? []);
             const mergedOptions = Object.assign({}, defaultOptions, customOptions);
 
-            this.chart = new window.Chart(ctx, {
-                type: '{{ $type }}',
-                data: {
-                    labels: @json($labels),
-                    datasets: @json($datasets)
-                },
-                options: mergedOptions
-            });
-        },
-        updateChart(newLabels, newDatasets) {
-            if (!this.chart) return;
-            this.chart.data.labels = newLabels;
-            this.chart.data.datasets = newDatasets;
-            this.chart.update('active');
+            try {
+                this.chart = new ChartObj(ctx, {
+                    type: '{{ $type }}',
+                    data: {
+                        labels: @js($labels),
+                        datasets: @js($datasets)
+                    },
+                    options: mergedOptions
+                });
+            } catch (err) {
+                console.warn('Chart render deferred:', err);
+            }
         }
     }"
-    x-init="$nextTick(() => initChart())"
-    x-effect="if (chart) updateChart(@json($labels), @json($datasets))"
+    x-init="
+        $nextTick(() => renderChart());
+    "
     {{ $attributes->merge(['class' => 'relative w-full']) }}
     style="height: {{ $height }}px;"
 >
