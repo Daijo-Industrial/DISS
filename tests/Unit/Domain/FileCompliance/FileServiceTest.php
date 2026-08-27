@@ -122,3 +122,36 @@ test('it stores file metadata correctly', function () {
         'size' => 512000, // 500KB in bytes
     ]);
 });
+
+test('it gracefully skips invalid or non-file items without throwing ValueError', function () {
+    $validFile = UploadedFile::fake()->create('valid.pdf', 100);
+    $invalidItems = [
+        null,
+        'not_a_file_string',
+        new stdClass(),
+        $validFile,
+    ];
+
+    $count = $this->service->uploadFiles($invalidItems, 'DOC-SAFEGUARD');
+
+    expect($count)->toBe(1);
+    $this->assertDatabaseCount('files', 1);
+    $this->assertDatabaseHas('files', [
+        'doc_id' => 'DOC-SAFEGUARD',
+    ]);
+});
+
+test('it gracefully skips corrupt or failed upload files', function () {
+    $failedUpload = new UploadedFile(
+        path: '',
+        originalName: 'corrupt.pdf',
+        mimeType: 'application/pdf',
+        error: UPLOAD_ERR_INI_SIZE,
+        test: true
+    );
+
+    $count = $this->service->uploadFiles([$failedUpload], 'DOC-CORRUPT');
+
+    expect($count)->toBe(0);
+    $this->assertDatabaseCount('files', 0);
+});

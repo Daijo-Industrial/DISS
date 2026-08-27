@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Domain\FileCompliance\Services;
 
 use App\Models\File;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\File\File as SymfonyFile;
 
 final class FileService
 {
@@ -18,33 +21,53 @@ final class FileService
         $uploadedFileNames = [];
 
         foreach ($files as $file) {
-            $fileName = time() . '-' . $file->getClientOriginalName();
-            $fileSize = $file->getSize();
+            if (! $this->isValidFile($file)) {
+                Log::warning('FileService: Invalid or unreadable file skipped during upload.', [
+                    'doc_num' => $docNum,
+                    'file_info' => $this->getFileDebugInfo($file),
+                ]);
+                continue;
+            }
 
-            $file->storeAs('public/files', $fileName);
+            $originalName = $this->getSafeOriginalName($file);
+            $fileName = time() . '-' . $originalName;
+            $fileSize = $this->getFileSize($file);
+            $mimeType = $this->getFileMimeType($file);
+
+            $storedPath = $file->storeAs('public/files', $fileName);
+            if (! $storedPath) {
+                Log::error('FileService: Failed to store file to disk.', [
+                    'doc_num' => $docNum,
+                    'file_name' => $fileName,
+                ]);
+                continue;
+            }
 
             $fileModel = File::create([
                 'doc_id' => $docNum,
                 'name' => $fileName,
-                'mime_type' => $file->getClientMimeType(),
+                'mime_type' => $mimeType,
                 'size' => $fileSize,
             ]);
 
-            // Explicitly log creation if not handled by trait auto-logging (or to add custom message)
-            // Since trait is there, it might log 'created' automatically.
-            // But usually we want more info or just rely on standard 'created'.
-            // If we want "uploaded file X", we can do:
-            activity()
-                ->performedOn($fileModel)
-                ->causedBy(auth()->user())
-                ->log('uploaded file: ' . $file->getClientOriginalName());
+            // Explicitly log creation if activity logger is available
+            if (function_exists('activity')) {
+                try {
+                    $activity = activity()->performedOn($fileModel);
+                    if ($user = auth()->user()) {
+                        $activity->causedBy($user);
+                    }
+                    $activity->log('uploaded file: ' . $originalName);
+                } catch (\Throwable $e) {
+                    Log::warning('FileService: Failed to write activity log.', [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
 
-            $uploadedFileNames[] = $file->getClientOriginalName();
+            $uploadedFileNames[] = $originalName;
             $uploadedCount++;
         }
-
-        // We removed the PR-level aggregation log because now each file has its own log
-        // which will be aggregated by getCombinedActivitiesAttribute on the PR model.
 
         return $uploadedCount;
     }
@@ -58,17 +81,34 @@ final class FileService
         $uploadedCount = 0;
 
         foreach ($files as $file) {
-            $fileName = time() . '-' . $file->getClientOriginalName();
-            $fileSize = $file->getSize();
+            if (! $this->isValidFile($file)) {
+                Log::warning('FileService: Invalid or unreadable file skipped during evaluation upload.', [
+                    'prefix' => $prefix,
+                    'file_info' => $this->getFileDebugInfo($file),
+                ]);
+                continue;
+            }
 
-            $file->storeAs('public/files', $fileName);
+            $originalName = $this->getSafeOriginalName($file);
+            $fileName = time() . '-' . $originalName;
+            $fileSize = $this->getFileSize($file);
+            $mimeType = $this->getFileMimeType($file);
+
+            $storedPath = $file->storeAs('public/files', $fileName);
+            if (! $storedPath) {
+                Log::error('FileService: Failed to store evaluation file to disk.', [
+                    'prefix' => $prefix,
+                    'file_name' => $fileName,
+                ]);
+                continue;
+            }
 
             $docId = $this->generateDocId($prefix);
 
             File::create([
                 'doc_id' => $docId,
                 'name' => $fileName,
-                'mime_type' => $file->getClientMimeType(),
+                'mime_type' => $mimeType,
                 'size' => $fileSize,
             ]);
 
@@ -86,7 +126,9 @@ final class FileService
         $file = File::find($fileId);
 
         if ($file) {
-            Storage::delete('public/files/' . $file->name);
+            if (! empty($file->name) && Storage::exists('public/files/' . $file->name)) {
+                Storage::delete('public/files/' . $file->name);
+            }
             $file->delete();
 
             return true;
@@ -103,6 +145,100 @@ final class FileService
         $pattern = "{$year}-{$month}-{$dept}-%";
 
         return File::where('doc_id', 'LIKE', $pattern)->get();
+    }
+
+    /**
+     * Check whether the file object is valid and present on disk.
+     */
+    private function isValidFile(mixed $file): bool
+    {
+        if (! $file instanceof SymfonyFile && ! $file instanceof UploadedFile) {
+            return false;
+        }
+
+        if ($file instanceof UploadedFile && ! $file->isValid()) {
+            return false;
+        }
+
+        $realPath = $file->getRealPath();
+        if ($realPath === false || $realPath === '' || ! file_exists($realPath)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Extract a safe basename from the uploaded file.
+     */
+    private function getSafeOriginalName(mixed $file): string
+    {
+        $originalName = $file instanceof UploadedFile
+            ? $file->getClientOriginalName()
+            : $file->getFilename();
+
+        $safeName = basename($originalName);
+
+        if (empty($safeName) || $safeName === '.' || $safeName === '..') {
+            $extension = $file instanceof UploadedFile ? $file->getClientOriginalExtension() : $file->getExtension();
+            $safeName = 'file_' . uniqid() . ($extension ? '.' . $extension : '');
+        }
+
+        return $safeName;
+    }
+
+    /**
+     * Safely determine file size.
+     */
+    private function getFileSize(mixed $file): int
+    {
+        try {
+            return (int) $file->getSize();
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    /**
+     * Safely determine MIME type.
+     */
+    private function getFileMimeType(mixed $file): string
+    {
+        try {
+            if ($file instanceof UploadedFile) {
+                return $file->getClientMimeType() ?: ($file->getMimeType() ?: 'application/octet-stream');
+            }
+
+            return $file->getMimeType() ?: 'application/octet-stream';
+        } catch (\Throwable) {
+            return 'application/octet-stream';
+        }
+    }
+
+    /**
+     * Get debug information about a file for logging.
+     */
+    private function getFileDebugInfo(mixed $file): array
+    {
+        if (! is_object($file)) {
+            return ['type' => gettype($file)];
+        }
+
+        if ($file instanceof UploadedFile) {
+            return [
+                'type' => get_class($file),
+                'isValid' => $file->isValid(),
+                'error' => $file->getError(),
+                'errorMessage' => $file->getErrorMessage(),
+                'clientName' => $file->getClientOriginalName(),
+                'realPath' => $file->getRealPath(),
+            ];
+        }
+
+        return [
+            'type' => get_class($file),
+            'realPath' => method_exists($file, 'getRealPath') ? $file->getRealPath() : null,
+        ];
     }
 
     /**
