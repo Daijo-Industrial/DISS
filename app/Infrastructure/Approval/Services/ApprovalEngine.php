@@ -383,7 +383,44 @@ final class ApprovalEngine implements Approvals
         $sig = $this->userSignatures->listByUser($by, onlyActive: true)[0] ?? null;
 
         if (! $sig || ! $sig->isActive()) {
-            throw new \DomainException('No active signature found. Please set up your signature first.');
+            // Check for legacy autograph fallback (e.g. autographs/{username}.png or Djoni.png)
+            $user = \App\Infrastructure\Persistence\Eloquent\Models\User::find($by);
+            $autographFile = null;
+            if ($user && ! empty($user->name) && file_exists(public_path("autographs/{$user->name}.png"))) {
+                $autographFile = "autographs/{$user->name}.png";
+            } elseif (file_exists(public_path('autographs/Djoni.png'))) {
+                $autographFile = 'autographs/Djoni.png';
+            }
+
+            if ($autographFile) {
+                try {
+                    $fullPath = public_path($autographFile);
+                    $bytes = file_get_contents($fullPath);
+                    $sha = hash('sha256', (string) $bytes);
+                    $relPath = 'signatures/' . $by . '/' . basename($autographFile);
+                    \Illuminate\Support\Facades\Storage::disk('private')->put($relPath, (string) $bytes);
+
+                    $sig = $this->userSignatures->create(
+                        userId: $by,
+                        label: 'Autograph',
+                        kind: \App\Domain\Signature\ValueObjects\SignatureKind::UPLOADED,
+                        filePath: $relPath,
+                        svgPath: null,
+                        sha256: $sha,
+                        isDefault: true,
+                        metadata: ['source' => $autographFile]
+                    );
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Failed to auto-migrate autograph to user signature', [
+                        'user_id' => $by,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            if (! $sig || ! $sig->isActive()) {
+                throw new \DomainException('No active signature found. Please set up your signature first.');
+            }
         }
 
         // snapshot to approval_steps

@@ -21,28 +21,54 @@ class PdfProcessingService
     public function sign(PurchaseOrder $po, int $userId): string
     {
         try {
-            $originalPdfPath = public_path("storage/pdfs/{$po->filename}");
+            $filename = basename($po->filename);
 
-            // Verify original PDF exists
-            if (! file_exists($originalPdfPath)) {
-                throw new \Exception("Original PDF file not found: {$po->filename}");
+            // Check canonical storage_path first, then fallback to public_path
+            $possiblePaths = [
+                storage_path("app/public/pdfs/{$filename}"),
+                storage_path("app/public/{$filename}"),
+                public_path("storage/pdfs/{$filename}"),
+                public_path("storage/{$filename}"),
+            ];
+
+            $originalPdfPath = null;
+            foreach ($possiblePaths as $path) {
+                if (file_exists($path)) {
+                    $originalPdfPath = $path;
+                    break;
+                }
             }
 
-            // Generate signed PDF filename
-            $signedPdfPath = str_replace('.pdf', '_signed.pdf', $originalPdfPath);
+            // Verify original PDF exists
+            if (! $originalPdfPath) {
+                throw new \Exception("Original PDF file not found on server: {$filename}");
+            }
+
+            // Ensure destination directory exists in storage
+            $signedDir = storage_path('app/public/pdfs');
+            if (! file_exists($signedDir)) {
+                mkdir($signedDir, 0755, true);
+            }
+
+            // Generate signed PDF filename and destination path
+            $signedFilename = str_replace('.pdf', '_signed.pdf', $filename);
+            $signedPdfPath = $signedDir . DIRECTORY_SEPARATOR . $signedFilename;
+
+            // Resolve signature image path for the signing user
+            $signaturePath = $this->resolveSignaturePath($userId);
 
             // Perform PDF signing
-            $this->performPdfSigning($originalPdfPath, $signedPdfPath);
+            $this->performPdfSigning($originalPdfPath, $signedPdfPath, $signaturePath);
 
             // Update PO with signed filename
-            $po->filename = basename($signedPdfPath);
+            $po->filename = $signedFilename;
             $po->save();
 
             Log::info('PDF signed successfully', [
                 'po_id' => $po->id,
                 'po_number' => $po->po_number,
                 'signed_by' => $userId,
-                'signed_file' => basename($signedPdfPath),
+                'signed_file' => $signedFilename,
             ]);
 
             return $signedPdfPath;
@@ -235,30 +261,44 @@ class PdfProcessingService
      *
      * @throws \Exception
      */
-    private function performPdfSigning(string $originalPath, string $signedPath): void
+    private function performPdfSigning(string $originalPath, string $signedPath, ?string $signaturePath = null): void
     {
         try {
             // Initialize FPDI
             $pdf = new Fpdi;
             $pageCount = $pdf->setSourceFile($originalPath);
 
-            // Path to the stored signature file
-            $signaturePath = public_path('autographs/Djoni.png');
-
-            if (! file_exists($signaturePath)) {
-                throw new \Exception('Signature image not found');
+            // Verify signature file exists if provided
+            if ($signaturePath && ! file_exists($signaturePath)) {
+                $signaturePath = null;
             }
 
-            // Loop through each page and add it to the new PDF
-            for ($pageIndex = 1; $pageIndex <= $pageCount; $pageIndex++) {
-                $pdf->AddPage();
-                $templateId = $pdf->importPage($pageIndex);
-                $pdf->useTemplate($templateId, 0, 0, 210);
+            // Fallback to default Djoni signature if none provided
+            if (! $signaturePath) {
+                $defaultSig = public_path('autographs/Djoni.png');
+                if (file_exists($defaultSig)) {
+                    $signaturePath = $defaultSig;
+                }
+            }
 
-                // Add signature to the last page
-                if ($pageIndex === $pageCount) {
-                    $pdf->SetFont('Arial', '', 12);
-                    $pdf->Image($signaturePath, 40, 250, 40, 20);
+            // Loop through each page and add it to the new PDF preserving dimensions
+            for ($pageIndex = 1; $pageIndex <= $pageCount; $pageIndex++) {
+                $templateId = $pdf->importPage($pageIndex);
+                $size = $pdf->getTemplateSize($templateId);
+                $orientation = $size['width'] > $size['height'] ? 'L' : 'P';
+
+                $pdf->AddPage($orientation, [$size['width'], $size['height']]);
+                $pdf->useTemplate($templateId);
+
+                // Add signature to the last page if signature image exists
+                if ($pageIndex === $pageCount && $signaturePath && file_exists($signaturePath)) {
+                    // Position signature nicely in bottom area based on page dimensions
+                    $sigWidth = 40;
+                    $sigHeight = 20;
+                    $x = min(40, max(10, $size['width'] - $sigWidth - 20));
+                    $y = max(10, $size['height'] - $sigHeight - 27);
+
+                    $pdf->Image($signaturePath, $x, $y, $sigWidth, $sigHeight);
                 }
             }
 
@@ -267,6 +307,50 @@ class PdfProcessingService
 
         } catch (\Exception $e) {
             throw new \Exception('PDF signing operation failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Resolve the signature image path for a given user ID.
+     */
+    private function resolveSignaturePath(int $userId): ?string
+    {
+        try {
+            // 1. Check user signature repository
+            if (interface_exists(\App\Domain\Signature\Repositories\UserSignatureRepository::class)) {
+                $repo = app(\App\Domain\Signature\Repositories\UserSignatureRepository::class);
+                $signatures = $repo->listByUser($userId, onlyActive: true);
+                if (! empty($signatures) && ! empty($signatures[0]->filePath)) {
+                    $privatePath = \Illuminate\Support\Facades\Storage::disk('private')->path($signatures[0]->filePath);
+                    if (file_exists($privatePath)) {
+                        return $privatePath;
+                    }
+                }
+            }
+
+            // 2. Check autographs folder by username
+            $user = \App\Models\User::find($userId);
+            if ($user && ! empty($user->name)) {
+                $userAutograph = public_path("autographs/{$user->name}.png");
+                if (file_exists($userAutograph)) {
+                    return $userAutograph;
+                }
+            }
+
+            // 3. Fallback to default Djoni.png
+            $defaultAutograph = public_path('autographs/Djoni.png');
+            if (file_exists($defaultAutograph)) {
+                return $defaultAutograph;
+            }
+
+            return null;
+        } catch (\Throwable $e) {
+            Log::warning('Failed to resolve signature path', [
+                'user_id' => $userId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return public_path('autographs/Djoni.png');
         }
     }
 

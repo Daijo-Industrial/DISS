@@ -169,7 +169,7 @@ final class FileService
     }
 
     /**
-     * Extract a safe basename from the uploaded file.
+     * Extract a safe, URL-friendly basename from the uploaded file.
      */
     private function getSafeOriginalName(mixed $file): string
     {
@@ -177,14 +177,21 @@ final class FileService
             ? $file->getClientOriginalName()
             : $file->getFilename();
 
-        $safeName = basename($originalName);
+        $info = pathinfo(basename($originalName));
+        $filename = $info['filename'] ?? 'file';
+        $extension = $file instanceof UploadedFile
+            ? ($file->getClientOriginalExtension() ?: ($info['extension'] ?? ''))
+            : ($file->getExtension() ?: ($info['extension'] ?? ''));
 
-        if (empty($safeName) || $safeName === '.' || $safeName === '..') {
-            $extension = $file instanceof UploadedFile ? $file->getClientOriginalExtension() : $file->getExtension();
-            $safeName = 'file_' . uniqid() . ($extension ? '.' . $extension : '');
+        // Replace spaces, pluses, ampersands and special characters with hyphens
+        $cleanName = preg_replace('/[^\w\.-]+/u', '-', $filename);
+        $cleanName = trim((string) preg_replace('/-+/', '-', (string) $cleanName), '-._');
+
+        if (empty($cleanName)) {
+            $cleanName = 'file_' . uniqid();
         }
 
-        return $safeName;
+        return $cleanName . ($extension !== '' ? '.' . strtolower($extension) : '');
     }
 
     /**

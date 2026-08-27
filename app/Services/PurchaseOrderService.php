@@ -175,6 +175,21 @@ class PurchaseOrderService
             // Use approval engine to approve - this will update status automatically
             $this->approvals->approve($po, $userId, $remarks);
 
+            // If PO has an associated PDF file, apply the digital signature
+            if (! empty($po->filename)) {
+                try {
+                    $pdfService = app(PdfProcessingService::class);
+                    $pdfService->sign($po, $userId);
+                } catch (\Throwable $pdfEx) {
+                    Log::warning('PDF signing skipped or encountered error during PO approval', [
+                        'po_id' => $po->id,
+                        'po_number' => $po->po_number,
+                        'filename' => $po->filename,
+                        'error' => $pdfEx->getMessage(),
+                    ]);
+                }
+            }
+
             Log::info('Purchase order approval processed via approval engine', [
                 'po_id' => $po->id,
                 'po_number' => $po->po_number,

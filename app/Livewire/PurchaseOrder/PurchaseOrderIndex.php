@@ -276,7 +276,8 @@ class PurchaseOrderIndex extends Component
             $poService = app(PurchaseOrderService::class);
             $poService->approve($this->selectedPurchaseOrder->id, auth()->id());
 
-            session()->flash('success', 'Purchase order approved successfully.');
+            session()->flash('success', 'Purchase order approved and signed successfully.');
+            $this->dispatch('toast', message: 'Purchase order approved and signed successfully!', type: 'success');
             $this->closeDetailModal();
             $this->resetPage();
 
@@ -287,6 +288,7 @@ class PurchaseOrderIndex extends Component
                 'error' => $e->getMessage(),
             ]);
             session()->flash('error', 'Failed to approve purchase order: ' . $e->getMessage());
+            $this->dispatch('toast', message: 'Failed to approve: ' . $e->getMessage(), type: 'error');
         }
     }
 
@@ -303,6 +305,7 @@ class PurchaseOrderIndex extends Component
             $poService->reject($this->selectedPurchaseOrder->id, auth()->id(), $reason);
 
             session()->flash('success', 'Purchase order rejected successfully.');
+            $this->dispatch('toast', message: 'Purchase order rejected successfully.', type: 'success');
             $this->closeDetailModal();
             $this->resetPage();
 
@@ -313,6 +316,7 @@ class PurchaseOrderIndex extends Component
                 'error' => $e->getMessage(),
             ]);
             session()->flash('error', 'Failed to reject purchase order: ' . $e->getMessage());
+            $this->dispatch('toast', message: 'Failed to reject: ' . $e->getMessage(), type: 'error');
         }
     }
 
