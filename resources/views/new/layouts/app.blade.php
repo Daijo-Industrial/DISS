@@ -215,6 +215,7 @@
                     <span class="text-xs font-semibold text-slate-500">Quick search commands...</span>
                     <span class="ml-4 rounded-md bg-white px-2 py-0.5 text-xs font-bold text-slate-400 shadow-sm border border-slate-200">Ctrl K</span>
                 </button>
+                <div class="flex items-center gap-4">
                     @livewire('notifications.bell', key('bell-desktop'))
 
                     <div class="relative" x-data="{ userMenuOpen: false }">
