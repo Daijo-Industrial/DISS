@@ -1,4 +1,5 @@
-<div class="relative" x-data="{ open: false }" @click.outside="open = false">
+<div class="relative" x-data="{ open: false }" @click.outside="open = false"
+    x-on:notifs-marked-all-read.window="window.__notifChannel?.postMessage({ type: 'MARK_ALL_READ' })">
     {{-- Bell button --}}
     <button type="button" @click="open = !open"
         class="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100 transition-all duration-300 active:scale-95">

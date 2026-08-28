@@ -215,8 +215,7 @@
                     <span class="text-xs font-semibold text-slate-500">Quick search commands...</span>
                     <span class="ml-4 rounded-md bg-white px-2 py-0.5 text-xs font-bold text-slate-400 shadow-sm border border-slate-200">Ctrl K</span>
                 </button>
-                <div class="flex items-center gap-4">
-                    @livewire('notifications.bell')
+                    @livewire('notifications.bell', key('bell-desktop'))
 
                     <div class="relative" x-data="{ userMenuOpen: false }">
                         <button type="button" @click="userMenuOpen = !userMenuOpen"
@@ -276,7 +275,7 @@
                     <span class="text-[15px] font-extrabold text-slate-900 leading-none tracking-tight">{{ config('app.name') }}</span>
                 </div>
                 <div class="flex items-center gap-2">
-                    @livewire('notifications.bell')
+                    @livewire('notifications.bell', key('bell-mobile'))
                     <button type="button" @click="sidebarOpen = true"
                         class="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-all">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -340,6 +339,28 @@
             Livewire.on('flash', function(params) {
                 window.__toastAdd(params);
             });
+
+            // Global Real-time Notification Listener & Toast Trigger
+            const currentUserId = {{ auth()->id() ?? 'null' }};
+            if (window.Echo && currentUserId) {
+                window.Echo.private(`users.${currentUserId}`)
+                    .listen('.NotificationPushed', function(payload) {
+                        const title = payload.title || 'New Notification';
+                        const body = payload.message || payload.body || '';
+                        const text = body ? `${title}: ${body}` : title;
+
+                        window.__toastAdd({
+                            type: payload.category || 'info',
+                            message: text
+                        });
+
+                        Livewire.dispatch('notification-received', { notification: payload });
+
+                        if (window.__notifChannel) {
+                            window.__notifChannel.postMessage({ type: 'NEW_NOTIFICATION', payload: payload });
+                        }
+                    });
+            }
         });
 
         // Also capture window-level toast events (from Alpine $dispatch or manual JS)

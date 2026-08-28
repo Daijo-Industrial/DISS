@@ -15,7 +15,14 @@ class Bell extends Component
         $id = auth()->id();
 
         return $id
-            ? ["echo-private:users.{$id},NotificationPushed" => 'refreshCount']
+            ? [
+                "echo-private:users.{$id},.NotificationPushed" => 'onNotificationReceived',
+                "echo-private:users.{$id},NotificationPushed" => 'onNotificationReceived',
+                'notification-received' => 'onNotificationReceived',
+                'reset-unread-count' => 'resetUnreadCount',
+                'increment-unread-count' => 'incrementUnreadCount',
+                'set-unread-count' => 'setUnreadCount',
+            ]
             : [];
     }
 
@@ -30,6 +37,26 @@ class Bell extends Component
         $this->unreadCount = $user ? $user->unreadNotifications()->count() : 0;
     }
 
+    public function onNotificationReceived($payload = null): void
+    {
+        $this->unreadCount++;
+    }
+
+    public function resetUnreadCount(): void
+    {
+        $this->unreadCount = 0;
+    }
+
+    public function incrementUnreadCount(): void
+    {
+        $this->unreadCount++;
+    }
+
+    public function setUnreadCount(int $count): void
+    {
+        $this->unreadCount = max(0, $count);
+    }
+
     public function markAsRead(string $id)
     {
         $user = auth()->user();
@@ -41,7 +68,7 @@ class Bell extends Component
 
         if ($notification && is_null($notification->read_at)) {
             $notification->markAsRead();
-            $this->refreshCount();
+            $this->unreadCount = max(0, $this->unreadCount - 1);
         }
 
         $url = data_get($notification?->data, 'action_url')
@@ -61,7 +88,9 @@ class Bell extends Component
         }
 
         $user->unreadNotifications()->update(['read_at' => now()]);
-        $this->refreshCount();
+        $this->unreadCount = 0;
+
+        $this->dispatch('notifs-marked-all-read');
     }
 
     public function render()

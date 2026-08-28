@@ -36,6 +36,8 @@ Route::middleware('auth')->group(function () {
 
     // Notifications
     Route::get('/notifications', [NotificationFeedController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/unread-count', [NotificationFeedController::class, 'unreadCount'])->name('notifications.unread-count');
+    Route::get('/notifications/feed', [NotificationFeedController::class, 'feed'])->name('notifications.feed');
     Route::post('/notifications/{id}/mark-as-read', [NotificationFeedController::class, 'markAsRead'])->name('notifications.mark-as-read');
     Route::post('/notifications/mark-all-as-read', [NotificationFeedController::class, 'markAllAsRead'])->name('notifications.mark-all-as-read');
 

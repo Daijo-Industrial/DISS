@@ -48,4 +48,51 @@ window.Echo = new Echo({
   disabledStats: true,
 });
 
+// Multi-Tab Notification Synchronization
+if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+  window.__notifChannel = new BroadcastChannel('app_notifications');
+  window.__notifChannel.onmessage = (event) => {
+    if (event.data?.type === 'MARK_ALL_READ') {
+      window.Livewire?.dispatch('reset-unread-count');
+    } else if (event.data?.type === 'NEW_NOTIFICATION') {
+      window.Livewire?.dispatch('increment-unread-count');
+    }
+  };
+}
+
+// Enterprise WebSocket Connection Monitor & Graceful Fallback Polling
+if (window.Echo?.connector?.pusher) {
+  let fallbackInterval = null;
+
+  const startFallback = () => {
+    if (fallbackInterval) return;
+    fallbackInterval = setInterval(async () => {
+      try {
+        const res = await window.axios.get('/notifications/unread-count');
+        if (typeof res.data?.unread === 'number') {
+          window.Livewire?.dispatch('set-unread-count', { count: res.data.unread });
+        }
+      } catch (e) {
+        // ignore network error during background fallback
+      }
+    }, 60000);
+  };
+
+  const stopFallback = () => {
+    if (fallbackInterval) {
+      clearInterval(fallbackInterval);
+      fallbackInterval = null;
+    }
+  };
+
+  window.Echo.connector.pusher.connection.bind('state_change', (states) => {
+    if (['unavailable', 'disconnected', 'failed'].includes(states.current)) {
+      startFallback();
+    } else if (states.current === 'connected') {
+      stopFallback();
+    }
+  });
+}
+
 // Pusher.logToConsole = true;
+
