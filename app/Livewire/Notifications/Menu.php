@@ -31,7 +31,13 @@ final class Menu extends Component
         $id = auth()->id();
 
         return $id
-            ? ["echo-private:users.{$id},NotificationPushed" => 'refreshUnread']
+            ? [
+                "echo-private:users.{$id},.NotificationPushed" => 'refreshUnread',
+                "echo-private:users.{$id},NotificationPushed" => 'refreshUnread',
+                'notification-received' => 'refreshUnread',
+                'notifs-marked-all-read' => 'refreshUnread',
+                'reset-unread-count' => 'refreshUnread',
+            ]
             : []; // no listeners if not authed
     }
 

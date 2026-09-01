@@ -1,6 +1,4 @@
 # .dockerignore - keep production image small and clean
-# (complements the production Dockerfile)
-
 # Version control
 .git
 .gitignore
@@ -12,11 +10,14 @@
 # Development / testing
 vendor
 node_modules
+tests
+scratch_test.php
 
-# Sail / Docker dev files (we only want the prod Dockerfile for production builds)
-compose.yaml
+# Docker compose files & local backups
+compose*.yaml
+compose*.yml
 docker-compose*.yml
-Dockerfile*
+backups/
 
 # IDE / editor
 .idea

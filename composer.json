@@ -16,6 +16,7 @@
     "endroid/qr-code": "^6.0",
     "guzzlehttp/guzzle": "^7.8",
     "laravel/framework": "^10.10",
+    "laravel/reverb": "^1.11",
     "laravel/sanctum": "^3.3",
     "laravel/tinker": "^2.8",
     "laravel/ui": "^4.3",
@@ -92,6 +93,10 @@
     "optimize-autoloader": true,
     "preferred-install": "dist",
     "sort-packages": true,
+    "platform": {
+      "php": "8.3.0",
+      "ext-gd": "1.0"
+    },
     "allow-plugins": {
       "pestphp/pest-plugin": true,
       "php-http/discovery": true

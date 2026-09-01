@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Events\NotificationPushed;
 use App\Livewire\Notifications\Bell;
+use App\Livewire\Notifications\Menu;
 use App\Models\User;
 use App\Notifications\CustomNotification;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -34,7 +35,7 @@ class NotificationPushEnterpriseTest extends TestCase
             $this->assertInstanceOf(ShouldBroadcast::class, $event);
             $this->assertSame('default', $event->broadcastQueue);
             $this->assertSame($user->id, $event->userId);
-            $this->assertSame(['users.' . $user->id], array_map(fn ($ch) => $ch->name, $event->broadcastOn()));
+            $this->assertSame(['private-users.' . $user->id], array_map(fn ($ch) => (string) $ch->name, $event->broadcastOn()));
             $this->assertSame('NotificationPushed', $event->broadcastAs());
 
             $payload = $event->broadcastWith();
@@ -92,5 +93,27 @@ class NotificationPushEnterpriseTest extends TestCase
             ->call('markAllAsRead')
             ->assertSet('unreadCount', 0)
             ->assertDispatched('notifs-marked-all-read');
+    }
+
+    public function test_menu_livewire_component_lifecycle_and_in_memory_events(): void
+    {
+        $user = User::factory()->create();
+        $user->notify(new CustomNotification('Hello 1', 'Message 1'));
+
+        Livewire::actingAs($user)
+            ->test(Menu::class)
+            ->assertSet('unreadCount', 1)
+            ->dispatch('notification-received')
+            ->assertSet('unreadCount', 1)
+            ->dispatch('notifs-marked-all-read')
+            ->assertSet('unreadCount', 1);
+
+        $user->notify(new CustomNotification('Hello 2', 'Message 2'));
+
+        Livewire::actingAs($user)
+            ->test(Menu::class)
+            ->assertSet('unreadCount', 2)
+            ->call('markAllRead')
+            ->assertSet('unreadCount', 0);
     }
 }

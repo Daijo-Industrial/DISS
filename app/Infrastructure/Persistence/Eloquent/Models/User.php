@@ -2,10 +2,14 @@
 
 namespace App\Infrastructure\Persistence\Eloquent\Models;
 
+use App\Infrastructure\Common\PermissionRegistry;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
@@ -24,7 +28,7 @@ class User extends Authenticatable
      */
     protected static function newFactory()
     {
-        return \Database\Factories\UserFactory::new();
+        return UserFactory::new();
     }
 
     protected $table = 'users';
@@ -67,7 +71,7 @@ class User extends Authenticatable
         return $this->employee ? $this->employee->department : null;
     }
 
-    public function signatures(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function signatures(): HasMany
     {
         return $this->hasMany(UserSignature::class, 'user_id', 'id');
     }
@@ -94,8 +98,21 @@ class User extends Authenticatable
     public function needsSignature(): bool
     {
         // Check for any permissions that MUST have a signature (Approvers/Makers/Admins)
-        $signaturePermissions = \App\Infrastructure\Common\PermissionRegistry::getSignatureRequiredPermissions();
+        $signaturePermissions = PermissionRegistry::getSignatureRequiredPermissions();
 
         return $this->hasAnyPermission($signaturePermissions);
+    }
+
+    /**
+     * Get the entity's notifications, supporting both legacy and infrastructure namespaces.
+     */
+    public function notifications()
+    {
+        return $this->morphMany(DatabaseNotification::class, 'notifiable')
+            ->whereIn('notifiable_type', [
+                self::class,
+                'App\\Models\\User',
+            ])
+            ->latest();
     }
 }

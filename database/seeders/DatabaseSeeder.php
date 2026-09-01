@@ -29,7 +29,6 @@ class DatabaseSeeder extends Seeder
         $this->call([
             // SpecificationSeeder::class,
             DepartmentSeeder::class,
-            StockTypeSeeder::class,
             PurchaseOrderCategorySeeder::class,
         ]);
 

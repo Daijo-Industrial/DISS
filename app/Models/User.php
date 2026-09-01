@@ -14,6 +14,11 @@ namespace App\Models;
  */
 class User extends \App\Infrastructure\Persistence\Eloquent\Models\User
 {
-    // This class extends the Infrastructure User model
-    // for backward compatibility with existing code
+    /**
+     * Get the class name for polymorphic relations.
+     */
+    public function getMorphClass(): string
+    {
+        return \App\Infrastructure\Persistence\Eloquent\Models\User::class;
+    }
 }

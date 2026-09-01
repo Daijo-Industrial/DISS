@@ -85,8 +85,11 @@ docker compose logs -f laravel.test
 |---------------|------------------------------|-------|
 | Application   | http://localhost             | Laravel |
 | Vite (HMR)    | http://localhost:5173        | Frontend development |
+| Reverb WS     | ws://localhost:8080          | Laravel Reverb WebSocket server |
 | Mailpit       | http://localhost:8025        | Email catcher |
 | MySQL         | `mysql:3306` (inside network)| User: `sail`, Password: `password` |
+
+> **Note on Background Services**: Sail automatically launches dedicated `reverb` (`php artisan reverb:start`) and `queue` (`php artisan queue:work`) worker containers on `./sail up -d`. You can inspect their live logs with `./sail logs -f reverb` and `./sail logs -f queue`.
 
 ## Production Environment
 
@@ -156,6 +159,34 @@ SNAPPY_IMAGE_BINARY=/var/www/html/vendor/h4cc/wkhtmltoimage-amd64/bin/wkhtmltoim
 
 - Development and Production use **separate** MySQL instances.
 - Never run `migrate:fresh --seed` against the production database.
+
+### WebSocket (Laravel Reverb) & Reverse Proxy Setup
+
+When deploying to production with Nginx / SSL (HTTPS):
+1. Configure Nginx to proxy WebSocket upgrade requests on `/app` and REST events on `/apps`:
+```nginx
+location /app {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_read_timeout 60;
+    proxy_connect_timeout 60;
+}
+
+location /apps {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto https;
+}
+```
+2. Production Supervisor configuration should manage `php artisan reverb:start` and `php artisan queue:work` alongside PHP-FPM.
 
 ### Switching Between Environments
 
