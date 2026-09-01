@@ -41,9 +41,9 @@ Route::middleware(['auth', 'evaluation.access'])->group(function () {
     Route::get('/evaluation', [EvaluationController::class, 'index'])->name('evaluation.index');
 
     // DataTable AJAX data per type tab (before {month}/{year} to avoid wildcard capture)
-    Route::get('/evaluation/data/regular', [EvaluationController::class, 'dataRegular'])->can('evaluation.view-regular')->name('evaluation.data.regular');
-    Route::get('/evaluation/data/yayasan', [EvaluationController::class, 'dataYayasan'])->can('evaluation.view-yayasan')->name('evaluation.data.yayasan');
-    Route::get('/evaluation/data/magang', [EvaluationController::class, 'dataMagang'])->can('evaluation.view-magang')->name('evaluation.data.magang');
+    Route::match(['get', 'post'], '/evaluation/data/regular', [EvaluationController::class, 'dataRegular'])->can('evaluation.view-regular')->name('evaluation.data.regular');
+    Route::match(['get', 'post'], '/evaluation/data/yayasan', [EvaluationController::class, 'dataYayasan'])->can('evaluation.view-yayasan')->name('evaluation.data.yayasan');
+    Route::match(['get', 'post'], '/evaluation/data/magang', [EvaluationController::class, 'dataMagang'])->can('evaluation.view-magang')->name('evaluation.data.magang');
 
     // Status summary chips (AJAX — before {month}/{year})
     Route::get('/evaluation/summary', [EvaluationController::class, 'summary'])->name('evaluation.summary');

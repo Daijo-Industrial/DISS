@@ -21,7 +21,9 @@ class DepartmentEmployeeResolver
         // Super Admins / HRD / GM see all regular employees
         if ($user->can('evaluation.view-any')) {
             return $this->repository->getAllNonYayasan();
+        }
 
+        if ($user->can('evaluation.view-regular')) {
             if ($this->isSpecialAccessId($user)) {
                 return $this->repository->getByDepartmentCodes([
                     DepartmentCode::QC->value,

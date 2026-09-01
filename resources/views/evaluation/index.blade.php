@@ -862,6 +862,10 @@
                     serverSide: true,
                     ajax: {
                         url: ajaxRoute,
+                        type: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                        },
                         data: function(d) {
                             d.month = currentMonth;
                             d.year = currentYear;
