@@ -4,8 +4,7 @@
 <head>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <!-- Scripts -->
-    @vite(['resources/sass/app.scss', 'resources/js/app.js'])
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    @vite(['resources/css/app.css', 'resources/sass/app.scss', 'resources/js/app.js'])
     <title>{{ config('app.name') }}</title>
 </head>
 

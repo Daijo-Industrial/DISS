@@ -19,19 +19,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
 
-    {{-- Tailwind CDN --}}
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Plus Jakarta Sans', 'ui-sans-serif', 'system-ui'],
-                    },
-                },
-            },
-        }
-    </script>
+    {{-- Compiled Assets --}}
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
         body {
