@@ -327,6 +327,37 @@ class PurchaseOrderIndex extends Component
         $this->closeDetailModal();
     }
 
+    public function deletePurchaseOrder($id = null)
+    {
+        $targetId = $id ?? $this->selectedPurchaseOrder?->id;
+        if (! $targetId) {
+            $this->dispatch('toast', message: 'No purchase order specified for deletion.', type: 'error');
+            return;
+        }
+
+        $po = PurchaseOrder::findOrFail($targetId);
+        $this->authorize('delete', $po);
+
+        try {
+            $poNumber = $po->po_number;
+            $poService = app(PurchaseOrderService::class);
+            $poService->delete($targetId);
+
+            session()->flash('success', "Purchase order #{$poNumber} deleted successfully.");
+            $this->dispatch('toast', message: "Purchase order #{$poNumber} deleted successfully.", type: 'success');
+            $this->closeDetailModal();
+            $this->resetPage();
+        } catch (\Exception $e) {
+            Log::error('PO deletion failed in index', [
+                'po_id' => $targetId,
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+            ]);
+            session()->flash('error', 'Failed to delete purchase order: ' . $e->getMessage());
+            $this->dispatch('toast', message: 'Failed to delete: ' . $e->getMessage(), type: 'error');
+        }
+    }
+
     public function refresh()
     {
         $this->resetPage();
@@ -694,6 +725,7 @@ class PurchaseOrderIndex extends Component
     public function getFilteredTotalProperty()
     {
         return $this->getPurchaseOrdersQuery()
+            ->reorder()
             ->select('currency')
             ->selectRaw('SUM(total) as total')
             ->groupBy('currency')

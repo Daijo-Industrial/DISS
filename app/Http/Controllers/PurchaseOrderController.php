@@ -142,6 +142,9 @@ class PurchaseOrderController extends Controller
     public function destroy($id)
     {
         try {
+            $po = PurchaseOrder::findOrFail($id);
+            $this->authorize('delete', $po);
+
             $this->poService->delete($id);
 
             return redirect()->route('po.index')->with('success', 'PO deleted successfully!');

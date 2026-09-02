@@ -5,6 +5,7 @@ namespace App\Livewire\PurchaseOrder;
 use App\Services\PdfProcessingService;
 use App\Services\PurchaseOrderService;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -34,7 +35,11 @@ class EditPurchaseOrderForm extends Component
     protected function rules()
     {
         return [
-            'po_number' => 'required|numeric|unique:purchase_orders,po_number,' . $this->purchaseOrderId,
+            'po_number' => [
+                'required',
+                'numeric',
+                Rule::unique('purchase_orders', 'po_number')->ignore($this->purchaseOrderId)->whereNull('deleted_at'),
+            ],
             'vendor_name' => 'required|string|max:255',
             'currency' => 'required|string|size:3',
             'total' => 'required|numeric|min:0',

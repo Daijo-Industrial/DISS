@@ -132,19 +132,29 @@ class PurchaseOrderService
     public function delete(int $id): bool
     {
         try {
-            $po = PurchaseOrder::findOrFail($id);
+            return DB::transaction(function () use ($id) {
+                $po = PurchaseOrder::findOrFail($id);
 
-            // TODO: Add business rules for deletion (only draft status, etc.)
+                // Soft delete associated invoices if any
+                $po->invoices()->delete();
 
-            $po->delete();
+                // Soft delete associated approval request and steps if any
+                if ($po->approvalRequest) {
+                    $po->approvalRequest->steps()->delete();
+                    $po->approvalRequest->actions()->delete();
+                    $po->approvalRequest->delete();
+                }
 
-            Log::info('Purchase order deleted', [
-                'po_id' => $id,
-                'po_number' => $po->po_number,
-                'deleted_by' => auth()->id(),
-            ]);
+                $po->delete();
 
-            return true;
+                Log::info('Purchase order deleted', [
+                    'po_id' => $id,
+                    'po_number' => $po->po_number,
+                    'deleted_by' => auth()->id(),
+                ]);
+
+                return true;
+            });
         } catch (\Exception $e) {
             Log::error('Failed to delete purchase order', [
                 'po_id' => $id,

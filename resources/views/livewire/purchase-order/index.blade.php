@@ -523,6 +523,13 @@
                                         <a href="{{ route('po.view', $po->id) }}" class="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-slate-900 hover:text-white transition-all" title="Open">
                                             <i class="bi bi-box-arrow-up-right text-base"></i>
                                         </a>
+                                        @can('delete', $po)
+                                            <button @click="$dispatch('open-delete-po-modal', { id: {{ $po->id }}, poNumber: '{{ $po->po_number }}' })" 
+                                                    class="p-2 bg-slate-50 text-slate-400 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all" 
+                                                    title="Delete">
+                                                <i class="bi bi-trash3 text-base"></i>
+                                            </button>
+                                        @endcan
                                     </div>
                                 </td>
                             @endif
@@ -844,6 +851,13 @@
                                                 </button>
                                             @endcan
 
+                                            @can('delete', $selectedPurchaseOrder)
+                                                <button @click="$dispatch('open-delete-po-modal', { id: {{ $selectedPurchaseOrder->id }}, poNumber: '{{ $selectedPurchaseOrder->po_number }}' })"
+                                                        class="w-full py-3 bg-white text-rose-600 border border-rose-200 rounded-2xl font-bold hover:bg-rose-50 transition-all flex items-center justify-center gap-2">
+                                                    <i class="bi bi-trash3"></i> Delete Purchase Order
+                                                </button>
+                                            @endcan
+
                                             <div class="grid grid-cols-2 gap-3 pt-2">
                                                 <a href="{{ route('po.view', $selectedPurchaseOrder->id) }}"
                                                    class="flex items-center justify-center py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition-all">
@@ -905,6 +919,46 @@
                     </button>
                     <button @click="open = false" 
                             class="w-full py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    {{-- Delete Confirmation Modal --}}
+    <template x-teleport="body">
+        <div x-data="{ open: false, poId: null, poNumber: '' }" 
+            x-show="open" 
+            x-cloak
+            x-on:open-delete-po-modal.window="open = true; poId = $event.detail.id; poNumber = $event.detail.poNumber"
+            x-on:close-delete-po-modal.window="open = false; poId = null; poNumber = ''"
+            class="fixed inset-0 z-[130] flex items-center justify-center p-4">
+            
+            <div x-show="open" x-transition.opacity class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" @click="open = false"></div>
+
+            <div x-show="open" 
+                 x-transition:enter="ease-out duration-200" 
+                 x-transition:enter-start="opacity-0 scale-95 translate-y-4" 
+                 x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                 class="relative w-full max-w-sm rounded-3xl bg-white shadow-2xl p-6 space-y-5 text-center border border-slate-200/50">
+                
+                <div class="h-16 w-16 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500 mx-auto">
+                    <i class="bi bi-trash3-fill text-3xl"></i>
+                </div>
+
+                <div class="space-y-1">
+                    <h3 class="text-xl font-black text-slate-900">Delete Purchase Order</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed">Are you sure you want to delete PO <span class="font-bold text-slate-800" x-text="'#' + poNumber"></span>? This will delete the purchase order and its associated workflow.</p>
+                </div>
+
+                <div class="flex flex-col gap-2 pt-2">
+                    <button @click="$wire.deletePurchaseOrder(poId); open = false" 
+                            class="w-full py-3 bg-rose-600 text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-rose-700 transition-all shadow-lg shadow-rose-200 active:scale-[0.98]">
+                        Yes, Delete PO
+                    </button>
+                    <button @click="open = false" 
+                            class="w-full py-2.5 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors">
                         Cancel
                     </button>
                 </div>

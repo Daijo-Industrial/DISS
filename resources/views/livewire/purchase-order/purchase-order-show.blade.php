@@ -56,6 +56,14 @@
                         <i class="bi bi-arrow-left"></i>
                         Back to List
                     </a>
+                    @can('delete', $purchaseOrder)
+                        <button @click="$dispatch('open-delete-modal')"
+                                type="button"
+                                class="inline-flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 px-4 py-2.5 text-sm font-bold text-rose-600 shadow-sm transition-all hover:bg-rose-100 hover:text-rose-700">
+                            <i class="bi bi-trash3"></i>
+                            Delete
+                        </button>
+                    @endcan
                     <a href="{{ route('po.download', $purchaseOrder->id) }}" 
                        class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-200 transition-all hover:bg-indigo-700 hover:scale-[1.02] active:scale-[0.98]">
                         <i class="bi bi-cloud-arrow-down-fill text-lg"></i>
@@ -441,5 +449,36 @@
 
     @push('modals')
         @include('partials.upload-files-modal', ['doc_id' => $purchaseOrder->po_number])
+
+        @can('delete', $purchaseOrder)
+            <div x-data="{ showDeleteConfirm: false }" 
+                 x-on:open-delete-modal.window="showDeleteConfirm = true"
+                 x-cloak>
+                <template x-teleport="body">
+                    <div x-show="showDeleteConfirm" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md" @click="showDeleteConfirm=false"></div>
+                        <div @click.outside="showDeleteConfirm=false" class="relative w-full max-w-md rounded-[2.5rem] bg-white shadow-2xl p-8 space-y-6 text-center text-slate-900">
+                            <div class="h-16 w-16 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-600 mx-auto">
+                                <i class="bi bi-trash3-fill text-3xl"></i>
+                            </div>
+                            <div class="space-y-2">
+                                <h3 class="text-2xl font-black">Delete Purchase Order</h3>
+                                <p class="text-sm text-slate-500 leading-relaxed">
+                                    Are you sure you want to delete PO <span class="font-bold text-slate-800">#{{ $purchaseOrder->po_number }}</span>? This will delete the purchase order and its associated workflow.
+                                </p>
+                            </div>
+                            <div class="flex flex-col gap-3">
+                                <button wire:click="delete" @click="showDeleteConfirm=false" class="w-full py-4 bg-rose-600 text-white rounded-2xl font-black shadow-lg hover:bg-rose-700 transition-all shadow-rose-200 active:scale-[0.98]">
+                                    Yes, Delete PO
+                                </button>
+                                <button @click="showDeleteConfirm=false" class="w-full py-3 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        @endcan
     @endpush
 </div>

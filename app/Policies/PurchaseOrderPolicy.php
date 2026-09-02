@@ -25,7 +25,7 @@ class PurchaseOrderPolicy
     public function view(User $user, PurchaseOrder $purchaseOrder): bool
     {
         // Users can view their own POs, or if they have view-any permission
-        if ($user->id === $purchaseOrder->user_id) {
+        if ($user->id === $purchaseOrder->creator_id || $user->id === $purchaseOrder->user_id) {
             return true;
         }
 
@@ -56,7 +56,7 @@ class PurchaseOrderPolicy
         }
 
         // 2. Check if the user is the owner or has management rights
-        if ($user->id === $purchaseOrder->user_id) {
+        if ($user->id === $purchaseOrder->creator_id || $user->id === $purchaseOrder->user_id) {
             return true;
         }
 
@@ -68,12 +68,13 @@ class PurchaseOrderPolicy
      */
     public function delete(User $user, PurchaseOrder $purchaseOrder): bool
     {
-        // Only owners can delete their own POs if they are in Draft/Rejected state
-        if ($user->id === $purchaseOrder->user_id && $purchaseOrder->getStatusEnum() === PurchaseOrderStatus::REJECTED) {
+        // Creators can delete their own POs
+        if ($user->id === $purchaseOrder->creator_id || $user->id === $purchaseOrder->user_id) {
             return true;
         }
 
-        return $user->hasAnyPermission(['po.manage', 'system.admin']);
+        return $user->hasAnyPermission(['po.manage', 'system.admin'])
+            || $user->hasRole(['super-admin', 'purchasing-manager', 'purchaser', 'director', 'general-manager']);
     }
 
     /**
@@ -106,7 +107,7 @@ class PurchaseOrderPolicy
     public function manageInvoices(User $user, PurchaseOrder $purchaseOrder): bool
     {
         // Users can manage invoices if they own the PO, or if they are purchasers/admins
-        if ($user->id === $purchaseOrder->user_id) {
+        if ($user->id === $purchaseOrder->creator_id || $user->id === $purchaseOrder->user_id) {
             return true;
         }
 
@@ -118,7 +119,7 @@ class PurchaseOrderPolicy
      */
     public function manageAttachments(User $user, PurchaseOrder $purchaseOrder): bool
     {
-        if ($user->id === $purchaseOrder->user_id) {
+        if ($user->id === $purchaseOrder->creator_id || $user->id === $purchaseOrder->user_id) {
             return true;
         }
 

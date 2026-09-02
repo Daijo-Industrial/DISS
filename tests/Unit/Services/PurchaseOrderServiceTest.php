@@ -51,12 +51,10 @@ class PurchaseOrderServiceTest extends TestCase
         // Assert
         $this->assertInstanceOf(PurchaseOrder::class, $po);
         $this->assertEquals(1001, $po->po_number);
-        $this->assertEquals(PurchaseOrderStatus::PENDING_APPROVAL->legacyValue(), $po->status);
         $this->assertEquals('Test Vendor', $po->vendor_name);
         $this->assertEquals(1000000, $po->total);
         $this->assertDatabaseHas('purchase_orders', [
             'po_number' => 1001,
-            'status' => PurchaseOrderStatus::PENDING_APPROVAL->legacyValue(),
         ]);
     }
 
@@ -155,7 +153,6 @@ class PurchaseOrderServiceTest extends TestCase
         // Arrange
         $po = PurchaseOrder::create([
             'po_number' => 1001,
-            'status' => PurchaseOrderStatus::APPROVED->legacyValue(), // Cannot edit approved POs
             'filename' => 'test.pdf',
             'creator_id' => 1,
             'vendor_name' => 'Test Vendor',
@@ -166,6 +163,13 @@ class PurchaseOrderServiceTest extends TestCase
             'purchase_order_category_id' => 1,
             'tanggal_pembayaran' => '2024-01-15',
         ]);
+
+        $approval = new ApprovalRequest;
+        $approval->approvable_id = $po->id;
+        $approval->approvable_type = PurchaseOrder::class;
+        $approval->status = 'APPROVED';
+        $approval->current_step = 1;
+        $approval->save();
 
         $updateData = [
             'po_number' => 1002,
@@ -206,9 +210,46 @@ class PurchaseOrderServiceTest extends TestCase
 
         // Assert
         $this->assertTrue($result);
-        $this->assertDatabaseMissing('purchase_orders', [
+        $this->assertSoftDeleted('purchase_orders', [
             'id' => $po->id,
         ]);
+    }
+
+    public function test_delete_approved_purchase_order_with_invoices()
+    {
+        // Arrange
+        $po = PurchaseOrder::create([
+            'po_number' => 2001,
+            'filename' => 'test_approved.pdf',
+            'creator_id' => 1,
+            'vendor_name' => 'Approved Vendor',
+            'currency' => 'IDR',
+            'total' => 5000000,
+            'purchase_order_category_id' => 1,
+        ]);
+
+        $approval = new ApprovalRequest;
+        $approval->approvable_id = $po->id;
+        $approval->approvable_type = PurchaseOrder::class;
+        $approval->status = 'APPROVED';
+        $approval->current_step = 1;
+        $approval->save();
+
+        $invoice = \App\Models\Invoice::create([
+            'purchase_order_id' => $po->id,
+            'invoice_number' => 'INV-2001',
+            'total' => 5000000,
+            'total_currency' => 'IDR',
+        ]);
+
+        // Act
+        $result = $this->service->delete($po->id);
+
+        // Assert
+        $this->assertTrue($result);
+        $this->assertSoftDeleted('purchase_orders', ['id' => $po->id]);
+        $this->assertSoftDeleted('invoices', ['id' => $invoice->id]);
+        $this->assertDatabaseMissing('approval_requests', ['id' => $approval->id]);
     }
 
     public function test_approve_purchase_order()

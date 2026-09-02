@@ -6,6 +6,7 @@ use App\Application\Approval\Contracts\Approvals;
 use App\Models\File;
 use App\Models\PurchaseOrder;
 use App\Services\PdfProcessingService;
+use App\Services\PurchaseOrderService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -223,6 +224,28 @@ class PurchaseOrderShow extends Component
                 'error' => $e->getMessage(),
             ]);
             $this->dispatch('toast', message: 'Submission failed: ' . $e->getMessage(), type: 'error');
+        } finally {
+            $this->loading = false;
+        }
+    }
+
+    public function delete(PurchaseOrderService $poService)
+    {
+        $this->authorize('delete', $this->purchaseOrder);
+        $this->loading = true;
+
+        try {
+            $poNumber = $this->purchaseOrder->po_number;
+            $poService->delete($this->purchaseOrderId);
+
+            session()->flash('success', "Purchase Order #{$poNumber} deleted successfully.");
+            return redirect()->route('po.index');
+        } catch (\Exception $e) {
+            Log::error('PurchaseOrderShow delete failed', [
+                'id' => $this->purchaseOrderId,
+                'error' => $e->getMessage(),
+            ]);
+            $this->dispatch('toast', message: 'Delete failed: ' . $e->getMessage(), type: 'error');
         } finally {
             $this->loading = false;
         }
