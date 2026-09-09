@@ -88,8 +88,8 @@ class EvaluationData extends Model
 
     protected $table = 'evaluation_datas';
 
-    /** Table has no created_at / updated_at columns */
-    public $timestamps = false;
+    /** Enable created_at and updated_at timestamps */
+    public $timestamps = true;
 
     /** Table DOES have an auto-increment `id` column */
     public $incrementing = true;

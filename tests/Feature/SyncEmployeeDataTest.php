@@ -76,7 +76,13 @@ test('it syncs employees, leave, and attendance correctly', function () {
         ->and($employee->jatah_cuti_tahun)
         ->toBe(10);
 
-    expect(EvaluationDataWeekly::count())->toBe(1);
-    $evaluation = EvaluationDataWeekly::first();
-    expect($evaluation->Alpha)->toBe(1)->and($evaluation->Izin)->toBe(1);
+    expect(DB::table('attendance_records')->count())->toBe(1);
+    $attendance = DB::table('attendance_records')->first();
+    expect($attendance->alpha)->toBe(1)->and($attendance->izin)->toBe(1);
+
+    expect(\App\Models\ImportJob::count())->toBe(1);
+    $importJob = \App\Models\ImportJob::first();
+    expect($importJob->type)->toBe('jpayroll_sync')
+        ->and($importJob->status)->toBe('completed')
+        ->and($importJob->error)->toBeNull();
 });

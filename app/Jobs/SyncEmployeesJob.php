@@ -35,17 +35,12 @@ class SyncEmployeesJob implements ShouldQueue
      */
     public function handle(JPayrollService $service): void
     {
-        $importJob = $this->importJobId ? \App\Models\ImportJob::find($this->importJobId) : null;
-
-        $result = $service->syncEmployeesLeaveAndAttendanceFromApi($this->companyArea, $this->year);
-
-        if ($importJob) {
-            $importJob->update([
-                'status' => $result['success'] ? 'completed' : 'failed',
-                'error' => $result['success'] ? null : $result['message'],
-                'finished_at' => now(),
-            ]);
-        }
+        $result = $service->syncEmployeesLeaveAndAttendanceFromApi(
+            $this->companyArea,
+            $this->year,
+            importJobId: $this->importJobId,
+            source: 'queued_job',
+        );
 
         if (! $result['success']) {
             Log::error('Sync failed in job: ' . $result['message']);

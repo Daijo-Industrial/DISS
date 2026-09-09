@@ -11,11 +11,17 @@ class UpdateEmployeeDashboardDataFromApi extends Command
 
     protected $description = 'Fetch and update employee dashboard data from JPayroll API';
 
-    public function handle(JPayrollService $service)
+    public function handle(JPayrollService $service): int
     {
         $this->info('Syncing employee data...');
-        $result = $service->syncEmployeesLeaveAndAttendanceFromApi();
+        $result = $service->syncEmployeesLeaveAndAttendanceFromApi(source: 'scheduled');
 
-        $this->error($result['message']);
+        if ($result['success'] ?? false) {
+            $this->info($result['message'] ?? 'Sync completed');
+            return Command::SUCCESS;
+        }
+
+        $this->error($result['message'] ?? 'Sync failed');
+        return Command::FAILURE;
     }
 }
