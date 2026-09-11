@@ -300,6 +300,13 @@ class Form extends Component
         $this->code = strtoupper(str_replace(' ', '_', $this->code));
     }
 
+    public function openDeleteModal(): void
+    {
+        $this->delete_confirm_input = '';
+        $this->resetErrorBag('delete_confirm_input');
+        $this->refreshUsageCounts();
+    }
+
     public function deleteRequirement(): void
     {
         if (! $this->requirement?->exists) {
@@ -307,18 +314,18 @@ class Form extends Component
         }
 
         // Must type the exact CODE to proceed
-        if (trim($this->delete_confirm_input) !== $this->requirement->code) {
-            $this->addError('delete_confirm_input', 'Type the exact code to confirm.');
+        if (strtoupper(trim($this->delete_confirm_input)) !== strtoupper($this->requirement->code)) {
+            $this->addError('delete_confirm_input', 'Type the exact code "' . $this->requirement->code . '" to confirm.');
 
             return;
         }
 
         // Re-check usage just in case it changed
         $this->refreshUsageCounts();
-        if ($this->usage['assignments'] > 0 || $this->usage['uploads'] > 0) {
+        if ($this->usage['uploads'] > 0) {
             $this->addError(
                 'delete_confirm_input',
-                'Cannot delete while assigned or with uploads. Detach assignments and remove uploads first.'
+                'Cannot delete while requirement has active uploads (' . $this->usage['uploads'] . '). Remove uploads first.'
             );
 
             return;
@@ -327,6 +334,7 @@ class Form extends Component
         $this->delete_in_progress = true;
 
         DB::transaction(function () {
+            $this->requirement->assignments()->delete();
             $this->requirement->delete();
         });
 
