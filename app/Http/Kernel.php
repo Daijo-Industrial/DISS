@@ -31,7 +31,6 @@ class Kernel extends HttpKernel
      */
     protected $middlewareGroups = [
         'web' => [
-            // \App\Http\Middleware\CheckSessionId::class,
             \App\Http\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
@@ -57,7 +56,6 @@ class Kernel extends HttpKernel
      * @var array<string, class-string|string>
      */
     protected $middlewareAliases = [
-        'checkSessionId' => \App\Http\Middleware\CheckSessionId::class,
         'auth' => \App\Http\Middleware\Authenticate::class,
         'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
         'auth.session' => \Illuminate\Session\Middleware\AuthenticateSession::class,
@@ -70,7 +68,6 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'checkUserRole' => \App\Http\Middleware\CheckUserRole::class,
-        'checkSession' => \App\Http\Middleware\CheckSessionId::class,
         'checkDepartment' => \App\Http\Middleware\CheckDepartment::class,
         'cors' => \App\Http\Middleware\CorsMiddleware::class,
         'is.head.or.management' => \App\Http\Middleware\IsHeadOrManagement::class,

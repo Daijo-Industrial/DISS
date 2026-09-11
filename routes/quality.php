@@ -158,7 +158,7 @@ Route::get('/inspection-reports/dashboard', \App\Livewire\InspectionDashboard::c
 Route::get('/inspection-reports/{inspection_report}', InspectionShow::class)->name('inspection-reports.show');
 
 // Department-specific QA/QC routes
-Route::middleware(['checkDepartment:QA,QC,ACCOUNTING,PPIC,STORE,LOGISTIC,DIRECTOR,PLASTIC INJECTION', 'checkSessionId'])->group(function () {
+Route::middleware(['checkDepartment:QA,QC,ACCOUNTING,PPIC,STORE,LOGISTIC,DIRECTOR,PLASTIC INJECTION'])->group(function () {
     // FORM ADJUST SECTION (duplicate routes with department restrictions)
     Route::get('/qaqc/adjustform', [AdjustFormQcController::class, 'index'])->name('adjust.index');
     Route::post('/qaqc/save/formadjust', [AdjustFormQcController::class, 'save'])->name('save.rawmaterial');
