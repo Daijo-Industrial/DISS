@@ -19,22 +19,27 @@ final class MasterPrItemService
             $itemName = $itemData['item_name'];
             $price = $this->sanitizeCurrencyInput($itemData['price']);
             $currency = $itemData['currency'];
+            $uom = $itemData['uom'] ?? null;
 
             // Check if the item exists in MasterDataPr
             $existingItem = MasterDataPr::where('name', $itemName)->first();
 
             if (! $existingItem) {
                 // Item not available in MasterDataPr - create new
+                // ponytail: persist uom on master item creation
                 MasterDataPr::create([
                     'name' => $itemName,
                     'currency' => $currency,
                     'price' => $price,
+                    'uom' => $uom,
                 ]);
             } else {
-                // Item available - update prices
+                // Item available - update prices and uom
+                // ponytail: persist uom if provided
                 $existingItem->update([
                     'price' => $existingItem->latest_price,
                     'latest_price' => $price,
+                    'uom' => $uom ?: $existingItem->uom,
                 ]);
             }
         }

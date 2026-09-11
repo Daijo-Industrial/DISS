@@ -387,7 +387,7 @@
                                                     class="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Item
                                                     Name</label>
                                                 <input type="text" x-model="item.item_name"
-                                                    :name="'items[' + index + '][item_name]'" x-init="initItemTomSelect($el, index)"
+                                                    :name="'items[' + index + '][item_name]'" x-init="initItemTomSelect($el, item)"
                                                     class="w-full" placeholder="Search Item..." required>
                                             </div>
 
@@ -598,11 +598,12 @@
                         });
                     },
 
-                    initItemTomSelect(el, index) {
+                    // ponytail: bind directly to item object to prevent repeater index drift; rich dropdown with uom auto-fill
+                    initItemTomSelect(el, item) {
                         if (!el) return;
                         if (el._ts) return;
 
-                        const existingValue = this.items[index]?.item_name || '';
+                        const existingValue = item?.item_name || '';
 
                         const tsOptions = {
                             valueField: 'name',
@@ -612,40 +613,81 @@
                             create: true,
                             dropdownParent: 'body',
                             placeholder: 'Select or type item...',
+                            loadThrottle: 300,
                             // Pre-populate with existing value so it shows on load
                             options: existingValue ? [{
                                 name: existingValue
                             }] : [],
                             items: existingValue ? [existingValue] : [],
                             load: (query, callback) => {
-                                if (!query.length) return callback();
+                                const q = (query || '').trim();
+                                if (q.length < 2) return callback();
+
+                                // ponytail: native AbortController cancels prior in-flight requests on rapid typing
+                                if (el._abortController) el._abortController.abort();
+                                el._abortController = new AbortController();
+
                                 fetch(
-                                        `/purchase-requests/get-item-names?itemName=${encodeURIComponent(query)}`)
+                                        `/purchase-requests/get-item-names?itemName=${encodeURIComponent(q)}`, {
+                                            signal: el._abortController.signal
+                                        }
+                                    )
                                     .then(res => res.json())
                                     .then(data => callback(data))
-                                    .catch(() => callback());
+                                    .catch(err => {
+                                        if (err.name !== 'AbortError') callback();
+                                    });
                             },
+                            render: {
+                                option: function(data, escape) {
+                                    const price = data.price ? Number(data.price).toLocaleString('id-ID') : '';
+                                    const priceDisplay = price ? `${escape(data.currency || 'IDR')} ${price}` : '';
+                                    const uomDisplay = data.uom ? escape(data.uom) : '';
+
+                                    return `<div class="py-2 px-3 flex items-center justify-between gap-3 border-b border-slate-100 last:border-0 hover:bg-indigo-50/50 transition-colors">
+                                        <div class="min-w-0 flex-1">
+                                            <div class="font-semibold text-slate-800 text-sm truncate">${escape(data.name)}</div>
+                                        </div>
+                                        <div class="flex items-center gap-2 flex-shrink-0 text-right">
+                                            ${uomDisplay ? `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 uppercase tracking-wider">${uomDisplay}</span>` : ''}
+                                            ${priceDisplay ? `<span class="text-xs font-bold text-emerald-600">${priceDisplay}</span>` : ''}
+                                        </div>
+                                    </div>`;
+                                },
+                                item: function(data, escape) {
+                                    return `<div>${escape(data.name)}</div>`;
+                                },
+                                option_create: function(data, escape) {
+                                    return `<div class="create py-2 px-3 text-xs text-indigo-600 font-semibold cursor-pointer hover:bg-indigo-50"><i class="bi bi-plus-circle mr-1"></i> Add custom item: <strong>${escape(data.input)}</strong></div>`;
+                                },
+                                no_results: function(data, escape) {
+                                    return `<div class="no-results py-2 px-3 text-xs text-slate-400">No catalog items found. Press Enter to use as new item.</div>`;
+                                }
+                            }
                         };
 
                         const ts = new TomSelect(el, tsOptions);
                         el._ts = ts;
 
                         ts.on('change', (value) => {
-                            if (!this.items[index]) return;
-                            this.items[index].item_name = value || '';
+                            if (!item) return;
+                            item.item_name = value || '';
 
                             const opt = ts.options[value];
                             if (opt) {
-                                // Update currency if it's still default IDR
-                                if (opt.currency && (this.items[index].currency === 'IDR' || !this
-                                        .items[index].currency)) {
-                                    this.items[index].currency = opt.currency;
+                                // Auto-fill currency if present
+                                if (opt.currency) {
+                                    item.currency = opt.currency;
                                 }
 
-                                // Update price with latest available
-                                const price = opt.latest_price || opt.price;
-                                if (price) {
-                                    this.items[index].price = price.toString();
+                                // Auto-fill price with latest available
+                                if (opt.price) {
+                                    item.price = opt.price.toString();
+                                }
+
+                                // Auto-fill UoM if available
+                                if (opt.uom) {
+                                    item.uom = opt.uom;
                                 }
                             }
                         });

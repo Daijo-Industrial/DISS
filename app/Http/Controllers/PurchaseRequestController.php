@@ -45,13 +45,12 @@ class PurchaseRequestController extends Controller
 
     public function create()
     {
-        $items = MasterDataPr::get();
+        // ponytail: items are loaded asynchronously via TomSelect search, skipping full table load
         $departments = Department::all();
         $defaultSig = $this->getDefaultSignature->execute((int) auth()->id());
         $user = auth()->user();
 
         return view('purchase-requests.pr-form', [
-            'items' => $items,
             'departments' => $departments,
             'hasDefaultSignature' => $defaultSig !== null,
             'signaturePreviewUrl' => $defaultSig ? route('signatures.show', $defaultSig->id) : null,
@@ -73,13 +72,12 @@ class PurchaseRequestController extends Controller
         // Authorize using PurchaseRequestPolicy@update
         $this->authorize('update', $purchaseRequest);
 
-        $items = MasterDataPr::get();
+        // ponytail: items are loaded asynchronously via TomSelect search, skipping full table load
         $departments = Department::all();
         $defaultSig = $this->getDefaultSignature->execute((int) auth()->id());
 
         return view('purchase-requests.pr-form', [
             'purchaseRequest' => $purchaseRequest,
-            'items' => $items,
             'departments' => $departments,
             'hasDefaultSignature' => $defaultSig !== null,
             'signaturePreviewUrl' => $defaultSig ? route('signatures.show', $defaultSig->id) : null,
@@ -170,22 +168,32 @@ class PurchaseRequestController extends Controller
         ]);
     }
 
-    // REVISI PR DROPDOWN ITEM + PRICE
+    // ponytail: fast query with limit, prefix ranking, and direct UoM retrieval
     public function getItemNames(Request $request)
     {
-        $itemName = $request->query('itemName');
-        // info('AJAX request received for item name: ' . $itemName);
+        $itemName = trim((string) $request->query('itemName'));
+        if (strlen($itemName) < 2) {
+            return response()->json([]);
+        }
 
-        // Fetch item names and prices from the database based on user input
-        $items = MasterDataPr::where('name', 'like', "%$itemName%")->get([
-            'id',
-            'name',
-            'currency',
-            'price',
-            'latest_price',
-        ]);
+        $items = MasterDataPr::where('name', 'like', "%{$itemName}%")
+            ->orderByRaw('CASE WHEN name LIKE ? THEN 1 ELSE 2 END', ["{$itemName}%"])
+            ->limit(15)
+            ->get([
+                'id',
+                'name',
+                'currency',
+                'price',
+                'latest_price',
+                'uom',
+            ]);
 
-        return response()->json($items);
+        return response()->json($items->map(fn ($item) => [
+            'name' => $item->name,
+            'currency' => $item->currency ?? 'IDR',
+            'price' => $item->latest_price ?: $item->price,
+            'uom' => $item->uom ?? '',
+        ]));
     }
 
     public function update(

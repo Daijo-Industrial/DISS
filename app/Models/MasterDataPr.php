@@ -9,7 +9,8 @@ class MasterDataPr extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'currency', 'price', 'latest_price'];
+    // ponytail: uom added to fillable for auto-completion and tracking
+    protected $fillable = ['name', 'currency', 'price', 'latest_price', 'uom'];
 
     public function details()
     {
