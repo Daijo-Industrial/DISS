@@ -61,6 +61,7 @@ final class GetPurchaseRequestDetail
         }
 
         // optional: legacy master item update when APPROVED (same as old show)
+        // ponytail: also persist latest approved uom to master catalog
         if ($pr->workflow_status === 'APPROVED') {
             foreach ($filtered as $d) {
                 $existing = MasterDataPr::where('name', $d->item_name)->first();
@@ -69,11 +70,13 @@ final class GetPurchaseRequestDetail
                         'name' => $d->item_name,
                         'currency' => $d->currency,
                         'price' => $d->price,
+                        'uom' => $d->uom,
                     ]);
                 } else {
                     $existing->update([
                         'price' => $existing->latest_price,
                         'latest_price' => $d->price,
+                        'uom' => $d->uom ?: $existing->uom,
                     ]);
                 }
             }
