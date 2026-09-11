@@ -18,6 +18,7 @@
                 'amber' => 'bg-amber-500 text-white shadow-sm shadow-amber-500/20',
                 'rose' => 'bg-rose-600 text-white shadow-sm shadow-rose-500/20',
                 'violet' => 'bg-violet-600 text-white shadow-sm shadow-violet-500/20',
+                'slate' => 'bg-slate-700 text-white shadow-sm shadow-slate-500/20',
                 default => 'bg-blue-600 text-white shadow-sm shadow-blue-500/20',
             };
         @endphp
