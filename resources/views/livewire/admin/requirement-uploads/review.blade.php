@@ -43,7 +43,8 @@
                     ['value' => 'pending', 'label' => 'Pending Review', 'count' => $counts['pending'], 'color' => 'amber'],
                     ['value' => 'approved', 'label' => 'Approved', 'count' => $counts['approved'], 'color' => 'emerald'],
                     ['value' => 'rejected', 'label' => 'Rejected', 'count' => $counts['rejected'], 'color' => 'rose'],
-                    ['value' => 'all', 'label' => 'All Submissions', 'count' => $counts['all']]
+                    ['value' => 'all', 'label' => 'All Submissions', 'count' => $counts['all']],
+                    ['value' => 'trashed', 'label' => 'Trash', 'count' => $counts['trashed'], 'color' => 'slate']
                 ]"
                 :selected="$status"
                 wireModel="status"
@@ -103,7 +104,7 @@
     </div>
 
     {{-- ─── 3. Main View Area (Kanban Board vs Table List) ───────────── --}}
-    @if($viewMode === 'kanban')
+    @if($viewMode === 'kanban' && $status !== 'trashed')
         {{-- KANBAN BOARD VIEW --}}
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -191,8 +192,12 @@
                             <x-compliance.sort-header field="requirements.name" label="Requirement" :currentSort="$sort" :currentDir="$dir" />
                             <x-compliance.sort-header field="dept_name" label="Department" :currentSort="$sort" :currentDir="$dir" />
                             <th class="px-4 py-3.5">File Details</th>
-                            <x-compliance.sort-header field="status" label="Status" :currentSort="$sort" :currentDir="$dir" />
-                            <x-compliance.sort-header field="valid_until" label="Validity" :currentSort="$sort" :currentDir="$dir" />
+                            @if($status === 'trashed')
+                                <x-compliance.sort-header field="deleted_at" label="Deleted At" :currentSort="$sort" :currentDir="$dir" />
+                            @else
+                                <x-compliance.sort-header field="status" label="Status" :currentSort="$sort" :currentDir="$dir" />
+                                <x-compliance.sort-header field="valid_until" label="Validity" :currentSort="$sort" :currentDir="$dir" />
+                            @endif
                             <th class="px-4 py-3.5 text-right">Action</th>
                         </tr>
                     </thead>
@@ -226,35 +231,73 @@
                                         {{ number_format($u->size / 1024, 1) }} KB
                                     </p>
                                 </td>
-                                <td class="px-4 py-4">
-                                    <x-compliance.status-badge
-                                        :status="$u->status === 'approved' ? 'compliant' : ($u->status === 'pending' ? 'pending' : 'critical')"
-                                        size="sm"
-                                    />
-                                </td>
-                                <td class="px-4 py-4">
-                                    <p class="text-xs font-semibold text-slate-700">
-                                        {{ $u->valid_from?->format('d M Y') ?? '—' }} → {{ $u->valid_until?->format('d M Y') ?? '—' }}
-                                    </p>
-                                    @if (!is_null($daysLeft))
-                                        <span class="inline-flex mt-0.5 rounded px-1.5 py-0.5 text-[10px] font-bold {{ $daysLeft < 0 ? 'bg-rose-100 text-rose-700' : ($daysLeft <= 14 ? 'bg-amber-100 text-amber-800' : 'text-slate-500') }}">
-                                            {{ $daysLeft < 0 ? 'Expired' : "Expires in {$daysLeft}d" }}
+                                @if($status === 'trashed')
+                                    <td class="px-4 py-4">
+                                        <p class="text-xs font-bold text-slate-700">
+                                            {{ $u->deleted_at ? \Carbon\Carbon::parse($u->deleted_at)->format('d M Y H:i') : '—' }}
+                                        </p>
+                                        <span class="inline-flex mt-0.5 rounded px-1.5 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-500">
+                                            {{ $u->deleted_at ? \Carbon\Carbon::parse($u->deleted_at)->diffForHumans() : '' }}
                                         </span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-4 text-right space-x-2">
+                                    </td>
+                                @else
+                                    <td class="px-4 py-4">
+                                        <x-compliance.status-badge
+                                            :status="$u->status === 'approved' ? 'compliant' : ($u->status === 'pending' ? 'pending' : 'critical')"
+                                            size="sm"
+                                        />
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <p class="text-xs font-semibold text-slate-700">
+                                            {{ $u->valid_from?->format('d M Y') ?? '—' }} → {{ $u->valid_until?->format('d M Y') ?? '—' }}
+                                        </p>
+                                        @if (!is_null($daysLeft))
+                                            <span class="inline-flex mt-0.5 rounded px-1.5 py-0.5 text-[10px] font-bold {{ $daysLeft < 0 ? 'bg-rose-100 text-rose-700' : ($daysLeft <= 14 ? 'bg-amber-100 text-amber-800' : 'text-slate-500') }}">
+                                                {{ $daysLeft < 0 ? 'Expired' : "Expires in {$daysLeft}d" }}
+                                            </span>
+                                        @endif
+                                    </td>
+                                @endif
+                                <td class="px-4 py-4 text-right space-x-1.5">
                                     <a href="{{ URL::signedRoute('uploads.download', ['upload' => $u->id]) }}" target="_blank"
                                         class="inline-flex items-center justify-center p-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors shadow-2xs"
                                         title="Download document">
                                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
                                     </a>
 
-                                    @can('approve-requirements')
-                                        <button type="button" wire:click="openDecision({{ $u->id }})"
-                                            class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs shadow-indigo-200 transition-all active:scale-95">
-                                            Decide
-                                        </button>
-                                    @endcan
+                                    @if($status === 'trashed')
+                                        @can('approve-requirements')
+                                            <button type="button" wire:click="restore({{ $u->id }})"
+                                                class="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold transition-all"
+                                                title="Restore upload">
+                                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"/></svg>
+                                                Restore
+                                            </button>
+                                            <button type="button"
+                                                wire:confirm="Permanently delete this upload and remove its file from storage? This cannot be undone."
+                                                wire:click="forceDelete({{ $u->id }})"
+                                                class="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition-all"
+                                                title="Delete forever">
+                                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                                                Delete Forever
+                                            </button>
+                                        @endcan
+                                    @else
+                                        @can('approve-requirements')
+                                            <button type="button"
+                                                wire:confirm="Are you sure you want to move this upload to trash?"
+                                                wire:click="moveToTrash({{ $u->id }})"
+                                                class="inline-flex items-center justify-center p-2 rounded-xl border border-rose-200 bg-rose-50/50 text-rose-600 hover:bg-rose-100/70 transition-colors shadow-2xs"
+                                                title="Move to Trash">
+                                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                                            </button>
+
+                                            <button type="button" wire:click="openDecision({{ $u->id }})"
+                                                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs shadow-indigo-200 transition-all active:scale-95">
+                                                Decide
+                                            </button>
+                                        @endcan
+                                    @endif
                                 </td>
                             </tr>
                         @empty
@@ -290,14 +333,33 @@
 
                 <div class="flex items-center gap-2">
                     @can('approve-requirements')
-                        <button type="button" wire:click="bulkApprove"
-                            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all active:scale-95">
-                            Approve Selected
-                        </button>
-                        <button type="button" wire:click="bulkReject"
-                            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition-all active:scale-95">
-                            Reject Selected
-                        </button>
+                        @if($status === 'trashed')
+                            <button type="button" wire:click="bulkRestore"
+                                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all active:scale-95">
+                                Restore Selected
+                            </button>
+                            <button type="button"
+                                wire:confirm="Permanently delete selected uploads and their files from storage? This cannot be undone."
+                                wire:click="bulkForceDelete"
+                                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition-all active:scale-95">
+                                Delete Permanently
+                            </button>
+                        @else
+                            <button type="button" wire:click="bulkApprove"
+                                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all active:scale-95">
+                                Approve Selected
+                            </button>
+                            <button type="button" wire:click="bulkReject"
+                                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition-all active:scale-95">
+                                Reject Selected
+                            </button>
+                            <button type="button"
+                                wire:confirm="Move selected uploads to trash?"
+                                wire:click="bulkMoveToTrash"
+                                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition-all active:scale-95">
+                                Move to Trash
+                            </button>
+                        @endif
                     @endcan
                     <button type="button" wire:click="clearSelection"
                         class="ml-2 text-xs font-bold text-slate-500 hover:text-slate-800">
@@ -387,6 +449,13 @@
                                         {{-- RIGHT: Verification & Decision Workbench (5 Cols) --}}
                                         <div class="lg:col-span-5 p-6 overflow-y-auto space-y-5 bg-white flex flex-col justify-between">
                                             <div class="space-y-5">
+                                                @if(!empty($active['is_trashed']))
+                                                    <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+                                                        <svg class="h-4 w-4 text-rose-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                                        <span>This submission is in the <strong>Trash</strong> (deleted {{ $active['deleted_at'] }}).</span>
+                                                    </div>
+                                                @endif
+
                                                 {{-- Submission Metadata --}}
                                                 <div class="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-3">
                                                     <div>
@@ -407,36 +476,38 @@
                                                     </div>
                                                 </div>
 
-                                                {{-- Preset Feedback Quick Templates --}}
-                                                <div>
-                                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Quick Rejection Reason</label>
-                                                    <div class="flex flex-wrap gap-1.5">
-                                                        <button type="button" wire:click="applyPresetReason('Scan is blurry or illegible')"
-                                                            class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-rose-50 hover:text-rose-700 transition-colors border">
-                                                            Blurry / Illegible
-                                                        </button>
-                                                        <button type="button" wire:click="applyPresetReason('Expired document certificate')"
-                                                            class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-rose-50 hover:text-rose-700 transition-colors border">
-                                                            Expired Certificate
-                                                        </button>
-                                                        <button type="button" wire:click="applyPresetReason('Missing required signature or seal')"
-                                                            class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-rose-50 hover:text-rose-700 transition-colors border">
-                                                            Missing Signature
-                                                        </button>
-                                                        <button type="button" wire:click="applyPresetReason('Incorrect document submitted for requirement')"
-                                                            class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-rose-50 hover:text-rose-700 transition-colors border">
-                                                            Wrong File Type
-                                                        </button>
+                                                @if(empty($active['is_trashed']))
+                                                    {{-- Preset Feedback Quick Templates --}}
+                                                    <div>
+                                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Quick Rejection Reason</label>
+                                                        <div class="flex flex-wrap gap-1.5">
+                                                            <button type="button" wire:click="applyPresetReason('Scan is blurry or illegible')"
+                                                                class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-rose-50 hover:text-rose-700 transition-colors border">
+                                                                Blurry / Illegible
+                                                            </button>
+                                                            <button type="button" wire:click="applyPresetReason('Expired document certificate')"
+                                                                class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-rose-50 hover:text-rose-700 transition-colors border">
+                                                                Expired Certificate
+                                                            </button>
+                                                            <button type="button" wire:click="applyPresetReason('Missing required signature or seal')"
+                                                                class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-rose-50 hover:text-rose-700 transition-colors border">
+                                                                Missing Signature
+                                                            </button>
+                                                            <button type="button" wire:click="applyPresetReason('Incorrect document submitted for requirement')"
+                                                                class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-rose-50 hover:text-rose-700 transition-colors border">
+                                                                Wrong File Type
+                                                            </button>
+                                                        </div>
                                                     </div>
-                                                </div>
 
-                                                {{-- Remarks Text Area --}}
-                                                <div>
-                                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Review Remarks / Feedback</label>
-                                                    <textarea wire:model="review_notes" rows="3"
-                                                        placeholder="Notes or feedback for department..."
-                                                        class="w-full p-3 rounded-xl border border-slate-200 text-xs font-medium text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"></textarea>
-                                                </div>
+                                                    {{-- Remarks Text Area --}}
+                                                    <div>
+                                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Review Remarks / Feedback</label>
+                                                        <textarea wire:model="review_notes" rows="3"
+                                                            placeholder="Notes or feedback for department..."
+                                                            class="w-full p-3 rounded-xl border border-slate-200 text-xs font-medium text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"></textarea>
+                                                    </div>
+                                                @endif
                                             </div>
 
                                             {{-- Footer Action Buttons --}}
@@ -448,16 +519,41 @@
 
                                                 @if($uploadId)
                                                     <div class="flex items-center gap-2">
-                                                        <button type="button"
-                                                            wire:click="reject({{ $uploadId }}); decisionPanelOpen = false"
-                                                            class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition-all active:scale-95">
-                                                            Reject Submission
-                                                        </button>
-                                                        <button type="button"
-                                                            wire:click="approve({{ $uploadId }}); decisionPanelOpen = false"
-                                                            class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs shadow-emerald-200 transition-all active:scale-95">
-                                                            Approve Document
-                                                        </button>
+                                                        @if(!empty($active['is_trashed']))
+                                                            @can('approve-requirements')
+                                                                <button type="button"
+                                                                    wire:confirm="Permanently delete this upload and remove its file from storage? This cannot be undone."
+                                                                    wire:click="forceDelete({{ $uploadId }})"
+                                                                    class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition-all active:scale-95">
+                                                                    Delete Forever
+                                                                </button>
+                                                                <button type="button"
+                                                                    wire:click="restore({{ $uploadId }})"
+                                                                    class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs shadow-emerald-200 transition-all active:scale-95">
+                                                                    Restore Upload
+                                                                </button>
+                                                            @endcan
+                                                        @else
+                                                            @can('approve-requirements')
+                                                                <button type="button"
+                                                                    wire:confirm="Are you sure you want to move this upload to trash?"
+                                                                    wire:click="moveToTrash({{ $uploadId }})"
+                                                                    class="px-3 py-2.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold shadow-xs transition-all active:scale-95"
+                                                                    title="Move upload to trash">
+                                                                    Move to Trash
+                                                                </button>
+                                                                <button type="button"
+                                                                    wire:click="reject({{ $uploadId }}); decisionPanelOpen = false"
+                                                                    class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs transition-all active:scale-95">
+                                                                    Reject Submission
+                                                                </button>
+                                                                <button type="button"
+                                                                    wire:click="approve({{ $uploadId }}); decisionPanelOpen = false"
+                                                                    class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs shadow-emerald-200 transition-all active:scale-95">
+                                                                    Approve Document
+                                                                </button>
+                                                            @endcan
+                                                        @endif
                                                     </div>
                                                 @endif
                                             </div>

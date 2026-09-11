@@ -58,6 +58,7 @@ Route::middleware('auth')->group(function () {
 
     // Signed download (shared, security check is signed middleware)
     Route::get('/requirement-uploads/{upload}/download', [RequirementUploadDownloadController::class, 'show'])
+        ->withTrashed()
         ->name('uploads.download')
         ->middleware('signed');
 });

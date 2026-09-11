@@ -5,13 +5,15 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
 class RequirementUpload extends Model
 {
-    use LogsActivity;
+    use LogsActivity, SoftDeletes;
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -45,6 +47,22 @@ class RequirementUpload extends Model
         });
 
         static::deleted(function ($upload) {
+            if ($upload->scope_type === \App\Models\ComplianceDepartment::class) {
+                \App\Jobs\UpdateDepartmentComplianceSnapshot::dispatch($upload->scope_id);
+            }
+        });
+
+        static::restored(function ($upload) {
+            if ($upload->scope_type === \App\Models\ComplianceDepartment::class) {
+                \App\Jobs\UpdateDepartmentComplianceSnapshot::dispatch($upload->scope_id);
+            }
+        });
+
+        static::forceDeleted(function ($upload) {
+            if ($upload->path && Storage::disk('public')->exists($upload->path)) {
+                Storage::disk('public')->delete($upload->path);
+            }
+
             if ($upload->scope_type === \App\Models\ComplianceDepartment::class) {
                 \App\Jobs\UpdateDepartmentComplianceSnapshot::dispatch($upload->scope_id);
             }

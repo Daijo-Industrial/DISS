@@ -17,7 +17,7 @@ class Review extends Component
 
     public $paginationTheme = 'bootstrap';
 
-    public string $status = 'pending'; // pending|approved|rejected|all
+    public string $status = 'pending'; // pending|approved|rejected|all|trashed
 
     public ?string $q = null;
 
@@ -141,7 +141,7 @@ class Review extends Component
 
     public function openDecision(int $id): void
     {
-        $u = $this->baseQuery()->where('requirement_uploads.id', $id)->firstOrFail();
+        $u = $this->baseQuery()->withTrashed()->where('requirement_uploads.id', $id)->firstOrFail();
 
         $this->uploadId = $id;
         $this->review_notes = $u->review_notes;
@@ -162,6 +162,8 @@ class Review extends Component
             'valid_until' => optional($u->valid_until)->format('Y-m-d'),
             'download_url' => $downloadUrl,
             'preview_url' => $previewUrl,
+            'is_trashed' => !is_null($u->deleted_at),
+            'deleted_at' => optional($u->deleted_at)->format('d M Y H:i'),
         ];
 
         $this->dispatch('open-decision-modal');
@@ -230,6 +232,84 @@ class Review extends Component
         $this->dispatch('toast', type: 'warning', message: 'Rejected selected uploads.');
     }
 
+    public function moveToTrash(int $id): void
+    {
+        Gate::authorize('approve-requirements');
+        $u = RequirementUpload::findOrFail($id);
+        $u->delete();
+
+        $this->dispatch('upload:done');
+        if ($this->uploadId === $id) {
+            $this->reset(['uploadId', 'review_notes', 'active']);
+            $this->dispatch('close-decision-modal');
+        }
+        $this->dispatch('toast', type: 'info', message: 'Upload moved to trash.');
+    }
+
+    public function restore(int $id): void
+    {
+        Gate::authorize('approve-requirements');
+        $u = RequirementUpload::onlyTrashed()->findOrFail($id);
+        $u->restore();
+
+        $this->dispatch('upload:done');
+        if ($this->uploadId === $id) {
+            $this->reset(['uploadId', 'review_notes', 'active']);
+            $this->dispatch('close-decision-modal');
+        }
+        $this->dispatch('toast', type: 'success', message: 'Upload restored successfully.');
+    }
+
+    public function forceDelete(int $id): void
+    {
+        Gate::authorize('approve-requirements');
+        $u = RequirementUpload::onlyTrashed()->findOrFail($id);
+        $u->forceDelete();
+
+        $this->dispatch('upload:done');
+        if ($this->uploadId === $id) {
+            $this->reset(['uploadId', 'review_notes', 'active']);
+            $this->dispatch('close-decision-modal');
+        }
+        $this->dispatch('toast', type: 'error', message: 'Upload permanently deleted.');
+    }
+
+    public function bulkMoveToTrash(): void
+    {
+        Gate::authorize('approve-requirements');
+        $uploads = RequirementUpload::whereIn('id', $this->selected)->get();
+        foreach ($uploads as $u) {
+            $u->delete();
+        }
+        $this->clearSelection();
+        $this->dispatch('upload:done');
+        $this->dispatch('toast', type: 'info', message: 'Moved selected uploads to trash.');
+    }
+
+    public function bulkRestore(): void
+    {
+        Gate::authorize('approve-requirements');
+        $uploads = RequirementUpload::onlyTrashed()->whereIn('id', $this->selected)->get();
+        foreach ($uploads as $u) {
+            $u->restore();
+        }
+        $this->clearSelection();
+        $this->dispatch('upload:done');
+        $this->dispatch('toast', type: 'success', message: 'Restored selected uploads.');
+    }
+
+    public function bulkForceDelete(): void
+    {
+        Gate::authorize('approve-requirements');
+        $uploads = RequirementUpload::onlyTrashed()->whereIn('id', $this->selected)->get();
+        foreach ($uploads as $u) {
+            $u->forceDelete();
+        }
+        $this->clearSelection();
+        $this->dispatch('upload:done');
+        $this->dispatch('toast', type: 'error', message: 'Permanently deleted selected uploads.');
+    }
+
     public function exportCsv()
     {
         $cols = [
@@ -284,7 +364,9 @@ class Review extends Component
                     ->where('requirement_uploads.scope_type', '=', \App\Infrastructure\Persistence\Eloquent\Models\Department::class);
             });
 
-        if ($this->status !== 'all') {
+        if ($this->status === 'trashed') {
+            $q->onlyTrashed();
+        } elseif ($this->status !== 'all') {
             $q->where('requirement_uploads.status', $this->status);
         }
 
@@ -318,7 +400,7 @@ class Review extends Component
         }
 
         // sorting
-        $allowed = ['requirements.name', 'dept_name', 'status', 'valid_until', 'created_at'];
+        $allowed = ['requirements.name', 'dept_name', 'status', 'valid_until', 'created_at', 'deleted_at'];
         $col = in_array($this->sort, $allowed, true) ? $this->sort : 'created_at';
         $dir = $this->dir === 'asc' ? 'asc' : 'desc';
         $q->orderBy($col, $dir);
@@ -336,11 +418,12 @@ class Review extends Component
             'approved' => RequirementUpload::where('status', 'approved')->count(),
             'rejected' => RequirementUpload::where('status', 'rejected')->count(),
             'all' => RequirementUpload::count(),
+            'trashed' => RequirementUpload::onlyTrashed()->count(),
         ];
 
-        // Kanban datasets if in kanban view mode
+        // Kanban datasets if in kanban view mode and not viewing trashed items
         $kanbanColumns = [];
-        if ($this->viewMode === 'kanban') {
+        if ($this->viewMode === 'kanban' && $this->status !== 'trashed') {
             $kanbanColumns = [
                 'pending' => $this->baseQuery()->clone()->where('requirement_uploads.status', 'pending')->take(15)->get(),
                 'approved' => $this->baseQuery()->clone()->where('requirement_uploads.status', 'approved')->take(15)->get(),
