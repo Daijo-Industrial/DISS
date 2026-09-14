@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Purchasing\SupplierEvaluation\Services\SapEvaluationImportService;
 use App\Domain\Purchasing\SupplierEvaluation\Services\SupplierEvaluationService;
 use App\Domain\Purchasing\SupplierEvaluation\Services\SupplierReportService;
 use App\Models\PurchasingHeaderEvaluationSupplier;
@@ -17,8 +18,32 @@ class PurchasingSupplierEvaluationController extends Controller
 {
     public function __construct(
         private readonly SupplierEvaluationService $evaluationService,
-        private readonly SupplierReportService $reportService
+        private readonly SupplierReportService $reportService,
+        private readonly SapEvaluationImportService $importService
     ) {}
+
+    public function import(Request $request)
+    {
+        if (! $request->user() || ! $request->user()->hasRole(['super-admin', 'admin'])) {
+            abort(403, 'Unauthorized. Only Super Admin and IT Admin can update evaluation tables.');
+        }
+
+        $request->validate([
+            'model' => 'required|string|in:' . implode(',', array_keys(SapEvaluationImportService::MODEL_CONFIG)),
+            'file' => 'required|file|max:51200',
+        ]);
+
+        try {
+            $result = $this->importService->import(
+                $request->input('model'),
+                $request->file('file')
+            );
+
+            return back()->with('success', $result['message']);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Import failed: ' . $e->getMessage());
+        }
+    }
 
     public function index()
     {

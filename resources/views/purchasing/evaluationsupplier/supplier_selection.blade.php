@@ -13,8 +13,31 @@
                         sudah pernah dihitung.
                     </p>
                 </div>
+
+                @if(auth()->check() && auth()->user()->hasRole(['super-admin', 'admin']))
+                    <div>
+                        <button type="button" class="btn btn-primary btn-sm d-flex align-items-center gap-1 shadow-sm" data-bs-toggle="modal" data-bs-target="#importSapModal">
+                            <i class="bx bx-upload fs-6"></i>
+                            <span>Update / Import SAP Data</span>
+                        </button>
+                    </div>
+                @endif
             </div>
         </section>
+
+        {{-- FLASH MESSAGES --}}
+        @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show small mb-3 border-0 shadow-sm" role="alert">
+                <i class="bx bx-check-circle me-1"></i> {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+        @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show small mb-3 border-0 shadow-sm" role="alert">
+                <i class="bx bx-error-circle me-1"></i> {{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
 
         {{-- FORM FILTER SUPPLIER & PERIODE --}}
         <section class="mb-4">
@@ -207,6 +230,8 @@
                 </div>
             @endif
         </section>
+
+        @include('purchasing.evaluationsupplier.partials.import_modal')
     </div>
 @endsection
 

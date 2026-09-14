@@ -91,11 +91,31 @@
                     <a href="{{ route('purchasing.evaluationsupplier.index') }}" class="btn btn-outline-secondary btn-sm">
                         ← Back to Supplier Evaluation
                     </a>
+                    @if(auth()->check() && auth()->user()->hasRole(['super-admin', 'admin']))
+                        <button type="button" class="btn btn-primary btn-sm d-print-none d-flex align-items-center gap-1 shadow-sm" onclick="openImportModal('kriteria5')">
+                            <i class="bx bx-upload fs-6"></i> Update Data
+                        </button>
+                    @endif
                     <button type="button" class="btn btn-outline-primary btn-sm" onclick="window.print()">
                         Print
                     </button>
                 </div>
+            </div>
         </section>
+
+        {{-- FLASH MESSAGES --}}
+        @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show small mb-3 border-0 shadow-sm d-print-none" role="alert">
+                <i class="bx bx-check-circle me-1"></i> {{ session('success') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
+        @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show small mb-3 border-0 shadow-sm d-print-none" role="alert">
+                <i class="bx bx-error-circle me-1"></i> {{ session('error') }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        @endif
 
         {{-- FILTER FORM --}}
         <section class="mb-4 d-print-none">
@@ -216,5 +236,6 @@
             </div>
         </section>
 
+        @include('purchasing.evaluationsupplier.partials.import_modal')
     </div>
 @endsection
