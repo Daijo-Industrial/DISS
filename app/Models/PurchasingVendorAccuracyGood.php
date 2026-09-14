@@ -7,4 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class PurchasingVendorAccuracyGood extends Model
 {
     protected $table = 'purchasing_vendor_accuracy_good';
+
+    public $timestamps = false;
+
+    protected $guarded = ['id'];
 }

@@ -7,4 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class PurchasingVendorUrgentRequest extends Model
 {
     protected $table = 'purchasing_vendor_urgent_request';
+
+    public $timestamps = false;
+
+    protected $guarded = ['id'];
 }

@@ -7,4 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class PurchasingVendorListCertificate extends Model
 {
     protected $table = 'purchasing_vendor_list_certificate';
+
+    public $timestamps = false;
+
+    protected $guarded = ['id'];
 }
