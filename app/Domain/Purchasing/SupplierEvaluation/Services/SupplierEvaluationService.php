@@ -8,6 +8,7 @@ use App\Models\PurchasingDetailEvaluationSupplier;
 use App\Models\PurchasingHeaderEvaluationSupplier;
 use App\Models\PurchasingListPo;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 final class SupplierEvaluationService
 {
@@ -161,20 +162,27 @@ final class SupplierEvaluationService
         return 'DOC-' . now()->format('YmdHis');
     }
 
+    // ponytail: direct SQL distinct aggregation avoids hydrating 37k+ Eloquent models into memory
     public function getSupplierData(): array
     {
+        $rows = DB::table('purchasing_list_po')
+            ->select('supplier_code', 'supplier_name', DB::raw('YEAR(posting_date) as year'))
+            ->distinct()
+            ->whereNotNull('supplier_code')
+            ->where('supplier_code', '!=', '')
+            ->whereNotNull('posting_date')
+            ->orderBy('supplier_name')
+            ->orderByDesc('year')
+            ->get();
+
         $supplierData = [];
-
-        $masters = PurchasingListPo::select('supplier_code', 'supplier_name', 'posting_date')->get();
-        $grouped = $masters->groupBy(['supplier_code', 'supplier_name']);
-
-        foreach ($grouped as $supplier_code => $byName) {
-            foreach ($byName as $supplier_name => $records) {
-                $years = $records->map(fn ($r) => Carbon::parse($r->posting_date)->format('Y'))
-                    ->unique()->values()->toArray();
-
-                $key = ($supplier_name ?: 'Unknown') . ' - ' . $supplier_code;
-                $supplierData[$key] = $years;
+        foreach ($rows as $row) {
+            $key = ($row->supplier_name ?: 'Unknown') . ' - ' . $row->supplier_code;
+            if (! isset($supplierData[$key])) {
+                $supplierData[$key] = [];
+            }
+            if ($row->year && ! in_array((string) $row->year, $supplierData[$key], true)) {
+                $supplierData[$key][] = (string) $row->year;
             }
         }
 

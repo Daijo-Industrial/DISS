@@ -48,7 +48,7 @@ class PurchasingSupplierEvaluationController extends Controller
     public function index()
     {
         $supplierData = $this->evaluationService->getSupplierData();
-        $header = PurchasingHeaderEvaluationSupplier::get();
+        $header = PurchasingHeaderEvaluationSupplier::latest('id')->get();
 
         return view('purchasing.evaluationsupplier.supplier_selection', compact('supplierData', 'header'));
     }
