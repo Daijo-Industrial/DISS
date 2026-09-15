@@ -40,12 +40,17 @@ final class SupplierEvaluationService
             ];
         }
 
-        $supplierParts = array_map('trim', explode(' - ', $data['supplier']));
-        if (count($supplierParts) !== 2) {
+        $lastDash = strrpos($data['supplier'], ' - ');
+        if ($lastDash === false) {
             return ['success' => false, 'message' => 'Invalid supplier format. Expected: "Name - Code"'];
         }
 
-        [$supplierName, $supplierCode] = $supplierParts;
+        $supplierName = trim(substr($data['supplier'], 0, $lastDash));
+        $supplierCode = trim(substr($data['supplier'], $lastDash + 3));
+
+        if ($supplierName === '' || $supplierCode === '') {
+            return ['success' => false, 'message' => 'Invalid supplier format. Expected: "Name - Code"'];
+        }
 
         $startMonthNum = $monthMapping[$data['start_month']] ?? null;
         $endMonthNum = $monthMapping[$data['end_month']] ?? null;
@@ -61,16 +66,23 @@ final class SupplierEvaluationService
             return ['success' => false, 'message' => 'Start date cannot be later than end date'];
         }
 
-        $supplier = PurchasingListPo::where('supplier_code', $supplierCode)->first();
+        $codeExists = PurchasingListPo::where('supplier_code', $supplierCode)->exists();
 
-        if (! $supplier) {
+        if (! $codeExists) {
             return [
                 'success' => false,
                 'message' => 'Supplier not found',
             ];
         }
 
-        if (strtolower(trim($supplier->supplier_name)) !== strtolower(trim($supplierName))) {
+        $supplier = PurchasingListPo::where('supplier_code', $supplierCode)
+            ->where(function ($query) use ($supplierName) {
+                $query->where('supplier_name', $supplierName)
+                    ->orWhereRaw('LOWER(TRIM(supplier_name)) = ?', [strtolower(trim($supplierName))]);
+            })
+            ->first();
+
+        if (! $supplier) {
             return ['success' => false, 'message' => 'Supplier name does not match the provided code'];
         }
 
@@ -87,7 +99,7 @@ final class SupplierEvaluationService
         ]);
 
         // Ambil bulan yang benar-benar ada PO-nya
-        $validMonths = PurchasingListPo::where('supplier_name', $supplierName)
+        $validMonths = PurchasingListPo::where('supplier_code', $supplier->supplier_code)
             ->whereBetween('posting_date', [$startDate, $endDate])
             ->get()
             ->map(fn ($p) => Carbon::parse($p->posting_date)->format('Y-m'))
