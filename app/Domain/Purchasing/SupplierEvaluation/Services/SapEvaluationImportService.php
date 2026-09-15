@@ -58,7 +58,7 @@ final class SapEvaluationImportService
         'purchasing_contact' => [
             'label' => 'Purchasing Contacts & Vendor Dept',
             'table' => 'purchasing_contacts',
-            'sample_file' => '(EVALUASI) VENDOR LIST PURCHASING DEPT.xls',
+            'sample_file' => '(EVALUASI) PURCHASING CONTACT.xls',
         ],
     ];
 
@@ -348,6 +348,7 @@ final class SapEvaluationImportService
         ];
     }
 
+    // ponytail: (EVALUASI) PURCHASING CONTACT.xls fully replaces legacy vendor list
     private function transformPurchasingContact(\Closure $getCol): ?array
     {
         $vendorCode = $getCol('BP Code', 'Vendor Code');
@@ -355,36 +356,17 @@ final class SapEvaluationImportService
             return null;
         }
 
-        $rawMember = $getCol('Sales Employee Name', 'P Member', 'p_member');
+        $firstWord = $this->cleanString($getCol('FirstWord'));
+        $pMember = ($firstWord !== null && ! str_starts_with($firstWord, '-'))
+            ? $firstWord
+            : null;
 
         return [
             'vendor_code' => $vendorCode,
             'vendor_name' => $getCol('BP Name', 'Vendor Name') ?? '',
-            'p_member' => $this->extractContactName($rawMember),
-            'persontocontact' => $this->cleanString($getCol('Person To Contact', 'Contact Person', 'persontocontact')),
+            'p_member' => $pMember,
+            'persontocontact' => $this->cleanString($getCol('Contact Person Name', 'persontocontact')),
         ];
-    }
-
-    /**
-     * Extract only contact name from Sales Employee Name string.
-     * e.g. "AYU KARIMA H. Ext 186 ayu@daijo.co.id" -> "AYU KARIMA H."
-     */
-    public function extractContactName(?string $raw): ?string
-    {
-        if ($raw === null) {
-            return null;
-        }
-
-        $trimmed = trim($raw);
-        if ($trimmed === '' || stripos($trimmed, 'No Sales Employee') !== false) {
-            return null;
-        }
-
-        // Split before 'Ext', 'email', or '@'
-        $parts = preg_split('/\b(ext\b|email\b|email\s*:|@)/i', $trimmed);
-        $name = trim($parts[0] ?? '');
-
-        return $name === '' ? null : $name;
     }
 
     /**

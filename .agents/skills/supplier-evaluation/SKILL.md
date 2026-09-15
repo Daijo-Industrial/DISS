@@ -30,18 +30,18 @@ Exported files from SAP have a `.xls` extension but are actually **tab-delimited
 | `PurchasingVendorUrgentRequest` | `purchasing_vendor_urgent_request` | `(EVALUASI) VENDOR URGENT REQUEST.xls` | Kriteria 4: Kerjasama Permintaan Mendadak | `PO No` &rarr; `po_no`<br>`PO Date` &rarr; `po_date`<br>`Request Date` &rarr; `request_date`<br>`Request Qty` &rarr; `request_quantity`<br>`Incoming Date` &rarr; `incoming_date`<br>`Incoming Qty` &rarr; `incoming_quantity`<br>`Special Price` &rarr; `special_price` |
 | `PurchasingVendorClaimResponse` | `purchasing_vendor_claim_response` | `(EVALUASI) VENDOR CLAIM RESPON.xls` | Kriteria 5: Respon Klaim (CPAR) | `Vendor Claim Code` &rarr; `vendor_claim_code`<br>`CPAR_NO` &rarr; `cpar_no`<br>`CPAR Sent Date` &rarr; `cpar_sent_date`<br>`CPAR Respon Date` &rarr; `cpar_response_date`<br>`Close Status` &rarr; `close_status` |
 | `PurchasingVendorListCertificate` | `purchasing_vendor_list_certificate` | `(EVALUASI) LIST VENDOR.xls` | Kriteria 6: Sertifikasi ISO / IATF | `BP Code` &rarr; `vendor_code`<br>`BP Name` &rarr; `vendor_name`<br>`ISO 9001:2015 NUM` &rarr; `iso_9001_doc`<br>`ISO 9001:2015 START/END DATE`<br>`ISO 14001:2015 NO / DATES`<br>`IATF 16949:2016 NO / DATES` |
-| `PurchasingContact` | `purchasing_contacts` | `(EVALUASI) VENDOR LIST PURCHASING DEPT.xls` | Vendor Contacts & Purchasing PIC (`p_member`) | `BP Code` &rarr; `vendor_code`<br>`BP Name` &rarr; `vendor_name`<br>`Sales Employee Name` &rarr; `p_member` (cleaned name) |
+| `PurchasingContact` | `purchasing_contacts` | `(EVALUASI) PURCHASING CONTACT.xls` | Vendor Contacts & Purchasing PIC (`p_member`) | `BP Code` &rarr; `vendor_code`<br>`BP Name` &rarr; `vendor_name`<br>`FirstWord` &rarr; `p_member` (null when '-No')<br>`Contact Person Name` &rarr; `persontocontact` |
 
 ---
 
-## 3. `p_member` Contact Name Extraction Rules
+## 3. Purchasing Contact & PIC Ingestion (`(EVALUASI) PURCHASING CONTACT.xls`)
 
-In `(EVALUASI) VENDOR LIST PURCHASING DEPT.xls`, column `Sales Employee Name` contains concatenated data like `"AYU KARIMA H. Ext 186 ayu@daijo.co.id"`.
-- Rule in `SapEvaluationImportService::extractContactName()`:
-  - Strips everything starting from `Ext`, `email:`, or `@`.
-  - Extracts the full name (even if multi-word: `AYU KARIMA H.`, `BAYU SETIADJI`, `DIAN`).
-  - Missing or placeholder values like `"-No Sales Employee-"` are converted to `null`.
-- In views (`foremind_detail.blade.php`, `foremind_detail_print_customer_excel.blade.php`, `supplier_detail.blade.php`), it is displayed with fallback `'-'`.
+The export file `(EVALUASI) PURCHASING CONTACT.xls` fully replaces the legacy vendor list export:
+- **`p_member` (Purchasing PIC)**: Extracted directly from column `FirstWord`.
+  - Values starting with `'-'` (such as `'-No'`) or blank strings indicate no assigned PIC and are stored as `null`.
+  - Valid names (e.g. `ANDRIANI`, `DIAN`, `AYU`) are trimmed and stored directly without regex parsing.
+- **`persontocontact` (Vendor Contact Person)**: Extracted directly from column `Contact Person Name` (e.g. `MR. BENNY SISWANTO`, `HADI CAHYONO`).
+- In views (`foremind_detail.blade.php`, `foremind_detail_print_customer_excel.blade.php`, `supplier_detail.blade.php`), `$contact->persontocontact` is displayed in `ATT` and `$contact->p_member ?? '-'` in `FR` / `PIC`.
 
 ---
 
