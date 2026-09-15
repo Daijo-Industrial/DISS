@@ -33,7 +33,7 @@
                                 <option value="kriteria4" data-file="(EVALUASI) VENDOR URGENT REQUEST.xls">Kriteria 4 - Urgent Request (purchasing_vendor_urgent_request)</option>
                                 <option value="kriteria5" data-file="(EVALUASI) VENDOR CLAIM RESPON.xls">Kriteria 5 - Claim Response (purchasing_vendor_claim_response)</option>
                                 <option value="kriteria6" data-file="(EVALUASI) LIST VENDOR.xls">Kriteria 6 - Vendor Certificate (purchasing_vendor_list_certificate)</option>
-                                <option value="purchasing_contact" data-file="(EVALUASI) VENDOR LIST PURCHASING DEPT.xls">Purchasing Contacts & PIC (purchasing_contacts)</option>
+                                <option value="purchasing_contact" data-file="(EVALUASI) PURCHASING CONTACT.xls">Purchasing Contacts & PIC (purchasing_contacts)</option>
                             </select>
                             <div class="form-text text-muted small mt-1" id="expected_file_hint">
                                 Expected SAP File: <span class="fw-semibold text-primary" id="expected_file_name">-</span>
