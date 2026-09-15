@@ -55,7 +55,7 @@
                         <tr>
                             <td style="vertical-align: middle; height:60px; font-size: 18px;">FR </td>
                             <td colspan="12" style="vertical-align: middle; height:60px; font-size: 18px;">
-                                {{ $contact->p_member }}</td>
+                                {{ $contact->p_member ?? '-' }}</td>
                         </tr>
                         <tr>
                             <td colspan="13" align="center" style="vertical-align: middle; font-size: 30px;">
