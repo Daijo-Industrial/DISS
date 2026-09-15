@@ -38,12 +38,12 @@ final class SupplierScoringService
                 $validMonths
             ));
 
-        $this->calculateKualitasBarang($headerId, $supplierName, $startDate, $endDate, $details);
-        $this->calculateCustomerStopline($headerId, $supplierName, $startDate, $endDate, $details);
-        $this->calculateKuantitas($headerId, $supplierName, $startDate, $endDate, $details);
-        $this->calculateWaktuPengiriman($headerId, $supplierName, $startDate, $endDate, $details);
-        $this->calculatePermintaanMendadak($headerId, $supplierName, $startDate, $endDate, $details);
-        $this->calculateResponKlaim($headerId, $supplierName, $startDate, $endDate, $details, $validMonths);
+        $this->calculateKualitasBarang($headerId, $supplierCode, $startDate, $endDate, $details);
+        $this->calculateCustomerStopline($headerId, $supplierCode, $startDate, $endDate, $details);
+        $this->calculateKuantitas($headerId, $supplierCode, $startDate, $endDate, $details);
+        $this->calculateWaktuPengiriman($headerId, $supplierCode, $startDate, $endDate, $details);
+        $this->calculatePermintaanMendadak($headerId, $supplierCode, $startDate, $endDate, $details);
+        $this->calculateResponKlaim($headerId, $supplierCode, $startDate, $endDate, $details, $validMonths);
         $this->calculateSertifikasi($headerId, $supplierCode, $details);
 
         $this->updateHeaderGradeAndStatus($headerId, $validMonths);
@@ -51,12 +51,12 @@ final class SupplierScoringService
 
     private function calculateKualitasBarang(
         int $headerId,
-        string $supplierName,
+        string $supplierCode,
         Carbon $startDate,
         Carbon $endDate,
         $details
     ): void {
-        $claims = PurchasingVendorClaim::where('vendor_name', $supplierName)
+        $claims = PurchasingVendorClaim::where('vendor_code', $supplierCode)
             ->whereBetween('claim_start_date', [$startDate, $endDate])
             ->get();
 
@@ -85,12 +85,12 @@ final class SupplierScoringService
 
     private function calculateCustomerStopline(
         int $headerId,
-        string $supplierName,
+        string $supplierCode,
         Carbon $startDate,
         Carbon $endDate,
         $details
     ): void {
-        $claims = PurchasingVendorClaim::where('vendor_name', $supplierName)
+        $claims = PurchasingVendorClaim::where('vendor_code', $supplierCode)
             ->whereBetween('claim_start_date', [$startDate, $endDate])
             ->get();
 
@@ -122,12 +122,12 @@ final class SupplierScoringService
 
     private function calculateKuantitas(
         int $headerId,
-        string $supplierName,
+        string $supplierCode,
         Carbon $startDate,
         Carbon $endDate,
         $details
     ): void {
-        $accuracyGoods = PurchasingVendorAccuracyGood::where('vendor_name', $supplierName)
+        $accuracyGoods = PurchasingVendorAccuracyGood::where('vendor_code', $supplierCode)
             ->whereBetween('incoming_date', [$startDate, $endDate])
             ->get();
 
@@ -156,12 +156,12 @@ final class SupplierScoringService
 
     private function calculateWaktuPengiriman(
         int $headerId,
-        string $supplierName,
+        string $supplierCode,
         Carbon $startDate,
         Carbon $endDate,
         $details
     ): void {
-        $ontimeDeliveries = PurchasingVendorOntimeDelivery::where('vendor_name', $supplierName)
+        $ontimeDeliveries = PurchasingVendorOntimeDelivery::where('vendor_code', $supplierCode)
             ->whereBetween('actual_date', [$startDate, $endDate])
             ->get();
 
@@ -190,12 +190,12 @@ final class SupplierScoringService
 
     private function calculatePermintaanMendadak(
         int $headerId,
-        string $supplierName,
+        string $supplierCode,
         Carbon $startDate,
         Carbon $endDate,
         $details
     ): void {
-        $urgentRequests = PurchasingVendorUrgentRequest::where('vendor_name', $supplierName)
+        $urgentRequests = PurchasingVendorUrgentRequest::where('vendor_code', $supplierCode)
             ->whereBetween('request_date', [$startDate, $endDate])
             ->get();
 
@@ -238,7 +238,7 @@ final class SupplierScoringService
 
     private function calculateResponKlaim(
         int $headerId,
-        string $supplierName,
+        string $supplierCode,
         Carbon $startDate,
         Carbon $endDate,
         $details,
@@ -249,7 +249,7 @@ final class SupplierScoringService
             $detail->update(['respon_klaim' => 10]);
         }
 
-        $claimResponses = PurchasingVendorClaimResponse::where('vendor_name', $supplierName)
+        $claimResponses = PurchasingVendorClaimResponse::where('vendor_code', $supplierCode)
             ->whereBetween('cpar_sent_date', [$startDate, $endDate])
             ->get();
 
