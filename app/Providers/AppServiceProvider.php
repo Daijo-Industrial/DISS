@@ -7,9 +7,15 @@ use App\Domain\Overtime\Observers\OvertimeFormObserver;
 use App\Infrastructure\Persistence\Eloquent\Models\VerificationItem;
 use App\Infrastructure\Persistence\Eloquent\Models\VerificationReport;
 use App\Observers\VerificationItemObserver;
+use Google\Client;
+use Google\Service\Drive;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
+use League\Flysystem\Filesystem;
+use Masbug\Flysystem\GoogleDriveAdapter;
 use Yajra\DataTables\Html\Builder;
 
 class AppServiceProvider extends ServiceProvider
@@ -78,6 +84,42 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        try {
+            Storage::extend('google', function ($app, $config) {
+                $options = [];
+
+                if (!empty($config['teamDriveId'] ?? null)) {
+                    $options['teamDriveId'] = $config['teamDriveId'];
+                }
+
+                if (!empty($config['sharedFolderId'] ?? null)) {
+                    $options['sharedFolderId'] = $config['sharedFolderId'];
+                }
+
+                $client = new Client();
+                $client->setClientId($config['clientId'] ?? '');
+                $client->setClientSecret($config['clientSecret'] ?? '');
+                $client->refreshToken($config['refreshToken'] ?? '');
+
+                $service = new Drive($client);
+                $adapter = new class($service, $config['folder'] ?? '/', $options) extends GoogleDriveAdapter {
+                    public function listContents(string $directory, bool $recursive): iterable
+                    {
+                        try {
+                            yield from parent::listContents($directory, $recursive);
+                        } catch (\League\Flysystem\UnableToReadFile $e) {
+                            return;
+                        }
+                    }
+                };
+                $driver  = new Filesystem($adapter, $config);
+
+                return new FilesystemAdapter($driver, $adapter, $config);
+            });
+        } catch (\Exception $e) {
+            // Handle initialization exceptions if needed
+        }
+        
         // Model::unguard();  -> kalau pake ini , semua model tidak perlu dibuat fillable / di definisikan
         OvertimeForm::observe(OvertimeFormObserver::class);
         VerificationItem::observe(VerificationItemObserver::class);

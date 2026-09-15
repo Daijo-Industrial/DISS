@@ -84,6 +84,28 @@ class Kernel extends ConsoleKernel
             ->timezone('Asia/Jakarta')
             ->withoutOverlapping()
             ->appendOutputTo(storage_path('logs/sap-sync.log'));
+
+        // Google Drive Backups
+        // ponytail: fast daily DB-only backup (data changes daily)
+        $schedule->command('backup:run --only-db')
+            ->dailyAt('02:00')
+            ->timezone('Asia/Jakarta')
+            ->withoutOverlapping()
+            ->onOneServer();
+
+        // ponytail: full backup (DB + uploads) weekly on Sunday off-peak
+        $schedule->command('backup:run')
+            ->weeklyOn(0, '02:00')
+            ->timezone('Asia/Jakarta')
+            ->withoutOverlapping()
+            ->onOneServer();
+
+        // ponytail: prune old backups based on retention rules daily
+        $schedule->command('backup:clean')
+            ->dailyAt('03:30')
+            ->timezone('Asia/Jakarta')
+            ->withoutOverlapping()
+            ->onOneServer();
     }
 
     /**
