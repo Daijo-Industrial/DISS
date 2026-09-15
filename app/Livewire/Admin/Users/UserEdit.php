@@ -18,6 +18,8 @@ class UserEdit extends Component
     public int $editingId;
     public string $name = '';
     public string $email = '';
+    public string $password = '';
+    public string $password_confirmation = '';
     public bool $active = true;
 
     /** @var string[] */
@@ -138,6 +140,14 @@ class UserEdit extends Component
         $this->employeeOptions = [];
     }
 
+    public function clearEmployee(): void
+    {
+        $this->employeeId = null;
+        $this->selectedEmployeeLabel = null;
+        $this->employeeSearch = '';
+        $this->employeeOptions = [];
+    }
+
     public function save(UpdateUser $updateUser): void
     {
         $this->authorize('user.update');
@@ -146,13 +156,18 @@ class UserEdit extends Component
         $dto = new UserData(
             name: $this->name, 
             email: $this->email, 
-            password: null, 
+            password: ! empty($this->password) ? $this->password : null, 
             roles: $this->selectedRoles, 
             active: $this->active, 
             employeeId: $this->employeeId
         );
 
-        $updateUser->execute($this->editingId, $dto);
+        try {
+            $updateUser->execute($this->editingId, $dto);
+        } catch (\DomainException $e) {
+            $this->addError('email', $e->getMessage());
+            return;
+        }
 
         $eloquent = EloquentUser::find($this->editingId);
         if ($eloquent) {

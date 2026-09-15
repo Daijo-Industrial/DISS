@@ -22,11 +22,16 @@
                 </label>
             </div>
             @if ($selectedEmployeeLabel)
-                <div class="mt-2 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 border border-emerald-100">
-                    <svg class="h-4 w-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                    </svg>
-                    Linked: {{ $selectedEmployeeLabel }}
+                <div class="mt-2 flex items-center justify-between gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 border border-emerald-100">
+                    <div class="flex items-center gap-2">
+                        <svg class="h-4 w-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                        <span>Linked: {{ $selectedEmployeeLabel }}</span>
+                    </div>
+                    <button type="button" wire:click="clearEmployee" class="text-xs text-rose-600 hover:text-rose-800 font-semibold underline">
+                        Unlink
+                    </button>
                 </div>
             @endif
             @if (!empty($employeeOptions))
@@ -69,6 +74,27 @@
                     Email Address <span class="text-red-500">*</span>
                 </label>
                 @error('email')<p class="mt-1 text-xs text-red-500">{{ $message }}</p>@enderror
+            </div>
+        </div>
+
+        {{-- Password + Confirm Password (Optional) --}}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div class="relative">
+                <input type="password" wire:model.defer="password" id="password"
+                    class="peer block w-full rounded-md border border-slate-200 bg-transparent px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-950"
+                    placeholder=" ">
+                <label for="password" class="absolute left-4 top-2 z-10 origin-[0] -translate-y-6 scale-75 transform text-xs text-slate-500 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-slate-900">
+                    New Password <span class="text-[11px] text-slate-400 font-normal">(Leave blank to keep current)</span>
+                </label>
+                @error('password')<p class="mt-1 text-xs text-red-500">{{ $message }}</p>@enderror
+            </div>
+            <div class="relative">
+                <input type="password" wire:model.defer="password_confirmation" id="password_confirmation"
+                    class="peer block w-full rounded-md border border-slate-200 bg-transparent px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-slate-950"
+                    placeholder=" ">
+                <label for="password_confirmation" class="absolute left-4 top-2 z-10 origin-[0] -translate-y-6 scale-75 transform text-xs text-slate-500 duration-300 peer-placeholder-shown:translate-y-0 peer-placeholder-shown:scale-100 peer-focus:-translate-y-6 peer-focus:scale-75 peer-focus:text-slate-900">
+                    Confirm New Password
+                </label>
             </div>
         </div>
 

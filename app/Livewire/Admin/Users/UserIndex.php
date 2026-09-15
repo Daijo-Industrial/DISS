@@ -116,7 +116,12 @@ class UserIndex extends Component
         $this->authorize('user.update');
         $this->validate($this->passwordRules());
         
-        $changeUserPassword->execute($this->passwordUserId, $this->newPassword);
+        try {
+            $changeUserPassword->execute($this->passwordUserId, $this->newPassword);
+        } catch (\DomainException $e) {
+            $this->addError('newPassword', $e->getMessage());
+            return;
+        }
 
         $this->showPasswordModal = false;
         $this->passwordUserId = null;
