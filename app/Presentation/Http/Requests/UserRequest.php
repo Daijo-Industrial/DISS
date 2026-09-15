@@ -38,6 +38,7 @@ abstract class UserRequest extends FormRequest
             ],
             'selectedRoles' => ['nullable', 'array'],
             'selectedRoles.*' => ['string'],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
             'active' => ['boolean'],
         ];
     }

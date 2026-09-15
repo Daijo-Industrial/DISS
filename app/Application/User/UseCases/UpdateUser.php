@@ -24,9 +24,9 @@ class UpdateUser
         }
 
         if ((string) $existing->email() !== $data->email) {
-            $existing = $this->users->findByEmail($data->email);
+            $userWithEmail = $this->users->findByEmail($data->email);
 
-            if ($existing && $existing->id() !== $existing->id()) {
+            if ($userWithEmail && $userWithEmail->id() !== $existing->id()) {
                 throw new DomainException('Email already in use');
             }
 
@@ -47,7 +47,7 @@ class UpdateUser
         if ($data->employeeId !== null && $data->employeeId !== $employeeId) {
             $employee = $this->employees->findById($data->employeeId);
             if (! $employee) {
-                throw new \DomainException('Employee not found');
+                throw new DomainException('Employee not found');
             }
 
             $otherUser = $this->users->findByEmployeeId($data->employeeId);
@@ -56,11 +56,17 @@ class UpdateUser
             }
 
             $existing->setEmployeeId($data->employeeId);
+        } elseif ($data->employeeId === null && $employeeId !== null) {
+            $existing->setEmployeeId(null);
+        }
+
+        if (! empty($data->password)) {
+            $this->users->changeUserPassword($id, $data->password);
         }
 
         $updated = $this->users->update($existing);
 
-        if ($data->roles) {
+        if (is_array($data->roles)) {
             $this->users->setRoles($updated, $data->roles);
         }
 

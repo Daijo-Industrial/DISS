@@ -70,7 +70,7 @@ class User
         $this->email = $email;
     }
 
-    public function setEmployeeId(int $employeeId): void
+    public function setEmployeeId(?int $employeeId): void
     {
         $this->employeeId = $employeeId;
     }
