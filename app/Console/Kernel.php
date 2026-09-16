@@ -85,6 +85,8 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->appendOutputTo(storage_path('logs/sap-sync.log'));
 
+        $schedule->command('queue:prune-failed --hours=72')->daily();
+
         // Google Drive Backups
         // ponytail: fast daily DB-only backup (data changes daily)
         $schedule->command('backup:run --only-db')
