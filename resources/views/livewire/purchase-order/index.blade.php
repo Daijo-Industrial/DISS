@@ -84,25 +84,52 @@
             </div>
         </button>
 
-        {{-- Dynamic Filtered Valuation --}}
-        <div class="group bg-indigo-600 rounded-2xl p-5 flex items-center gap-4 shadow-lg shadow-indigo-100 transition-all text-left relative overflow-hidden text-white">
-            <div class="h-12 w-12 rounded-xl bg-white/20 text-white flex items-center justify-center text-2xl shadow-inner">
-                <i class="bi bi-wallet2"></i>
-            </div>
-            <div>
-                <p class="text-xs font-black text-indigo-100 uppercase tracking-wider mb-0.5">Active Valuation</p>
-                <div class="space-y-1.5 mt-1 max-h-[60px] overflow-y-auto custom-scrollbar pr-1">
-                    @forelse($this->filteredTotal as $currency => $total)
-                        <div class="flex items-baseline justify-between gap-2 border-b border-white/10 pb-1 last:border-0 last:pb-0">
-                            <span class="text-[9px] font-black text-indigo-200 uppercase tracking-widest">{{ $currency }}</span>
-                            <p class="text-base font-black leading-none">{{ number_format($total, 0, ',', '.') }}</p>
-                        </div>
-                    @empty
-                        <p class="text-sm font-bold opacity-60 italic">No Valuation</p>
-                    @endforelse
+        {{-- Dynamic Filtered Valuation / Invoicing Sums --}}
+        @if($invoicingFilter === 'partially_invoiced')
+            <div class="group bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl p-4 flex items-center gap-3.5 shadow-lg shadow-indigo-100 transition-all text-left relative overflow-hidden text-white">
+                <div class="h-11 w-11 rounded-xl bg-white/20 text-white flex items-center justify-center text-xl shadow-inner flex-shrink-0">
+                    <i class="bi bi-pie-chart-fill"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-[10px] font-black text-indigo-100 uppercase tracking-wider mb-0.5">Partial Invoicing Sums</p>
+                    <div class="space-y-1.5 mt-0.5 max-h-[72px] overflow-y-auto custom-scrollbar pr-1">
+                        @forelse($this->filteredInvoicingTotals as $currency => $sums)
+                            <div class="border-b border-white/10 pb-1 last:border-0 last:pb-0">
+                                <div class="flex items-baseline justify-between gap-1">
+                                    <span class="text-[9px] font-black text-indigo-200 uppercase tracking-widest">{{ $currency }} Total</span>
+                                    <span class="text-sm font-black leading-none font-mono">{{ number_format($sums['total_valuation'], 0, ',', '.') }}</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-1 text-[9px] font-bold mt-1">
+                                    <span class="text-emerald-300">Inv: {{ number_format($sums['total_invoiced'], 0, ',', '.') }}</span>
+                                    <span class="text-amber-200">Rem: {{ number_format($sums['total_remaining'], 0, ',', '.') }}</span>
+                                </div>
+                            </div>
+                        @empty
+                            <p class="text-xs font-bold opacity-60 italic">No Partial Invoices</p>
+                        @endforelse
+                    </div>
                 </div>
             </div>
-        </div>
+        @else
+            <div class="group bg-indigo-600 rounded-2xl p-5 flex items-center gap-4 shadow-lg shadow-indigo-100 transition-all text-left relative overflow-hidden text-white">
+                <div class="h-12 w-12 rounded-xl bg-white/20 text-white flex items-center justify-center text-2xl shadow-inner">
+                    <i class="bi bi-wallet2"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-black text-indigo-100 uppercase tracking-wider mb-0.5">Active Valuation</p>
+                    <div class="space-y-1.5 mt-1 max-h-[60px] overflow-y-auto custom-scrollbar pr-1">
+                        @forelse($this->filteredTotal as $currency => $total)
+                            <div class="flex items-baseline justify-between gap-2 border-b border-white/10 pb-1 last:border-0 last:pb-0">
+                                <span class="text-[9px] font-black text-indigo-200 uppercase tracking-widest">{{ $currency }}</span>
+                                <p class="text-base font-black leading-none">{{ number_format($total, 0, ',', '.') }}</p>
+                            </div>
+                        @empty
+                            <p class="text-sm font-bold opacity-60 italic">No Valuation</p>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+        @endif
     </div>
 
     {{-- Main Toolbar - Enterprise Compact --}}
@@ -311,6 +338,67 @@
                 </div>
             @endforeach
             <button wire:click="clearFilters" class="text-xs font-black text-rose-500 uppercase tracking-widest hover:text-rose-600 ml-3 transition-colors">Clear All</button>
+        </div>
+    @endif
+
+    {{-- Partially Invoiced Financial Overview Banner --}}
+    @if($invoicingFilter === 'partially_invoiced')
+        <div class="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-200/80 rounded-2xl p-4 shadow-sm backdrop-blur-sm mb-4">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="h-10 w-10 rounded-xl bg-amber-500 text-white flex items-center justify-center text-xl shadow-md shadow-amber-500/20 flex-shrink-0">
+                        <i class="bi bi-receipt-cutoff"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-sm font-black text-slate-900 uppercase tracking-tight">Partially Invoiced POs Summary</h3>
+                            @php
+                                $totalPos = collect($this->filteredInvoicingTotals)->sum('po_count');
+                            @endphp
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">
+                                {{ $totalPos }} {{ Str::plural('Order', $totalPos) }}
+                            </span>
+                        </div>
+                        <p class="text-xs font-medium text-slate-500 mt-0.5">
+                            Aggregated financial totals for all purchase orders with open invoice balances
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3 md:gap-4">
+                    @forelse($this->filteredInvoicingTotals as $currency => $sums)
+                        <div class="flex items-center gap-3 bg-white/90 border border-amber-200/70 rounded-xl px-4 py-2.5 shadow-sm">
+                            <div class="flex flex-col">
+                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">PO Total ({{ $currency }})</span>
+                                <span class="text-sm font-black text-slate-900 font-mono">
+                                    {{ number_format($sums['total_valuation'], 0, ',', '.') }}
+                                </span>
+                            </div>
+                            <div class="h-7 w-[1px] bg-slate-200"></div>
+                            <div class="flex flex-col">
+                                <span class="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
+                                    <i class="bi bi-check-circle-fill text-[9px]"></i> Invoiced
+                                </span>
+                                <span class="text-sm font-black text-emerald-700 font-mono">
+                                    {{ number_format($sums['total_invoiced'], 0, ',', '.') }}
+                                    <span class="text-[10px] font-bold text-emerald-600/70 font-sans">({{ $sums['percent'] }}%)</span>
+                                </span>
+                            </div>
+                            <div class="h-7 w-[1px] bg-slate-200"></div>
+                            <div class="flex flex-col">
+                                <span class="text-[9px] font-black text-amber-600 uppercase tracking-widest flex items-center gap-1">
+                                    <i class="bi bi-hourglass-split text-[9px]"></i> Remaining
+                                </span>
+                                <span class="text-sm font-black text-amber-700 font-mono">
+                                    {{ number_format($sums['total_remaining'], 0, ',', '.') }}
+                                </span>
+                            </div>
+                        </div>
+                    @empty
+                        <span class="text-xs font-bold text-slate-400 italic">No partially invoiced orders found.</span>
+                    @endforelse
+                </div>
+            </div>
         </div>
     @endif
 
@@ -549,6 +637,48 @@
                         </tr>
                     @endforelse
                 </tbody>
+                @if($invoicingFilter === 'partially_invoiced' && !empty($this->filteredInvoicingTotals))
+                    <tfoot class="bg-slate-50/80 border-t-2 border-slate-200 font-bold text-xs text-slate-800">
+                        <tr>
+                            <td class="pl-6 pr-4 py-3 text-slate-400 font-black uppercase text-[10px]">Total</td>
+                            @if(in_array('po_number', $visibleColumns))
+                                <td class="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                                    {{ collect($this->filteredInvoicingTotals)->sum('po_count') }} POs
+                                </td>
+                            @endif
+                            @if(in_array('vendor', $visibleColumns))
+                                <td class="px-4 py-3"></td>
+                            @endif
+                            @if(in_array('creator', $visibleColumns))
+                                <td class="px-4 py-3"></td>
+                            @endif
+                            @if(in_array('total', $visibleColumns))
+                                <td class="px-4 py-3 hidden lg:table-cell font-mono">
+                                    @foreach($this->filteredInvoicingTotals as $currency => $sums)
+                                        <div><span class="text-[10px] text-slate-400 mr-1">{{ $currency }}</span>{{ number_format($sums['total_valuation'], 0, ',', '.') }}</div>
+                                    @endforeach
+                                </td>
+                            @endif
+                            @if(in_array('invoicing', $visibleColumns))
+                                <td class="px-4 py-3">
+                                    @foreach($this->filteredInvoicingTotals as $currency => $sums)
+                                        <div class="text-[10px] leading-tight font-mono">
+                                            <span class="text-emerald-600 font-bold">Inv: {{ number_format($sums['total_invoiced'], 0, ',', '.') }}</span>
+                                            <span class="text-slate-300 mx-1">|</span>
+                                            <span class="text-amber-600 font-bold">Rem: {{ number_format($sums['total_remaining'], 0, ',', '.') }}</span>
+                                        </div>
+                                    @endforeach
+                                </td>
+                            @endif
+                            @if(in_array('status', $visibleColumns))
+                                <td class="px-4 py-3"></td>
+                            @endif
+                            @if(in_array('actions', $visibleColumns))
+                                <td class="px-8 py-3"></td>
+                            @endif
+                        </tr>
+                    </tfoot>
+                @endif
             </table>
         </div>
         
