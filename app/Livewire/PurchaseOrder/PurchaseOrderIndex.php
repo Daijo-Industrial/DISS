@@ -412,6 +412,10 @@ class PurchaseOrderIndex extends Component
     private function exportPOs(array $poIds)
     {
         $purchaseOrders = PurchaseOrder::with(['user', 'category'])
+            ->withCount('invoices')
+            ->withSum(['invoices as invoiced_total' => function ($query) {
+                $query->whereColumn('total_currency', 'purchase_orders.currency');
+            }], 'total')
             ->whereIn('id', $poIds)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -432,7 +436,10 @@ class PurchaseOrderIndex extends Component
                 'Vendor Name',
                 'Creator',
                 'Status',
+                'Invoicing Status',
                 'Total',
+                'Invoiced Total',
+                'Remaining Balance',
                 'Currency',
                 'Approved Date',
                 'Created At',
@@ -440,12 +447,22 @@ class PurchaseOrderIndex extends Component
 
             // CSV data
             foreach ($purchaseOrders as $po) {
+                $invoicedTotal = (float) ($po->invoiced_total ?? 0);
+                $remainingBalance = max(0, (float) $po->total - $invoicedTotal);
+                $invoicingStatus = 'Not Invoiced';
+                if ($po->invoices_count > 0) {
+                    $invoicingStatus = $invoicedTotal >= (float) $po->total ? 'Fully Invoiced' : 'Partially Invoiced';
+                }
+
                 fputcsv($file, [
                     $po->po_number,
                     $po->vendor_name,
                     $po->user?->name ?: '',
                     $po->getStatusEnum()->label(),
+                    $invoicingStatus,
                     $po->total,
+                    $invoicedTotal,
+                    $remainingBalance,
                     $po->currency ?: 'IDR',
                     $po->approved_date ? $po->approved_date->format('Y-m-d H:i:s') : '',
                     $po->created_at->format('Y-m-d H:i:s'),
@@ -733,6 +750,38 @@ class PurchaseOrderIndex extends Component
             ->toArray();
     }
 
+    // ponytail: single aggregation query computes PO valuation, invoiced sum, and remaining balance grouped by currency
+    public function getFilteredInvoicingTotalsProperty(): array
+    {
+        $subInvoices = '(SELECT COALESCE(SUM(invoices.total), 0) FROM invoices WHERE invoices.purchase_order_id = purchase_orders.id AND invoices.total_currency = purchase_orders.currency AND invoices.deleted_at IS NULL)';
+
+        return $this->getPurchaseOrdersQuery()
+            ->reorder()
+            ->select('currency')
+            ->selectRaw('COUNT(*) as po_count')
+            ->selectRaw('SUM(total) as total_valuation')
+            ->selectRaw("SUM({$subInvoices}) as total_invoiced")
+            ->selectRaw("SUM(total - {$subInvoices}) as total_remaining")
+            ->groupBy('currency')
+            ->get()
+            ->keyBy('currency')
+            ->map(function ($item) {
+                $totalValuation = (float) $item->total_valuation;
+                $totalInvoiced = (float) $item->total_invoiced;
+                $totalRemaining = (float) $item->total_remaining;
+                $percent = $totalValuation > 0 ? min(100, ($totalInvoiced / $totalValuation) * 100) : 0;
+
+                return [
+                    'po_count' => (int) $item->po_count,
+                    'total_valuation' => $totalValuation,
+                    'total_invoiced' => $totalInvoiced,
+                    'total_remaining' => $totalRemaining,
+                    'percent' => round($percent, 1),
+                ];
+            })
+            ->toArray();
+    }
+
     public function getStatsProperty()
     {
         $currentMonth = now()->startOfMonth();
@@ -802,6 +851,9 @@ class PurchaseOrderIndex extends Component
                 break;
             case 'rejected':
                 $this->statusFilter = 'REJECTED';
+                break;
+            case 'partially_invoiced':
+                $this->invoicingFilter = 'partially_invoiced';
                 break;
         }
     }
