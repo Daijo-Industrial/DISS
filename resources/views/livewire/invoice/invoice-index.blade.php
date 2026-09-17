@@ -1,12 +1,20 @@
 <div>
-    <div class="px-4 sm:px-6 lg:px-8 py-5 max-w-[1600px] mx-auto space-y-4">
+    <div class="px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto space-y-4">
         {{-- Header Section (Minimal) --}}
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-                <h1 class="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                    <i class="bi bi-receipt text-emerald-600"></i>
-                    Invoices
-                </h1>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                        <i class="bi bi-receipt text-emerald-600"></i>
+                        Invoices
+                    </h1>
+                    <select wire:model.live="yearFilter"
+                            class="bg-white border border-slate-200 rounded-xl text-xs font-black uppercase tracking-wider text-slate-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 py-1.5 px-3 shadow-xs hover:border-slate-300 transition-all cursor-pointer">
+                        @foreach($filterOptions['years'] as $val => $lbl)
+                            <option value="{{ $val }}">{{ $lbl }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <p class="text-xs text-slate-500 mt-0.5">
                     Manage and track purchase order invoices, approval workflows, and payments.
                 </p>

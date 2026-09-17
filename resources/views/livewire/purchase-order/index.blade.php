@@ -24,7 +24,15 @@
     {{-- Page Header --}}
     <div class="flex items-center justify-between mb-6">
         <div>
-            <h1 class="text-2xl font-black text-slate-900 tracking-tight uppercase">Purchase Orders</h1>
+            <div class="flex items-center gap-3">
+                <h1 class="text-2xl font-black text-slate-900 tracking-tight uppercase">Purchase Orders</h1>
+                <select wire:model.live="yearFilter"
+                        class="bg-white border border-slate-200 rounded-xl text-xs font-black uppercase tracking-wider text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 py-1.5 px-3 shadow-xs hover:border-slate-300 transition-all cursor-pointer">
+                    @foreach($filters['years'] as $value => $label)
+                        <option value="{{ $value }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
             <nav class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
                 <a href="{{ route('po.dashboard') }}" class="hover:text-indigo-600 transition-colors">Dashboard</a>
                 <i class="bi bi-chevron-right text-[10px]"></i>
@@ -332,7 +340,7 @@
                 <div class="flex items-center gap-2 px-4 py-1.5 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-indigo-200 transition-all group">
                     <span class="text-[10px] font-black text-slate-400 uppercase tracking-tight">{{ $pill['label'] }}</span>
                     <span class="text-xs font-black text-slate-700">{{ $pill['value'] }}</span>
-                    <button wire:click="$set('{{ $pill['key'] }}', '')" class="text-slate-300 hover:text-rose-500 transition-colors">
+                    <button wire:click="$set('{{ $pill['key'] }}', '{{ $pill['reset'] ?? '' }}')" class="text-slate-300 hover:text-rose-500 transition-colors">
                         <i class="bi bi-x-circle-fill text-xs"></i>
                     </button>
                 </div>
@@ -682,70 +690,34 @@
             </table>
         </div>
         
-        {{-- Footer with pagination and export --}}
-        <div class="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                @if($purchaseOrders->total() > 0)
-                    <div class="text-sm text-slate-600">
-                        {{ $purchaseOrders->total() }} result{{ $purchaseOrders->total() !== 1 ? 's' : '' }}
-                        @if($purchaseOrders->hasPages())
-                            <span class="text-slate-400">•</span>
-                            Page {{ $purchaseOrders->currentPage() }} of {{ $purchaseOrders->lastPage() }}
-                        @endif
+        {{-- Clean Pagination & Export Footer --}}
+        @if($purchaseOrders->hasPages())
+            <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="flex-1">
+                        {{ $purchaseOrders->links(data: ['scrollTo' => false]) }}
                     </div>
-                    <button wire:click="exportFiltered"
-                            class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
-                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                        Export
-                    </button>
-                @endif
-            </div>
-
-            @if ($purchaseOrders->hasPages())
-                <div class="flex items-center gap-1">
-                    @if ($purchaseOrders->onFirstPage())
-                        <button disabled class="px-2.5 py-1.5 text-sm border border-slate-200 rounded-md bg-slate-50 text-slate-400 cursor-not-allowed">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                            </svg>
-                        </button>
-                    @else
-                        <button wire:click.prevent="setPage({{ $purchaseOrders->currentPage() - 1 }})"
-                                class="px-2.5 py-1.5 text-sm border border-slate-200 rounded-md hover:bg-white transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                            </svg>
-                        </button>
-                    @endif
-
-                    <div class="flex gap-1">
-                        @foreach ($purchaseOrders->getUrlRange(max(1, $purchaseOrders->currentPage() - 2), min($purchaseOrders->lastPage(), $purchaseOrders->currentPage() + 2)) as $page => $url)
-                            <button wire:click.prevent="setPage({{ $page }})"
-                                    class="px-3 py-1.5 text-sm border rounded-md transition-colors {{ $page == $purchaseOrders->currentPage() ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-200 hover:bg-white' }}">
-                                {{ $page }}
+                    @if($purchaseOrders->total() > 0)
+                        <div class="flex items-center justify-end">
+                            <button wire:click="exportFiltered"
+                                    class="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 shadow-xs transition-all whitespace-nowrap">
+                                <i class="bi bi-file-earmark-arrow-down text-slate-500"></i>
+                                <span>Export</span>
                             </button>
-                        @endforeach
-                    </div>
-
-                    @if ($purchaseOrders->hasMorePages())
-                        <button wire:click.prevent="setPage({{ $purchaseOrders->currentPage() + 1 }})"
-                                class="px-2.5 py-1.5 text-sm border border-slate-200 rounded-md hover:bg-white transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                            </svg>
-                        </button>
-                    @else
-                        <button disabled class="px-2.5 py-1.5 text-sm border border-slate-200 rounded-md bg-slate-50 text-slate-400 cursor-not-allowed">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                            </svg>
-                        </button>
+                        </div>
                     @endif
                 </div>
-            @endif
-        </div>
+            </div>
+        @elseif($purchaseOrders->total() > 0)
+            <div class="px-6 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>Showing {{ $purchaseOrders->total() }} results</span>
+                <button wire:click="exportFiltered"
+                        class="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 shadow-xs transition-all whitespace-nowrap">
+                    <i class="bi bi-file-earmark-arrow-down text-slate-500"></i>
+                    <span>Export</span>
+                </button>
+            </div>
+        @endif
     </div>
 
     {{-- Floating Bulk Action Bar - Compact & Fixed Bug --}}

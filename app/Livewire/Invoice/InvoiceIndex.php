@@ -13,6 +13,8 @@ class InvoiceIndex extends Component
 
     public $search = '';
 
+    public $yearFilter = '';
+
     public $poStatusFilter = '';
 
     public $paymentStatusFilter = '';
@@ -41,6 +43,7 @@ class InvoiceIndex extends Component
 
     protected $queryString = [
         'search' => ['except' => ''],
+        'yearFilter' => ['except' => ''],
         'poStatusFilter' => ['except' => ''],
         'paymentStatusFilter' => ['except' => ''],
         'settlementFilter' => ['except' => ''],
@@ -54,6 +57,18 @@ class InvoiceIndex extends Component
         'sortBy' => ['except' => 'created_at'],
         'sortDirection' => ['except' => 'desc'],
     ];
+
+    public function mount()
+    {
+        if ($this->yearFilter === '') {
+            $this->yearFilter = (string) now()->year;
+        }
+    }
+
+    public function updatingYearFilter()
+    {
+        $this->resetPage();
+    }
 
     public function updatingSearch()
     {
@@ -159,6 +174,8 @@ class InvoiceIndex extends Component
         if (property_exists($this, $key)) {
             if ($key === 'dateType') {
                 $this->dateType = 'invoice_date';
+            } elseif ($key === 'yearFilter') {
+                $this->yearFilter = 'all';
             } else {
                 $this->$key = '';
             }
@@ -169,6 +186,7 @@ class InvoiceIndex extends Component
     public function clearFilters()
     {
         $this->search = '';
+        $this->yearFilter = (string) now()->year;
         $this->poStatusFilter = '';
         $this->paymentStatusFilter = '';
         $this->settlementFilter = '';
@@ -200,7 +218,22 @@ class InvoiceIndex extends Component
 
     public function getFilterOptionsProperty(): array
     {
+        $years = Invoice::query()
+            ->selectRaw('DISTINCT YEAR(COALESCE(invoice_date, created_at)) as year')
+            ->pluck('year')
+            ->filter(fn ($y) => $y >= 2020 && $y <= now()->year + 1)
+            ->push(now()->year)
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        $yearOptions = ['all' => 'All Years'];
+        foreach ($years as $y) {
+            $yearOptions[(string) $y] = (string) $y;
+        }
+
         return [
+            'years' => $yearOptions,
             'po_statuses' => [
                 '' => 'All PO Statuses',
                 'IN_REVIEW' => 'Pending Approval',
@@ -247,51 +280,63 @@ class InvoiceIndex extends Component
     public function getStatsProperty(): array
     {
         $today = today();
+        $baseQuery = Invoice::query();
+
+        if ($this->yearFilter && $this->yearFilter !== 'all') {
+            $year = (int) $this->yearFilter;
+            $baseQuery->where(function ($q) use ($year) {
+                $q->whereYear('invoice_date', $year)
+                    ->orWhere(function ($sq) use ($year) {
+                        $sq->whereNull('invoice_date')
+                            ->whereYear('created_at', $year);
+                    });
+            });
+        }
 
         return [
-            'total_count' => Invoice::count(),
-            'total_amount_idr' => (float) Invoice::where('total_currency', 'IDR')->sum('total'),
-            'pending_approval' => Invoice::whereHas('purchaseOrder', function ($q) {
+            'total_count' => (clone $baseQuery)->count(),
+            'total_amount_idr' => (float) (clone $baseQuery)->where('total_currency', 'IDR')->sum('total'),
+            'pending_approval' => (clone $baseQuery)->whereHas('purchaseOrder', function ($q) {
                 $q->withWorkflowStatus('IN_REVIEW');
             })->count(),
-            'pending_approval_sum' => (float) Invoice::whereHas('purchaseOrder', function ($q) {
+            'pending_approval_sum' => (float) (clone $baseQuery)->whereHas('purchaseOrder', function ($q) {
                 $q->withWorkflowStatus('IN_REVIEW');
             })->where('total_currency', 'IDR')->sum('total'),
-            'po_approved' => Invoice::whereHas('purchaseOrder', function ($q) {
+            'po_approved' => (clone $baseQuery)->whereHas('purchaseOrder', function ($q) {
                 $q->withWorkflowStatus('APPROVED');
             })->count(),
-            'po_approved_sum' => (float) Invoice::whereHas('purchaseOrder', function ($q) {
+            'po_approved_sum' => (float) (clone $baseQuery)->whereHas('purchaseOrder', function ($q) {
                 $q->withWorkflowStatus('APPROVED');
             })->where('total_currency', 'IDR')->sum('total'),
             // Truly past due: UNPAID and scheduled payment_date has passed
-            'past_due' => Invoice::whereNull('paid_at')
+            'past_due' => (clone $baseQuery)->whereNull('paid_at')
                 ->whereNotNull('payment_date')
                 ->where('payment_date', '<', $today)
                 ->count(),
-            'past_due_sum' => (float) Invoice::whereNull('paid_at')
+            'past_due_sum' => (float) (clone $baseQuery)->whereNull('paid_at')
                 ->whereNotNull('payment_date')
                 ->where('payment_date', '<', $today)
                 ->where('total_currency', 'IDR')
                 ->sum('total'),
             // Upcoming: UNPAID and scheduled payment_date is today or in future
-            'upcoming' => Invoice::whereNull('paid_at')
+            'upcoming' => (clone $baseQuery)->whereNull('paid_at')
                 ->whereNotNull('payment_date')
                 ->where('payment_date', '>=', $today)
                 ->count(),
-            'upcoming_sum' => (float) Invoice::whereNull('paid_at')
+            'upcoming_sum' => (float) (clone $baseQuery)->whereNull('paid_at')
                 ->whereNotNull('payment_date')
                 ->where('payment_date', '>=', $today)
                 ->where('total_currency', 'IDR')
                 ->sum('total'),
             // Unscheduled: UNPAID with no payment_date
-            'unscheduled' => Invoice::whereNull('paid_at')->whereNull('payment_date')->count(),
-            'unscheduled_sum' => (float) Invoice::whereNull('paid_at')->whereNull('payment_date')->where('total_currency', 'IDR')->sum('total'),
+            'unscheduled' => (clone $baseQuery)->whereNull('paid_at')->whereNull('payment_date')->count(),
+            'unscheduled_sum' => (float) (clone $baseQuery)->whereNull('paid_at')->whereNull('payment_date')->where('total_currency', 'IDR')->sum('total'),
             // Total Unpaid liabilities
-            'unpaid' => Invoice::whereNull('paid_at')->count(),
-            'unpaid_sum' => (float) Invoice::whereNull('paid_at')->where('total_currency', 'IDR')->sum('total'),
+            'unpaid' => (clone $baseQuery)->whereNull('paid_at')->count(),
+            'unpaid_sum' => (float) (clone $baseQuery)->whereNull('paid_at')->where('total_currency', 'IDR')->sum('total'),
             // Total Paid
-            'paid' => Invoice::whereNotNull('paid_at')->count(),
-            'paid_sum' => (float) Invoice::whereNotNull('paid_at')->where('total_currency', 'IDR')->sum('total'),
+            'paid' => (clone $baseQuery)->whereNotNull('paid_at')->count(),
+            'paid_sum' => (float) (clone $baseQuery)->whereNotNull('paid_at')->where('total_currency', 'IDR')->sum('total'),
         ];
     }
 
@@ -384,6 +429,18 @@ class InvoiceIndex extends Component
         } elseif ($this->attachmentFilter === 'missing_attachments') {
             $query->whereNotExists(function ($sub) {
                 $sub->selectRaw(1)->from('files')->whereRaw("files.doc_id = CONCAT('INV-', invoices.id)");
+            });
+        }
+
+        // Year filter
+        if ($this->yearFilter && $this->yearFilter !== 'all') {
+            $year = (int) $this->yearFilter;
+            $query->where(function ($q) use ($year) {
+                $q->whereYear('invoice_date', $year)
+                    ->orWhere(function ($sq) use ($year) {
+                        $sq->whereNull('invoice_date')
+                            ->whereYear('created_at', $year);
+                    });
             });
         }
 

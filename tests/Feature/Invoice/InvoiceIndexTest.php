@@ -381,4 +381,99 @@ class InvoiceIndexTest extends TestCase
         $this->assertFalse($invoice->is_paid);
         $this->assertNull($invoice->paid_at);
     }
+
+    public function test_it_defaults_year_filter_to_current_year_on_mount()
+    {
+        Livewire::test(InvoiceIndex::class)
+            ->assertSet('yearFilter', (string) now()->year);
+    }
+
+    public function test_it_filters_invoices_by_year()
+    {
+        $currentYear = now()->year;
+        $prevYear = $currentYear - 1;
+
+        $poCurrent = $this->createPO(7001);
+        $poPrev = $this->createPO(7002);
+
+        $invCurrent = Invoice::create([
+            'purchase_order_id' => $poCurrent->id,
+            'invoice_number' => 'INV-YEAR-CURR',
+            'invoice_date' => now(),
+            'total' => 1000000,
+            'total_currency' => 'IDR',
+        ]);
+
+        $invPrev = Invoice::create([
+            'purchase_order_id' => $poPrev->id,
+            'invoice_number' => 'INV-YEAR-PREV',
+            'invoice_date' => now()->subYear(),
+            'total' => 2000000,
+            'total_currency' => 'IDR',
+        ]);
+
+        // Default: current year only
+        Livewire::test(InvoiceIndex::class)
+            ->assertSee('INV-YEAR-CURR')
+            ->assertDontSee('INV-YEAR-PREV')
+            // Set to previous year
+            ->set('yearFilter', (string) $prevYear)
+            ->assertSee('INV-YEAR-PREV')
+            ->assertDontSee('INV-YEAR-CURR')
+            // Set to all years
+            ->set('yearFilter', 'all')
+            ->assertSee('INV-YEAR-CURR')
+            ->assertSee('INV-YEAR-PREV');
+    }
+
+    public function test_it_scopes_stats_by_selected_year()
+    {
+        $currentYear = now()->year;
+        $prevYear = $currentYear - 1;
+
+        $poCurrent = $this->createPO(8001);
+        $poPrev = $this->createPO(8002);
+
+        Invoice::create([
+            'purchase_order_id' => $poCurrent->id,
+            'invoice_number' => 'INV-STAT-CURR',
+            'invoice_date' => now(),
+            'total' => 1000000,
+            'total_currency' => 'IDR',
+        ]);
+
+        Invoice::create([
+            'purchase_order_id' => $poPrev->id,
+            'invoice_number' => 'INV-STAT-PREV',
+            'invoice_date' => now()->subYear(),
+            'total' => 500000,
+            'total_currency' => 'IDR',
+        ]);
+
+        // Default: current year only in stats
+        $component = Livewire::test(InvoiceIndex::class);
+        $this->assertEquals(1, $component->get('stats')['total_count']);
+        $this->assertEquals(1000000, $component->get('stats')['total_amount_idr']);
+
+        // Previous year in stats
+        $component->set('yearFilter', (string) $prevYear);
+        $this->assertEquals(1, $component->get('stats')['total_count']);
+        $this->assertEquals(500000, $component->get('stats')['total_amount_idr']);
+
+        // All years in stats
+        $component->set('yearFilter', 'all');
+        $this->assertEquals(2, $component->get('stats')['total_count']);
+        $this->assertEquals(1500000, $component->get('stats')['total_amount_idr']);
+    }
+
+    public function test_clear_filter_and_clear_filters_for_year_in_invoice_index()
+    {
+        Livewire::test(InvoiceIndex::class)
+            // clearFilter('yearFilter') sets it to 'all'
+            ->call('clearFilter', 'yearFilter')
+            ->assertSet('yearFilter', 'all')
+            // clearFilters() resets it to current year
+            ->call('clearFilters')
+            ->assertSet('yearFilter', (string) now()->year);
+    }
 }
