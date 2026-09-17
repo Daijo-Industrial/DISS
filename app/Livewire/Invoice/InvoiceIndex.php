@@ -223,10 +223,17 @@ class InvoiceIndex extends Component
             'pending_approval' => Invoice::whereHas('purchaseOrder', function ($q) {
                 $q->withWorkflowStatus('IN_REVIEW');
             })->count(),
+            'pending_approval_sum' => (float) Invoice::whereHas('purchaseOrder', function ($q) {
+                $q->withWorkflowStatus('IN_REVIEW');
+            })->where('total_currency', 'IDR')->sum('total'),
             'po_approved' => Invoice::whereHas('purchaseOrder', function ($q) {
                 $q->withWorkflowStatus('APPROVED');
             })->count(),
+            'po_approved_sum' => (float) Invoice::whereHas('purchaseOrder', function ($q) {
+                $q->withWorkflowStatus('APPROVED');
+            })->where('total_currency', 'IDR')->sum('total'),
             'unpaid' => Invoice::whereNull('payment_date')->count(),
+            'unpaid_sum' => (float) Invoice::whereNull('payment_date')->where('total_currency', 'IDR')->sum('total'),
             'total_amount_idr' => (float) Invoice::where('total_currency', 'IDR')->sum('total'),
         ];
     }
@@ -253,7 +260,7 @@ class InvoiceIndex extends Component
             }
         }
 
-        // 2. Parent PO Workflow / Approval Status
+        // 2. Parent PO Workflow / Approval Status filter
         if ($this->poStatusFilter) {
             if ($this->poStatusFilter === 'ORPHANED') {
                 $query->whereNull('purchase_order_id');
@@ -264,7 +271,7 @@ class InvoiceIndex extends Component
             }
         }
 
-        // 3. Payment status
+        // 3. Payment status filter
         if ($this->paymentStatusFilter) {
             switch ($this->paymentStatusFilter) {
                 case 'paid':
@@ -293,7 +300,7 @@ class InvoiceIndex extends Component
             $query->where('total_currency', $this->currencyFilter);
         }
 
-        // 6. Attachment filter (using exists subquery for reliable SQL matching with INV- prefix)
+        // 6. Attachment filter
         if ($this->attachmentFilter === 'with_attachments') {
             $query->whereExists(function ($sub) {
                 $sub->selectRaw(1)->from('files')->whereRaw("files.doc_id = CONCAT('INV-', invoices.id)");

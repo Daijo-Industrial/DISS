@@ -109,6 +109,68 @@ class InvoiceIndexTest extends TestCase
             ->assertDontSee('1001');
     }
 
+    public function test_it_calculates_and_displays_category_sums_in_kpi_cards()
+    {
+        // PO In Review: 2,500,000 IDR
+        $poPending = $this->createPO(5001, 'Vendor A', 'IDR', 2500000);
+        ApprovalRequest::create([
+            'approvable_type' => PurchaseOrder::class,
+            'approvable_id' => $poPending->id,
+            'status' => 'IN_REVIEW',
+            'submitted_at' => now(),
+        ]);
+        Invoice::create([
+            'purchase_order_id' => $poPending->id,
+            'invoice_number' => 'INV-SUM-REVIEW',
+            'invoice_date' => now(),
+            'payment_date' => now(), // paid, but PO in review
+            'total' => 2500000,
+            'total_currency' => 'IDR',
+        ]);
+
+        // PO Approved: 1,500,000 IDR
+        $poApproved = $this->createPO(5002, 'Vendor B', 'IDR', 1500000);
+        ApprovalRequest::create([
+            'approvable_type' => PurchaseOrder::class,
+            'approvable_id' => $poApproved->id,
+            'status' => 'APPROVED',
+            'submitted_at' => now(),
+        ]);
+        Invoice::create([
+            'purchase_order_id' => $poApproved->id,
+            'invoice_number' => 'INV-SUM-APPROVED',
+            'invoice_date' => now(),
+            'payment_date' => now(), // paid
+            'total' => 1500000,
+            'total_currency' => 'IDR',
+        ]);
+
+        // Unpaid Invoice: 750,000 IDR
+        $poUnpaid = $this->createPO(5003, 'Vendor C', 'IDR', 750000);
+        Invoice::create([
+            'purchase_order_id' => $poUnpaid->id,
+            'invoice_number' => 'INV-SUM-UNPAID',
+            'invoice_date' => now(),
+            'payment_date' => null, // unpaid
+            'total' => 750000,
+            'total_currency' => 'IDR',
+        ]);
+
+        $component = Livewire::test(InvoiceIndex::class);
+
+        // Verify stats data property
+        $stats = $component->get('stats');
+        $this->assertEquals(2500000, (float) $stats['pending_approval_sum']);
+        $this->assertEquals(1500000, (float) $stats['po_approved_sum']);
+        $this->assertEquals(750000, (float) $stats['unpaid_sum']);
+
+        // Verify formatted output rendered in KPI cards
+        $component->assertSee('2,500,000')
+            ->assertSee('1,500,000')
+            ->assertSee('750,000')
+            ->assertDontSee('Financial Category Breakdown'); // Confirms bottom card strip was removed
+    }
+
     public function test_it_filters_by_stat_card_presets()
     {
         // PO In Review
