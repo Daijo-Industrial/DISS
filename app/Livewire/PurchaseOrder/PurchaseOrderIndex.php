@@ -23,6 +23,7 @@ class PurchaseOrderIndex extends Component
 
     public $currencyFilter = '';
 
+    public $yearFilter = '';
 
     public $monthFilter = '';
 
@@ -67,6 +68,7 @@ class PurchaseOrderIndex extends Component
     protected $queryString = [
         'search' => ['except' => ''],
         'statusFilter' => ['except' => ''],
+        'yearFilter' => ['except' => ''],
         'vendorFilter' => ['except' => ''],
         'currencyFilter' => ['except' => ''],
 
@@ -91,6 +93,18 @@ class PurchaseOrderIndex extends Component
     public $modalLoading = false;
 
     public $pdfUrl = null;
+
+    public function mount()
+    {
+        if ($this->yearFilter === '') {
+            $this->yearFilter = (string) now()->year;
+        }
+    }
+
+    public function updatingYearFilter()
+    {
+        $this->resetPage();
+    }
 
     public function updatingSearch()
     {
@@ -174,6 +188,7 @@ class PurchaseOrderIndex extends Component
     {
         $this->search = '';
         $this->statusFilter = '';
+        $this->yearFilter = (string) now()->year;
         $this->vendorFilter = '';
         $this->creatorFilter = '';
         $this->categoryFilter = '';
@@ -670,6 +685,11 @@ class PurchaseOrderIndex extends Component
             $query->withWorkflowStatus($this->statusFilter);
         }
 
+        // Year filtering
+        if ($this->yearFilter && $this->yearFilter !== 'all') {
+            $query->whereYear('purchase_orders.created_at', (int) $this->yearFilter);
+        }
+
         // Direct column filters
         if ($this->vendorFilter) {
             $query->where('vendor_name', $this->vendorFilter);
@@ -860,7 +880,23 @@ class PurchaseOrderIndex extends Component
 
     public function getFiltersProperty()
     {
+        $years = PurchaseOrder::query()
+            ->whereNotNull('created_at')
+            ->selectRaw('DISTINCT YEAR(created_at) as year')
+            ->pluck('year')
+            ->filter(fn ($y) => $y >= 2020 && $y <= now()->year + 1)
+            ->push(now()->year)
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        $yearOptions = ['all' => 'All Years'];
+        foreach ($years as $y) {
+            $yearOptions[(string) $y] = (string) $y;
+        }
+
         return [
+            'years' => $yearOptions,
             'statuses' => [
                 '' => 'All Statuses',
                 'DRAFT' => 'Draft',

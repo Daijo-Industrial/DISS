@@ -28,6 +28,8 @@ class InvoiceManager extends Component
 
     public $payment_date = '';
 
+    public $paid_at = '';
+
     public $total = '';
 
     public $total_currency = 'IDR';
@@ -72,6 +74,7 @@ class InvoiceManager extends Component
             'invoice_number' => 'required|string|max:255',
             'invoice_date' => 'required|date',
             'payment_date' => 'nullable|date',
+            'paid_at' => 'nullable|date',
             'total' => 'required|numeric|min:0',
             'total_currency' => 'required|string|max:10',
         ];
@@ -100,6 +103,7 @@ class InvoiceManager extends Component
         $this->invoice_number = $invoice->invoice_number;
         $this->invoice_date = $invoice->invoice_date ? $invoice->invoice_date->format('Y-m-d') : '';
         $this->payment_date = $invoice->payment_date ? $invoice->payment_date->format('Y-m-d') : '';
+        $this->paid_at = $invoice->paid_at ? $invoice->paid_at->format('Y-m-d') : '';
         $this->total = $invoice->total;
         $this->total_currency = $invoice->total_currency;
         $this->checkCurrencyMismatch();
@@ -201,9 +205,27 @@ class InvoiceManager extends Component
         $this->invoice_number = '';
         $this->invoice_date = '';
         $this->payment_date = '';
+        $this->paid_at = '';
         $this->total = '';
         $this->currencyMismatchWarning = false;
         $this->resetValidation();
+    }
+
+    public function togglePaid($id)
+    {
+        $this->authorize('manageInvoices', $this->purchaseOrder);
+        $invoice = Invoice::findOrFail($id);
+
+        if ($invoice->paid_at) {
+            $invoice->markAsUnpaid();
+            $this->dispatch('flash', message: "Invoice #{$invoice->invoice_number} marked as unpaid.", type: 'info');
+        } else {
+            $invoice->markAsPaid(today());
+            $this->dispatch('flash', message: "Invoice #{$invoice->invoice_number} marked as paid.", type: 'success');
+        }
+
+        $this->loadInvoices();
+        $this->dispatch('po-updated');
     }
 
     public function openAttachmentModal($invoiceId)
