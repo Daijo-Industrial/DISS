@@ -1,96 +1,96 @@
 <div>
-    <div class="px-4 sm:px-6 lg:px-8 py-6 max-w-[1600px] mx-auto space-y-6">
-        {{-- Header Section --}}
-        <div class="sm:flex sm:items-center sm:justify-between bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden group">
-            <div class="absolute -right-20 -top-20 w-64 h-64 bg-emerald-50 rounded-full blur-3xl opacity-50 group-hover:bg-emerald-100 transition-colors duration-500"></div>
-            
-            <div class="relative">
-                <div class="flex items-center gap-4 flex-wrap">
-                    <h1 class="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                        <div class="h-12 w-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-inner">
-                            <i class="bi bi-receipt"></i>
-                        </div>
-                        Invoices
-                    </h1>
-                </div>
-                <p class="mt-2 text-sm text-slate-500 font-medium max-w-2xl">
-                    Manage and track all invoices connected to purchase orders, monitor approval states, and oversee payment schedules.
+    <div class="px-4 sm:px-6 lg:px-8 py-5 max-w-[1600px] mx-auto space-y-4">
+        {{-- Header Section (Minimal) --}}
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                    <i class="bi bi-receipt text-emerald-600"></i>
+                    Invoices
+                </h1>
+                <p class="text-xs text-slate-500 mt-0.5">
+                    Manage and track purchase order invoices, approval workflows, and payments.
                 </p>
             </div>
             
-            <div class="mt-4 sm:mt-0 relative z-10 flex gap-3">
-                <a href="{{ route('po.index') }}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-200 hover:bg-slate-50 transition-all hover:ring-slate-300">
+            <div class="flex items-center gap-2">
+                <a href="{{ route('po.index') }}" class="inline-flex items-center gap-1.5 rounded-lg bg-white px-3.5 py-1.5 text-xs font-bold text-slate-700 shadow-xs ring-1 ring-inset ring-slate-200 hover:bg-slate-50 transition-all hover:ring-slate-300">
                     <i class="bi bi-arrow-left"></i>
                     Back to POs
                 </a>
             </div>
         </div>
 
-        {{-- Interactive KPI Stat Cards --}}
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {{-- Interactive KPI Stat Cards (Reduced Padding & Sleek Dimensions) --}}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {{-- All Invoices --}}
             <div wire:click="filterByStat('all')"
-                 class="cursor-pointer bg-white p-5 rounded-2xl border transition-all duration-200 hover:shadow-md relative overflow-hidden group {{ empty($poStatusFilter) && empty($paymentStatusFilter) ? 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/10' : 'border-slate-100 hover:border-slate-200' }}">
+                 class="cursor-pointer bg-white p-3.5 rounded-xl border transition-all duration-200 hover:shadow-sm relative overflow-hidden group {{ empty($poStatusFilter) && empty($paymentStatusFilter) ? 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/10' : 'border-slate-100 hover:border-slate-200' }}">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">All Invoices</p>
-                        <h3 class="text-2xl font-black text-slate-900 mt-1">{{ number_format($stats['total_count']) }}</h3>
-                        <p class="text-[11px] font-semibold text-slate-500 mt-0.5">
-                            Rp {{ number_format($stats['total_amount_idr'], 0, ',', '.') }}
-                        </p>
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">All Invoices</p>
+                        <h3 class="text-xl font-black text-slate-900 tracking-tight mt-0.5">{{ number_format($stats['total_count']) }}</h3>
+                        <div class="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-mono font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                            <span class="text-[10px] text-slate-400 font-black">TOTAL:</span> Rp {{ number_format($stats['total_amount_idr'], 0, ',', '.') }}
+                        </div>
                     </div>
-                    <div class="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 group-hover:bg-slate-200 transition-colors">
-                        <i class="bi bi-receipt-cutoff text-xl"></i>
+                    <div class="h-9 w-9 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 group-hover:bg-slate-200 transition-colors text-base">
+                        <i class="bi bi-receipt-cutoff"></i>
                     </div>
                 </div>
             </div>
 
             {{-- PO Pending Approval --}}
             <div wire:click="filterByStat('pending_approval')"
-                 class="cursor-pointer bg-white p-5 rounded-2xl border transition-all duration-200 hover:shadow-md relative overflow-hidden group {{ $poStatusFilter === 'IN_REVIEW' ? 'ring-2 ring-amber-500 border-amber-500 bg-amber-50/20' : 'border-slate-100 hover:border-amber-200' }}">
+                 class="cursor-pointer bg-white p-3.5 rounded-xl border transition-all duration-200 hover:shadow-sm relative overflow-hidden group {{ $poStatusFilter === 'IN_REVIEW' ? 'ring-2 ring-amber-500 border-amber-500 bg-amber-50/20' : 'border-slate-100 hover:border-amber-200' }}">
                 <div class="flex items-center justify-between">
                     <div>
-                        <div class="flex items-center gap-2">
-                            <p class="text-xs font-bold text-amber-600 uppercase tracking-wider">PO In Review</p>
+                        <div class="flex items-center gap-1.5">
+                            <p class="text-[11px] font-bold text-amber-600 uppercase tracking-wider">PO In Review</p>
                             @if($stats['pending_approval'] > 0)
-                                <span class="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                <span class="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                             @endif
                         </div>
-                        <h3 class="text-2xl font-black text-slate-900 mt-1">{{ number_format($stats['pending_approval']) }}</h3>
-                        <p class="text-[11px] font-semibold text-amber-600 mt-0.5">Awaiting PO Approval</p>
+                        <h3 class="text-xl font-black text-slate-900 tracking-tight mt-0.5">{{ number_format($stats['pending_approval']) }}</h3>
+                        <div class="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-mono font-bold text-amber-800 bg-amber-50 border border-amber-200/60 px-2 py-0.5 rounded-md">
+                            <span class="text-[10px] text-amber-500 font-black">SUM:</span> Rp {{ number_format($stats['pending_approval_sum'], 0, ',', '.') }}
+                        </div>
                     </div>
-                    <div class="h-12 w-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 group-hover:bg-amber-100 transition-colors">
-                        <i class="bi bi-hourglass-split text-xl"></i>
+                    <div class="h-9 w-9 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 group-hover:bg-amber-100 transition-colors text-base">
+                        <i class="bi bi-hourglass-split"></i>
                     </div>
                 </div>
             </div>
 
             {{-- PO Approved --}}
             <div wire:click="filterByStat('po_approved')"
-                 class="cursor-pointer bg-white p-5 rounded-2xl border transition-all duration-200 hover:shadow-md relative overflow-hidden group {{ $poStatusFilter === 'APPROVED' ? 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/20' : 'border-slate-100 hover:border-emerald-200' }}">
+                 class="cursor-pointer bg-white p-3.5 rounded-xl border transition-all duration-200 hover:shadow-sm relative overflow-hidden group {{ $poStatusFilter === 'APPROVED' ? 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/20' : 'border-slate-100 hover:border-emerald-200' }}">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs font-bold text-emerald-600 uppercase tracking-wider">PO Approved</p>
-                        <h3 class="text-2xl font-black text-slate-900 mt-1">{{ number_format($stats['po_approved']) }}</h3>
-                        <p class="text-[11px] font-semibold text-emerald-600 mt-0.5">Ready for Processing</p>
+                        <p class="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">PO Approved</p>
+                        <h3 class="text-xl font-black text-slate-900 tracking-tight mt-0.5">{{ number_format($stats['po_approved']) }}</h3>
+                        <div class="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-mono font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md">
+                            <span class="text-[10px] text-emerald-500 font-black">SUM:</span> Rp {{ number_format($stats['po_approved_sum'], 0, ',', '.') }}
+                        </div>
                     </div>
-                    <div class="h-12 w-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-100 transition-colors">
-                        <i class="bi bi-check-circle text-xl"></i>
+                    <div class="h-9 w-9 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-100 transition-colors text-base">
+                        <i class="bi bi-check-circle"></i>
                     </div>
                 </div>
             </div>
 
             {{-- Unpaid Invoices --}}
             <div wire:click="filterByStat('unpaid')"
-                 class="cursor-pointer bg-white p-5 rounded-2xl border transition-all duration-200 hover:shadow-md relative overflow-hidden group {{ $paymentStatusFilter === 'unpaid' ? 'ring-2 ring-indigo-500 border-indigo-500 bg-indigo-50/20' : 'border-slate-100 hover:border-indigo-200' }}">
+                 class="cursor-pointer bg-white p-3.5 rounded-xl border transition-all duration-200 hover:shadow-sm relative overflow-hidden group {{ $paymentStatusFilter === 'unpaid' ? 'ring-2 ring-indigo-500 border-indigo-500 bg-indigo-50/20' : 'border-slate-100 hover:border-indigo-200' }}">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs font-bold text-indigo-600 uppercase tracking-wider">Unpaid Invoices</p>
-                        <h3 class="text-2xl font-black text-slate-900 mt-1">{{ number_format($stats['unpaid']) }}</h3>
-                        <p class="text-[11px] font-semibold text-indigo-600 mt-0.5">Payment Date Pending</p>
+                        <p class="text-[11px] font-bold text-indigo-600 uppercase tracking-wider">Unpaid Invoices</p>
+                        <h3 class="text-xl font-black text-slate-900 tracking-tight mt-0.5">{{ number_format($stats['unpaid']) }}</h3>
+                        <div class="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-mono font-bold text-indigo-800 bg-indigo-50 border border-indigo-200/60 px-2 py-0.5 rounded-md">
+                            <span class="text-[10px] text-indigo-500 font-black">SUM:</span> Rp {{ number_format($stats['unpaid_sum'], 0, ',', '.') }}
+                        </div>
                     </div>
-                    <div class="h-12 w-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-100 transition-colors">
-                        <i class="bi bi-wallet2 text-xl"></i>
+                    <div class="h-9 w-9 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-100 transition-colors text-base">
+                        <i class="bi bi-wallet2"></i>
                     </div>
                 </div>
             </div>
@@ -102,16 +102,16 @@
                 {{-- Search Bar --}}
                 <div class="flex-1 w-full relative">
                     <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <i class="bi bi-search text-slate-400"></i>
+                        <i class="bi bi-search text-slate-400 text-sm"></i>
                     </div>
                     <input wire:model.live.debounce.300ms="search" type="text" 
-                           class="block w-full rounded-xl border-0 py-2.5 pl-11 pr-4 text-slate-900 ring-1 ring-inset ring-slate-200 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-emerald-600 sm:text-sm sm:leading-6 font-medium transition-all" 
+                           class="block w-full rounded-xl border-0 py-2.5 pl-11 pr-4 text-slate-900 ring-1 ring-inset ring-slate-200 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-emerald-600 sm:text-sm font-medium transition-all" 
                            placeholder="Search by Invoice #, PO #, or Vendor...">
                 </div>
                 
                 {{-- Primary Controls --}}
-                <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-end">
-                    {{-- PO Status Filter (Hero Control) --}}
+                <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
+                    {{-- PO Status Filter --}}
                     <div class="w-full sm:w-auto">
                         <select wire:model.live="poStatusFilter" class="w-full rounded-xl border-0 py-2.5 pl-3.5 pr-8 text-slate-900 ring-1 ring-inset ring-slate-200 focus:ring-2 focus:ring-inset focus:ring-emerald-600 sm:text-xs font-black uppercase tracking-wider bg-slate-50">
                             @foreach($filterOptions['po_statuses'] as $val => $lbl)
@@ -193,7 +193,7 @@
                     </div>
 
                     {{-- Date Filter Row --}}
-                    <div class="sm:col-span-2 lg:col-span-4 pt-2 border-t border-slate-100 flex flex-wrap items-center gap-3">
+                    <div class="sm:col-span-2 lg:col-span-4 pt-2 border-t border-slate-100 flex flex-wrap items-center gap-3 text-xs">
                         <div class="flex items-center gap-2">
                             <span class="text-[11px] font-black uppercase tracking-wider text-slate-400">Date Type:</span>
                             <select wire:model.live="dateType" class="rounded-lg border-0 py-1.5 pl-2.5 pr-7 text-xs font-bold text-slate-700 ring-1 ring-inset ring-slate-200 focus:ring-2 focus:ring-emerald-600 bg-slate-50">
@@ -213,7 +213,7 @@
                         </div>
 
                         @if($dateFrom || $dateTo)
-                            <button wire:click="clearFilter('dateFrom'); clearFilter('dateTo')" class="text-xs font-bold text-rose-500 hover:text-rose-700">
+                            <button wire:click="clearFilter('dateFrom'); clearFilter('dateTo')" class="text-xs font-bold text-rose-500 hover:text-rose-700 ml-1">
                                 Clear Dates
                             </button>
                         @endif
@@ -282,16 +282,16 @@
             @endif
         </div>
 
-        {{-- Data Table --}}
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden relative">
+        {{-- Data Table (Good, Balanced Density) --}}
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative">
             <div class="overflow-x-auto min-h-[400px]">
                 <table class="min-w-full divide-y divide-slate-100 table-fixed">
                     <thead>
                         <tr class="bg-slate-50/80">
-                            <th scope="col" class="relative px-6 py-4 w-12">
+                            <th scope="col" class="relative px-4 py-3 w-12 text-center">
                                 <span class="sr-only">Row ID</span>
                             </th>
-                            <th scope="col" class="w-[20%] px-3 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-emerald-600 transition-colors group" wire:click="sortByColumn('invoice_number')">
+                            <th scope="col" class="w-[20%] px-3 py-3 text-left text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-emerald-600 transition-colors group" wire:click="sortByColumn('invoice_number')">
                                 <div class="flex items-center gap-2">
                                     Invoice
                                     @if ($sortBy === 'invoice_number')
@@ -301,10 +301,10 @@
                                     @endif
                                 </div>
                             </th>
-                            <th scope="col" class="w-[28%] px-3 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest">
+                            <th scope="col" class="w-[28%] px-3 py-3 text-left text-xs font-black text-slate-400 uppercase tracking-widest">
                                 Parent PO & Approval State
                             </th>
-                            <th scope="col" class="w-[18%] px-3 py-4 text-left text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-emerald-600 transition-colors group" wire:click="sortByColumn('invoice_date')">
+                            <th scope="col" class="w-[18%] px-3 py-3 text-left text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-emerald-600 transition-colors group" wire:click="sortByColumn('invoice_date')">
                                 <div class="flex items-center gap-2">
                                     Dates & Payment
                                     @if ($sortBy === 'invoice_date')
@@ -314,7 +314,7 @@
                                     @endif
                                 </div>
                             </th>
-                            <th scope="col" class="w-[16%] px-3 py-4 text-right text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-emerald-600 transition-colors group" wire:click="sortByColumn('total')">
+                            <th scope="col" class="w-[18%] px-3 py-3 text-right text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-emerald-600 transition-colors group" wire:click="sortByColumn('total')">
                                 <div class="flex items-center justify-end gap-2">
                                     Total Amount
                                     @if ($sortBy === 'total')
@@ -324,34 +324,34 @@
                                     @endif
                                 </div>
                             </th>
-                            <th scope="col" class="w-[14%] px-6 py-4 text-right text-xs font-black text-slate-400 uppercase tracking-widest">
+                            <th scope="col" class="w-[14%] px-6 py-3 text-right text-xs font-black text-slate-400 uppercase tracking-widest">
                                 Actions
                             </th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50 bg-white">
                         @forelse ($invoices as $invoice)
-                            <tr class="group hover:bg-slate-50/50 transition-all duration-200">
-                                <td class="px-6 py-5 whitespace-nowrap">
-                                    <div class="h-8 w-8 rounded-xl bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-400 border border-slate-100">
+                            <tr class="group hover:bg-slate-50/50 transition-all duration-150">
+                                {{-- Row ID Chip --}}
+                                <td class="px-4 py-3.5 whitespace-nowrap text-center">
+                                    <div class="h-7 w-7 rounded-lg bg-slate-50 flex items-center justify-center text-xs font-bold text-slate-400 border border-slate-100 mx-auto">
                                         {{ $loop->iteration + ($invoices->currentPage() - 1) * $invoices->perPage() }}
                                     </div>
                                 </td>
                                 
                                 {{-- Invoice Info --}}
-                                <td class="px-3 py-5">
+                                <td class="px-3 py-3.5">
                                     <div class="flex items-center gap-3">
-                                        <div class="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500 shadow-inner shrink-0">
+                                        <div class="h-9 w-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-500 shadow-inner shrink-0 text-sm">
                                             <i class="bi bi-receipt"></i>
                                         </div>
                                         <div>
-                                            <p class="text-sm font-black text-slate-900 group-hover:text-emerald-600 transition-colors">
+                                            <p class="text-sm font-black text-slate-900 group-hover:text-emerald-600 transition-colors truncate max-w-[200px]">
                                                 {{ $invoice->invoice_number ?? 'No Number' }}
                                             </p>
-                                            <div class="flex items-center gap-2 mt-1">
+                                            <div class="flex items-center gap-1.5 mt-0.5">
                                                 <span class="text-[10px] font-bold px-2 py-0.5 rounded-md {{ $invoice->files->count() > 0 ? 'bg-slate-100 text-slate-600' : 'bg-rose-50 text-rose-500' }}">
-                                                    <i class="bi bi-paperclip mr-0.5"></i>
-                                                    {{ $invoice->files->count() }} Attachments
+                                                    <i class="bi bi-paperclip mr-0.5"></i>{{ $invoice->files->count() }} Attachments
                                                 </span>
                                             </div>
                                         </div>
@@ -359,8 +359,8 @@
                                 </td>
                                 
                                 {{-- Parent PO & Approval State --}}
-                                <td class="px-3 py-5">
-                                    <div class="flex flex-col justify-center gap-1.5">
+                                <td class="px-3 py-3.5">
+                                    <div class="flex flex-col justify-center gap-1">
                                         @if($invoice->purchaseOrder)
                                             @php
                                                 $po = $invoice->purchaseOrder;
@@ -380,19 +380,18 @@
 
                                                 @if($isPending && $daysPending > 0)
                                                     <span class="text-[10px] font-black {{ $daysPending > 3 ? 'text-rose-500' : 'text-amber-500' }} flex items-center gap-0.5" title="Days in Review">
-                                                        <i class="bi bi-clock-history"></i>
-                                                        {{ $daysPending }}d
+                                                        <i class="bi bi-clock-history"></i>{{ $daysPending }}d
                                                     </span>
                                                 @endif
                                             </div>
 
-                                            <div class="flex items-center gap-2 text-xs">
-                                                <span class="font-bold text-slate-500 truncate max-w-[220px]" title="{{ $po->vendor_name }}">
+                                            <div class="flex items-center gap-2 text-xs mt-0.5">
+                                                <span class="font-bold text-slate-500 truncate max-w-[210px]" title="{{ $po->vendor_name }}">
                                                     {{ $po->vendor_name }}
                                                 </span>
 
                                                 @if($isPending && $po->workflow_step)
-                                                    <span class="text-[10px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded truncate max-w-[140px]" title="Current Reviewer: {{ $po->workflow_step }}">
+                                                    <span class="text-[10px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded truncate max-w-[130px]" title="Current Reviewer: {{ $po->workflow_step }}">
                                                         <i class="bi bi-person mr-0.5"></i>{{ $po->workflow_step }}
                                                     </span>
                                                 @endif
@@ -406,20 +405,20 @@
                                 </td>
                                 
                                 {{-- Dates & Payment Status --}}
-                                <td class="px-3 py-5">
-                                    <div class="flex flex-col gap-1.5 justify-center">
+                                <td class="px-3 py-3.5">
+                                    <div class="flex flex-col gap-1 justify-center">
                                         <div class="flex items-center gap-2 text-xs">
-                                            <span class="font-bold text-slate-400 uppercase text-[10px] w-8">Inv:</span>
+                                            <span class="font-bold text-slate-400 uppercase text-[10px] w-7">Inv:</span>
                                             <span class="font-semibold text-slate-700">{{ $invoice->invoice_date ? $invoice->invoice_date->format('d M Y') : '-' }}</span>
                                         </div>
                                         <div class="flex items-center gap-2 text-xs">
-                                            <span class="font-bold text-slate-400 uppercase text-[10px] w-8">Pay:</span>
+                                            <span class="font-bold text-slate-400 uppercase text-[10px] w-7">Pay:</span>
                                             @if($invoice->payment_date)
-                                                <span class="font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[11px] font-mono">
+                                                <span class="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[11px] font-mono">
                                                     {{ $invoice->payment_date->format('d M Y') }}
                                                 </span>
                                             @else
-                                                <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                                                <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
                                                     Unpaid
                                                 </span>
                                             @endif
@@ -428,19 +427,19 @@
                                 </td>
                                 
                                 {{-- Total Amount --}}
-                                <td class="px-3 py-5 text-right whitespace-nowrap">
+                                <td class="px-3 py-3.5 text-right whitespace-nowrap">
                                     <span class="text-[10px] font-bold text-slate-400 uppercase">{{ $invoice->total_currency }}</span>
                                     <span class="font-mono font-black text-slate-800 text-sm ml-1">{{ number_format($invoice->total, 2, '.', ',') }}</span>
                                 </td>
                                 
                                 {{-- Actions --}}
-                                <td class="px-6 py-5 whitespace-nowrap text-right text-sm font-medium">
+                                <td class="px-6 py-3.5 whitespace-nowrap text-right text-sm font-medium">
                                     <div class="flex items-center justify-end gap-2">
                                         @if($invoice->purchaseOrder)
                                             <a href="{{ route('po.view', $invoice->purchase_order_id) }}" 
-                                               class="h-8 px-3 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white flex items-center gap-2 font-bold transition-all shadow-sm border border-indigo-100 text-xs">
+                                               class="h-8 px-3 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white flex items-center gap-1.5 font-bold transition-all shadow-sm border border-indigo-100 text-xs">
                                                 View PO
-                                                <i class="bi bi-arrow-right"></i>
+                                                <i class="bi bi-arrow-right text-[11px]"></i>
                                             </a>
                                         @endif
                                     </div>
@@ -468,7 +467,7 @@
                 </table>
             </div>
 
-            {{-- Pagination --}}
+            {{-- Clean Pagination Footer --}}
             @if($invoices->hasPages())
                 <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
                     {{ $invoices->links(data: ['scrollTo' => false]) }}
