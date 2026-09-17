@@ -10,6 +10,7 @@ use App\Models\PurchaseOrderCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class InvoiceIndexTest extends TestCase
@@ -348,6 +349,9 @@ class InvoiceIndexTest extends TestCase
 
     public function test_it_marks_invoices_as_paid_and_unpaid()
     {
+        Role::firstOrCreate(['name' => 'accounting-admin', 'guard_name' => 'web']);
+        $this->user->assignRole('accounting-admin');
+
         $po = $this->createPO(6001);
         $invoice = Invoice::create([
             'purchase_order_id' => $po->id,
@@ -380,6 +384,61 @@ class InvoiceIndexTest extends TestCase
         $invoice->refresh();
         $this->assertFalse($invoice->is_paid);
         $this->assertNull($invoice->paid_at);
+    }
+
+    public function test_unauthorized_user_cannot_mark_invoice_as_paid_or_unpaid()
+    {
+        $po = $this->createPO(6002);
+        $invoice = Invoice::create([
+            'purchase_order_id' => $po->id,
+            'invoice_number' => 'INV-UNAUTH-PAID',
+            'invoice_date' => now(),
+            'total' => 1000000,
+            'total_currency' => 'IDR',
+        ]);
+
+        // Regular user without accounting-admin role
+        $regularUser = User::factory()->create();
+
+        Livewire::actingAs($regularUser)
+            ->test(InvoiceIndex::class)
+            ->call('markAsPaid', $invoice->id)
+            ->assertForbidden();
+
+        $invoice->update(['paid_at' => today()]);
+
+        Livewire::actingAs($regularUser)
+            ->test(InvoiceIndex::class)
+            ->call('markAsUnpaid', $invoice->id)
+            ->assertForbidden();
+    }
+
+    public function test_super_admin_can_mark_invoice_as_paid_and_unpaid()
+    {
+        Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
+        $adminUser = User::factory()->create();
+        $adminUser->assignRole('super-admin');
+
+        $po = $this->createPO(6003);
+        $invoice = Invoice::create([
+            'purchase_order_id' => $po->id,
+            'invoice_number' => 'INV-SUPERADMIN-PAID',
+            'invoice_date' => now(),
+            'total' => 1000000,
+            'total_currency' => 'IDR',
+        ]);
+
+        Livewire::actingAs($adminUser)
+            ->test(InvoiceIndex::class)
+            ->call('markAsPaid', $invoice->id);
+
+        $this->assertTrue($invoice->fresh()->is_paid);
+
+        Livewire::actingAs($adminUser)
+            ->test(InvoiceIndex::class)
+            ->call('markAsUnpaid', $invoice->id);
+
+        $this->assertFalse($invoice->fresh()->is_paid);
     }
 
     public function test_it_defaults_year_filter_to_current_year_on_mount()
@@ -475,5 +534,76 @@ class InvoiceIndexTest extends TestCase
             // clearFilters() resets it to current year
             ->call('clearFilters')
             ->assertSet('yearFilter', (string) now()->year);
+    }
+
+    public function test_it_opens_payment_modal_with_default_date_now()
+    {
+        Role::firstOrCreate(['name' => 'accounting-admin', 'guard_name' => 'web']);
+        $this->user->assignRole('accounting-admin');
+
+        $po = $this->createPO(9001);
+        $invoice = Invoice::create([
+            'purchase_order_id' => $po->id,
+            'invoice_number' => 'INV-MODAL-001',
+            'invoice_date' => now(),
+            'total' => 1000000,
+            'total_currency' => 'IDR',
+        ]);
+
+        Livewire::actingAs($this->user)
+            ->test(InvoiceIndex::class)
+            ->call('openPaymentModal', $invoice->id)
+            ->assertSet('showPaymentModal', true)
+            ->assertSet('settlingInvoiceId', $invoice->id)
+            ->assertSet('settlementDate', now()->format('Y-m-d'))
+            ->call('closePaymentModal')
+            ->assertSet('showPaymentModal', false)
+            ->assertSet('settlingInvoiceId', null);
+    }
+
+    public function test_it_confirms_payment_with_selected_custom_date()
+    {
+        Role::firstOrCreate(['name' => 'accounting-admin', 'guard_name' => 'web']);
+        $this->user->assignRole('accounting-admin');
+
+        $po = $this->createPO(9002);
+        $invoice = Invoice::create([
+            'purchase_order_id' => $po->id,
+            'invoice_number' => 'INV-MODAL-002',
+            'invoice_date' => now(),
+            'total' => 2000000,
+            'total_currency' => 'IDR',
+        ]);
+
+        Livewire::actingAs($this->user)
+            ->test(InvoiceIndex::class)
+            ->call('openPaymentModal', $invoice->id)
+            ->set('settlementDate', '2026-09-12')
+            ->call('confirmPayment')
+            ->assertSet('showPaymentModal', false)
+            ->assertDispatched('banner-message');
+
+        $invoice->refresh();
+        $this->assertTrue($invoice->is_paid);
+        $this->assertEquals('2026-09-12', $invoice->paid_at->format('Y-m-d'));
+    }
+
+    public function test_unauthorized_user_cannot_open_payment_modal()
+    {
+        $po = $this->createPO(9003);
+        $invoice = Invoice::create([
+            'purchase_order_id' => $po->id,
+            'invoice_number' => 'INV-MODAL-UNAUTH',
+            'invoice_date' => now(),
+            'total' => 1000000,
+            'total_currency' => 'IDR',
+        ]);
+
+        $regularUser = User::factory()->create();
+
+        Livewire::actingAs($regularUser)
+            ->test(InvoiceIndex::class)
+            ->call('openPaymentModal', $invoice->id)
+            ->assertForbidden();
     }
 }
