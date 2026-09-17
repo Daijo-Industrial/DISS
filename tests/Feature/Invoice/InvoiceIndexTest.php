@@ -145,14 +145,27 @@ class InvoiceIndexTest extends TestCase
             'total_currency' => 'IDR',
         ]);
 
-        // Unpaid Invoice: 750,000 IDR
+        // Past Due Unpaid Invoice: 750,000 IDR
         $poUnpaid = $this->createPO(5003, 'Vendor C', 'IDR', 750000);
         Invoice::create([
             'purchase_order_id' => $poUnpaid->id,
             'invoice_number' => 'INV-SUM-UNPAID',
-            'invoice_date' => now(),
-            'payment_date' => null, // unpaid
+            'invoice_date' => now()->subDays(10),
+            'payment_date' => now()->subDays(3), // Past target date
+            'paid_at' => null, // UNPAID -> Past due!
             'total' => 750000,
+            'total_currency' => 'IDR',
+        ]);
+
+        // Settled Historical Invoice: 500,000 IDR (target was in past, but paid)
+        $poSettled = $this->createPO(5004, 'Vendor D', 'IDR', 500000);
+        Invoice::create([
+            'purchase_order_id' => $poSettled->id,
+            'invoice_number' => 'INV-SUM-SETTLED',
+            'invoice_date' => now()->subDays(20),
+            'payment_date' => now()->subDays(15),
+            'paid_at' => now()->subDays(14), // Paid! Not past due
+            'total' => 500000,
             'total_currency' => 'IDR',
         ]);
 
@@ -162,13 +175,13 @@ class InvoiceIndexTest extends TestCase
         $stats = $component->get('stats');
         $this->assertEquals(2500000, (float) $stats['pending_approval_sum']);
         $this->assertEquals(1500000, (float) $stats['po_approved_sum']);
-        $this->assertEquals(750000, (float) $stats['unpaid_sum']);
+        $this->assertEquals(750000, (float) $stats['past_due_sum']); // Only the unpaid one!
 
         // Verify formatted output rendered in KPI cards
         $component->assertSee('2,500,000')
             ->assertSee('1,500,000')
             ->assertSee('750,000')
-            ->assertDontSee('Financial Category Breakdown'); // Confirms bottom card strip was removed
+            ->assertDontSee('Financial Category Breakdown');
     }
 
     public function test_it_filters_by_stat_card_presets()
@@ -189,24 +202,26 @@ class InvoiceIndexTest extends TestCase
             'total_currency' => 'IDR',
         ]);
 
-        // Unpaid Invoice
-        $poUnpaid = $this->createPO(2002);
+        // Past Due Unpaid Invoice
+        $poPastDue = $this->createPO(2002);
         Invoice::create([
-            'purchase_order_id' => $poUnpaid->id,
-            'invoice_number' => 'INV-UNPAID-ONLY',
-            'invoice_date' => now(),
-            'payment_date' => null,
+            'purchase_order_id' => $poPastDue->id,
+            'invoice_number' => 'INV-PASTDUE-ONLY',
+            'invoice_date' => now()->subDays(10),
+            'payment_date' => now()->subDays(2),
+            'paid_at' => null,
             'total' => 300000,
             'total_currency' => 'IDR',
         ]);
 
-        // Paid Invoice
+        // Settled Paid Invoice
         $poPaid = $this->createPO(2003);
         Invoice::create([
             'purchase_order_id' => $poPaid->id,
             'invoice_number' => 'INV-PAID-ONLY',
             'invoice_date' => now(),
             'payment_date' => now(),
+            'paid_at' => now(),
             'total' => 400000,
             'total_currency' => 'IDR',
         ]);
@@ -218,15 +233,16 @@ class InvoiceIndexTest extends TestCase
             ->assertSee('INV-STAT-PENDING')
             ->assertDontSee('INV-PAID-ONLY');
 
-        // Test filterByStat('unpaid')
+        // Test filterByStat('past_due')
         Livewire::test(InvoiceIndex::class)
-            ->call('filterByStat', 'unpaid')
-            ->assertSet('paymentStatusFilter', 'unpaid')
-            ->assertSee('INV-UNPAID-ONLY')
+            ->call('filterByStat', 'past_due')
+            ->assertSet('paymentStatusFilter', 'past_due')
+            ->assertSet('settlementFilter', 'unpaid')
+            ->assertSee('INV-PASTDUE-ONLY')
             ->assertDontSee('INV-PAID-ONLY');
     }
 
-    public function test_it_filters_by_payment_status()
+    public function test_it_filters_by_payment_status_and_settlement()
     {
         $po1 = $this->createPO(3001);
         Invoice::create([
@@ -234,6 +250,7 @@ class InvoiceIndexTest extends TestCase
             'invoice_number' => 'INV-PAID',
             'invoice_date' => now(),
             'payment_date' => now(),
+            'paid_at' => now(),
             'total' => 100000,
             'total_currency' => 'IDR',
         ]);
@@ -244,19 +261,41 @@ class InvoiceIndexTest extends TestCase
             'invoice_number' => 'INV-UNPAID',
             'invoice_date' => now(),
             'payment_date' => null,
+            'paid_at' => null,
             'total' => 200000,
             'total_currency' => 'IDR',
         ]);
 
+        $po3 = $this->createPO(3003);
+        Invoice::create([
+            'purchase_order_id' => $po3->id,
+            'invoice_number' => 'INV-PAST-DUE',
+            'invoice_date' => now()->subDays(10),
+            'payment_date' => now()->subDays(2),
+            'paid_at' => null,
+            'total' => 300000,
+            'total_currency' => 'IDR',
+        ]);
+
+        // Test settlementFilter = paid
         Livewire::test(InvoiceIndex::class)
-            ->set('paymentStatusFilter', 'paid')
+            ->set('settlementFilter', 'paid')
             ->assertSee('INV-PAID')
             ->assertDontSee('INV-UNPAID');
 
+        // Test settlementFilter = unpaid
         Livewire::test(InvoiceIndex::class)
-            ->set('paymentStatusFilter', 'unpaid')
+            ->set('settlementFilter', 'unpaid')
             ->assertSee('INV-UNPAID')
+            ->assertSee('INV-PAST-DUE')
             ->assertDontSee('INV-PAID');
+
+        // Test paymentStatusFilter = past_due
+        Livewire::test(InvoiceIndex::class)
+            ->set('paymentStatusFilter', 'past_due')
+            ->assertSee('INV-PAST-DUE')
+            ->assertDontSee('INV-PAID')
+            ->assertDontSee('INV-UNPAID');
     }
 
     public function test_it_filters_by_vendor_and_currency()
@@ -295,13 +334,51 @@ class InvoiceIndexTest extends TestCase
         Livewire::test(InvoiceIndex::class)
             ->set('search', 'TestSearch')
             ->set('poStatusFilter', 'IN_REVIEW')
-            ->set('paymentStatusFilter', 'unpaid')
+            ->set('paymentStatusFilter', 'past_due')
+            ->set('settlementFilter', 'unpaid')
             ->call('clearFilter', 'poStatusFilter')
             ->assertSet('poStatusFilter', '')
-            ->assertSet('paymentStatusFilter', 'unpaid')
+            ->assertSet('settlementFilter', 'unpaid')
             ->call('clearFilters')
             ->assertSet('search', '')
             ->assertSet('paymentStatusFilter', '')
+            ->assertSet('settlementFilter', '')
             ->assertSet('poStatusFilter', '');
+    }
+
+    public function test_it_marks_invoices_as_paid_and_unpaid()
+    {
+        $po = $this->createPO(6001);
+        $invoice = Invoice::create([
+            'purchase_order_id' => $po->id,
+            'invoice_number' => 'INV-TOGGLE-PAID',
+            'invoice_date' => now(),
+            'payment_date' => now()->addDays(5),
+            'paid_at' => null,
+            'total' => 1250000,
+            'total_currency' => 'IDR',
+        ]);
+
+        $this->assertFalse($invoice->fresh()->is_paid);
+        $this->assertNull($invoice->fresh()->paid_at);
+
+        // Mark as paid
+        Livewire::actingAs($this->user)
+            ->test(InvoiceIndex::class)
+            ->call('markAsPaid', $invoice->id);
+
+        $invoice->refresh();
+        $this->assertTrue($invoice->is_paid);
+        $this->assertNotNull($invoice->paid_at);
+        $this->assertEquals(today()->toDateString(), $invoice->paid_at->toDateString());
+
+        // Mark as unpaid
+        Livewire::actingAs($this->user)
+            ->test(InvoiceIndex::class)
+            ->call('markAsUnpaid', $invoice->id);
+
+        $invoice->refresh();
+        $this->assertFalse($invoice->is_paid);
+        $this->assertNull($invoice->paid_at);
     }
 }

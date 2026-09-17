@@ -19,6 +19,7 @@ class Invoice extends Model
         'invoice_number',
         'invoice_date',
         'payment_date',
+        'paid_at',
         'total',
         'total_currency',
     ];
@@ -26,6 +27,7 @@ class Invoice extends Model
     protected $casts = [
         'invoice_date' => 'date',
         'payment_date' => 'date',
+        'paid_at' => 'date',
         'total' => 'decimal:2',
     ];
 
@@ -71,5 +73,57 @@ class Invoice extends Model
     public function getFileDocIdAttribute(): string
     {
         return 'INV-' . $this->id;
+    }
+
+    /**
+     * Check if invoice has been settled/paid.
+     */
+    public function getIsPaidAttribute(): bool
+    {
+        return !is_null($this->paid_at);
+    }
+
+    // =========================================================================
+    // Scopes
+    // =========================================================================
+
+    public function scopePaid($query)
+    {
+        return $query->whereNotNull('paid_at');
+    }
+
+    public function scopeUnpaid($query)
+    {
+        return $query->whereNull('paid_at');
+    }
+
+    public function scopePastDue($query)
+    {
+        return $query->whereNull('paid_at')
+            ->whereNotNull('payment_date')
+            ->where('payment_date', '<', today());
+    }
+
+    public function scopeUpcoming($query)
+    {
+        return $query->whereNull('paid_at')
+            ->whereNotNull('payment_date')
+            ->where('payment_date', '>=', today());
+    }
+
+    // =========================================================================
+    // Actions
+    // =========================================================================
+
+    public function markAsPaid($date = null): bool
+    {
+        $this->paid_at = $date ? \Carbon\Carbon::parse($date) : today();
+        return $this->save();
+    }
+
+    public function markAsUnpaid(): bool
+    {
+        $this->paid_at = null;
+        return $this->save();
     }
 }

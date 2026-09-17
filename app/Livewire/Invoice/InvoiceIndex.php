@@ -17,13 +17,15 @@ class InvoiceIndex extends Component
 
     public $paymentStatusFilter = '';
 
+    public $settlementFilter = '';
+
     public $vendorFilter = '';
 
     public $currencyFilter = '';
 
     public $attachmentFilter = '';
 
-    public $dateType = 'invoice_date'; // 'invoice_date' or 'payment_date'
+    public $dateType = 'invoice_date'; // 'invoice_date', 'payment_date', or 'paid_at'
 
     public $dateFrom = '';
 
@@ -41,6 +43,7 @@ class InvoiceIndex extends Component
         'search' => ['except' => ''],
         'poStatusFilter' => ['except' => ''],
         'paymentStatusFilter' => ['except' => ''],
+        'settlementFilter' => ['except' => ''],
         'vendorFilter' => ['except' => ''],
         'currencyFilter' => ['except' => ''],
         'attachmentFilter' => ['except' => ''],
@@ -63,6 +66,11 @@ class InvoiceIndex extends Component
     }
 
     public function updatingPaymentStatusFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingSettlementFilter()
     {
         $this->resetPage();
     }
@@ -124,8 +132,19 @@ class InvoiceIndex extends Component
             case 'po_approved':
                 $this->poStatusFilter = 'APPROVED';
                 break;
+            case 'past_due':
+                $this->paymentStatusFilter = 'past_due';
+                $this->settlementFilter = 'unpaid';
+                break;
+            case 'upcoming':
+                $this->paymentStatusFilter = 'upcoming';
+                $this->settlementFilter = 'unpaid';
+                break;
             case 'unpaid':
-                $this->paymentStatusFilter = 'unpaid';
+                $this->settlementFilter = 'unpaid';
+                break;
+            case 'paid':
+                $this->settlementFilter = 'paid';
                 break;
             case 'all':
                 // Already cleared
@@ -152,6 +171,7 @@ class InvoiceIndex extends Component
         $this->search = '';
         $this->poStatusFilter = '';
         $this->paymentStatusFilter = '';
+        $this->settlementFilter = '';
         $this->vendorFilter = '';
         $this->currencyFilter = '';
         $this->attachmentFilter = '';
@@ -169,6 +189,7 @@ class InvoiceIndex extends Component
         if (!empty($this->search)) $count++;
         if (!empty($this->poStatusFilter)) $count++;
         if (!empty($this->paymentStatusFilter)) $count++;
+        if (!empty($this->settlementFilter)) $count++;
         if (!empty($this->vendorFilter)) $count++;
         if (!empty($this->currencyFilter)) $count++;
         if (!empty($this->attachmentFilter)) $count++;
@@ -189,11 +210,18 @@ class InvoiceIndex extends Component
                 'CANCELLED' => 'Cancelled',
                 'ORPHANED' => 'Orphaned (No PO)',
             ],
+            'settlement_statuses' => [
+                '' => 'All Settlements',
+                'unpaid' => 'Unpaid / Open',
+                'paid' => 'Paid / Settled',
+            ],
             'payment_statuses' => [
-                '' => 'All Payment Statuses',
-                'paid' => 'Paid',
-                'unpaid' => 'Unpaid / Pending',
-                'overdue' => 'Overdue (> 30 Days)',
+                '' => 'All Schedules',
+                'past_due' => 'Past Due (< Today & Unpaid)',
+                'upcoming' => 'Upcoming (>= Today & Unpaid)',
+                'unscheduled' => 'Unscheduled (No Date)',
+                'paid' => 'Settled / Paid',
+                'unpaid' => 'Unpaid / Open',
             ],
             'attachment_statuses' => [
                 '' => 'All Attachments',
@@ -218,8 +246,11 @@ class InvoiceIndex extends Component
 
     public function getStatsProperty(): array
     {
+        $today = today();
+
         return [
             'total_count' => Invoice::count(),
+            'total_amount_idr' => (float) Invoice::where('total_currency', 'IDR')->sum('total'),
             'pending_approval' => Invoice::whereHas('purchaseOrder', function ($q) {
                 $q->withWorkflowStatus('IN_REVIEW');
             })->count(),
@@ -232,9 +263,35 @@ class InvoiceIndex extends Component
             'po_approved_sum' => (float) Invoice::whereHas('purchaseOrder', function ($q) {
                 $q->withWorkflowStatus('APPROVED');
             })->where('total_currency', 'IDR')->sum('total'),
-            'unpaid' => Invoice::whereNull('payment_date')->count(),
-            'unpaid_sum' => (float) Invoice::whereNull('payment_date')->where('total_currency', 'IDR')->sum('total'),
-            'total_amount_idr' => (float) Invoice::where('total_currency', 'IDR')->sum('total'),
+            // Truly past due: UNPAID and scheduled payment_date has passed
+            'past_due' => Invoice::whereNull('paid_at')
+                ->whereNotNull('payment_date')
+                ->where('payment_date', '<', $today)
+                ->count(),
+            'past_due_sum' => (float) Invoice::whereNull('paid_at')
+                ->whereNotNull('payment_date')
+                ->where('payment_date', '<', $today)
+                ->where('total_currency', 'IDR')
+                ->sum('total'),
+            // Upcoming: UNPAID and scheduled payment_date is today or in future
+            'upcoming' => Invoice::whereNull('paid_at')
+                ->whereNotNull('payment_date')
+                ->where('payment_date', '>=', $today)
+                ->count(),
+            'upcoming_sum' => (float) Invoice::whereNull('paid_at')
+                ->whereNotNull('payment_date')
+                ->where('payment_date', '>=', $today)
+                ->where('total_currency', 'IDR')
+                ->sum('total'),
+            // Unscheduled: UNPAID with no payment_date
+            'unscheduled' => Invoice::whereNull('paid_at')->whereNull('payment_date')->count(),
+            'unscheduled_sum' => (float) Invoice::whereNull('paid_at')->whereNull('payment_date')->where('total_currency', 'IDR')->sum('total'),
+            // Total Unpaid liabilities
+            'unpaid' => Invoice::whereNull('paid_at')->count(),
+            'unpaid_sum' => (float) Invoice::whereNull('paid_at')->where('total_currency', 'IDR')->sum('total'),
+            // Total Paid
+            'paid' => Invoice::whereNotNull('paid_at')->count(),
+            'paid_sum' => (float) Invoice::whereNotNull('paid_at')->where('total_currency', 'IDR')->sum('total'),
         ];
     }
 
@@ -271,36 +328,55 @@ class InvoiceIndex extends Component
             }
         }
 
-        // 3. Payment status filter
+        // 3. Settlement filter (Paid vs Unpaid)
+        if ($this->settlementFilter) {
+            if ($this->settlementFilter === 'paid') {
+                $query->whereNotNull('paid_at');
+            } elseif ($this->settlementFilter === 'unpaid') {
+                $query->whereNull('paid_at');
+            }
+        }
+
+        // 4. Payment schedule filter
         if ($this->paymentStatusFilter) {
+            $today = today();
             switch ($this->paymentStatusFilter) {
-                case 'paid':
-                    $query->whereNotNull('payment_date');
+                case 'past_due':
+                case 'overdue':
+                    $query->whereNull('paid_at')
+                        ->whereNotNull('payment_date')
+                        ->where('payment_date', '<', $today);
                     break;
-                case 'unpaid':
+                case 'upcoming':
+                    $query->whereNull('paid_at')
+                        ->whereNotNull('payment_date')
+                        ->where('payment_date', '>=', $today);
+                    break;
+                case 'unscheduled':
                     $query->whereNull('payment_date');
                     break;
-                case 'overdue':
-                    $query->whereNull('payment_date')
-                        ->whereNotNull('invoice_date')
-                        ->where('invoice_date', '<', now()->subDays(30));
+                case 'paid':
+                    $query->whereNotNull('paid_at');
+                    break;
+                case 'unpaid':
+                    $query->whereNull('paid_at');
                     break;
             }
         }
 
-        // 4. Vendor filter
+        // 5. Vendor filter
         if ($this->vendorFilter) {
             $query->whereHas('purchaseOrder', function ($poQuery) {
                 $poQuery->where('vendor_name', $this->vendorFilter);
             });
         }
 
-        // 5. Currency filter
+        // 6. Currency filter
         if ($this->currencyFilter) {
             $query->where('total_currency', $this->currencyFilter);
         }
 
-        // 6. Attachment filter
+        // 7. Attachment filter
         if ($this->attachmentFilter === 'with_attachments') {
             $query->whereExists(function ($sub) {
                 $sub->selectRaw(1)->from('files')->whereRaw("files.doc_id = CONCAT('INV-', invoices.id)");
@@ -311,8 +387,8 @@ class InvoiceIndex extends Component
             });
         }
 
-        // 7. Date range filter
-        $validDateColumns = ['invoice_date', 'payment_date'];
+        // 8. Date range filter
+        $validDateColumns = ['invoice_date', 'payment_date', 'paid_at'];
         $dateColumn = in_array($this->dateType, $validDateColumns) ? $this->dateType : 'invoice_date';
 
         if ($this->dateFrom) {
@@ -324,7 +400,7 @@ class InvoiceIndex extends Component
 
         // Optimized sorting
         $sortableColumns = [
-            'invoice_number', 'invoice_date', 'payment_date', 'total', 'created_at',
+            'invoice_number', 'invoice_date', 'payment_date', 'paid_at', 'total', 'created_at',
         ];
 
         if (in_array($this->sortBy, $sortableColumns)) {
@@ -334,6 +410,38 @@ class InvoiceIndex extends Component
         }
 
         return $query;
+    }
+
+    public function markAsPaid(int $invoiceId, ?string $paidDate = null)
+    {
+        $invoice = Invoice::with('purchaseOrder')->findOrFail($invoiceId);
+
+        if ($invoice->purchaseOrder) {
+            $this->authorize('manageInvoices', $invoice->purchaseOrder);
+        }
+
+        $invoice->markAsPaid($paidDate ?: today());
+
+        $this->dispatch('banner-message', [
+            'style' => 'success',
+            'message' => "Invoice #{$invoice->invoice_number} marked as paid on " . ($invoice->paid_at ? $invoice->paid_at->format('d M Y') : 'today') . '.',
+        ]);
+    }
+
+    public function markAsUnpaid(int $invoiceId)
+    {
+        $invoice = Invoice::with('purchaseOrder')->findOrFail($invoiceId);
+
+        if ($invoice->purchaseOrder) {
+            $this->authorize('manageInvoices', $invoice->purchaseOrder);
+        }
+
+        $invoice->markAsUnpaid();
+
+        $this->dispatch('banner-message', [
+            'style' => 'info',
+            'message' => "Invoice #{$invoice->invoice_number} marked as unpaid.",
+        ]);
     }
 
     public function getInvoicesProperty()

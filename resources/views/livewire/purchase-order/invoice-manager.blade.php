@@ -104,11 +104,23 @@
                          <td class="px-6 py-4 space-y-1">
                              <div class="flex items-center gap-2">
                                  <span class="text-[10px] font-bold text-slate-400 uppercase w-12">Inv:</span>
-                                 <span class="text-slate-700">{{ $invoice->invoice_date ? $invoice->invoice_date->format('d M Y') : '-' }}</span>
+                                 <span class="text-slate-700 text-xs">{{ $invoice->invoice_date ? $invoice->invoice_date->format('d M Y') : '-' }}</span>
                              </div>
                              <div class="flex items-center gap-2">
-                                 <span class="text-[10px] font-bold text-slate-400 uppercase w-12">Pay:</span>
-                                 <span class="text-slate-700">{{ $invoice->payment_date ? $invoice->payment_date->format('d M Y') : '-' }}</span>
+                                 <span class="text-[10px] font-bold text-slate-400 uppercase w-12">Due:</span>
+                                 <span class="text-slate-700 text-xs">{{ $invoice->payment_date ? $invoice->payment_date->format('d M Y') : '-' }}</span>
+                             </div>
+                             <div class="flex items-center gap-2">
+                                 <span class="text-[10px] font-bold text-slate-400 uppercase w-12">Paid:</span>
+                                 @if($invoice->paid_at)
+                                     <span class="inline-flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[10px]">
+                                         <i class="bi bi-check2"></i> {{ $invoice->paid_at->format('d M Y') }}
+                                     </span>
+                                 @else
+                                     <span class="inline-flex items-center font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded text-[10px]">
+                                         Unpaid
+                                     </span>
+                                 @endif
                              </div>
                          </td>
                          <td class="px-6 py-4 text-right">
@@ -151,6 +163,11 @@
                         <td class="px-6 py-4 text-right">
                             @can('manageInvoices', $purchaseOrder)
                                 <div class="flex items-center justify-end gap-2">
+                                    <button wire:click="togglePaid({{ $invoice->id }})" 
+                                            class="h-8 w-8 rounded-lg {{ $invoice->paid_at ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white' }} flex items-center justify-center transition-all shadow-sm border {{ $invoice->paid_at ? 'border-slate-200' : 'border-emerald-200' }}"
+                                            title="{{ $invoice->paid_at ? 'Mark as Unpaid' : 'Mark as Paid Today' }}">
+                                        <i class="bi {{ $invoice->paid_at ? 'bi-arrow-counterclockwise' : 'bi-check2' }}"></i>
+                                    </button>
                                     <button wire:click="edit({{ $invoice->id }})" class="h-8 w-8 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white flex items-center justify-center transition-all shadow-sm border border-indigo-100">
                                         <i class="bi bi-pencil"></i>
                                     </button>
@@ -270,16 +287,21 @@
                             @error('invoice_number') <span class="text-rose-500 text-xs mt-1 block">{{ $message }}</span> @enderror
                         </div>
 
-                        <div class="grid grid-cols-2 gap-5">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-slate-700 mb-1.5">Invoice Date</label>
                                 <input type="date" wire:model="invoice_date" class="w-full px-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 py-2.5 shadow-sm transition-all">
                                 @error('invoice_date') <span class="text-rose-500 text-xs mt-1 block">{{ $message }}</span> @enderror
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1.5">Payment Date (Optional)</label>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">Due Date (Optional)</label>
                                 <input type="date" wire:model="payment_date" class="w-full px-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 py-2.5 shadow-sm transition-all">
                                 @error('payment_date') <span class="text-rose-500 text-xs mt-1 block">{{ $message }}</span> @enderror
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1.5">Paid Date (Settled)</label>
+                                <input type="date" wire:model="paid_at" class="w-full px-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 py-2.5 shadow-sm transition-all">
+                                @error('paid_at') <span class="text-rose-500 text-xs mt-1 block">{{ $message }}</span> @enderror
                             </div>
                         </div>
 
