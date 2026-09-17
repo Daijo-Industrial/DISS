@@ -111,7 +111,7 @@ class PurchaseOrderPolicy
             return true;
         }
 
-        return $user->hasAnyPermission(['po.manage', 'system.admin']) || $user->hasRole('purchaser');
+        return $user->hasAnyPermission(['po.manage', 'system.admin']) || $user->hasRole(['purchaser', 'accounting-admin']);
     }
 
     /**

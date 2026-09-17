@@ -41,6 +41,12 @@ class InvoiceIndex extends Component
 
     public $sortDirection = 'desc';
 
+    // Payment Settlement Modal
+    public bool $showPaymentModal = false;
+    public ?int $settlingInvoiceId = null;
+    public ?Invoice $settlingInvoice = null;
+    public string $settlementDate = '';
+
     protected $queryString = [
         'search' => ['except' => ''],
         'yearFilter' => ['except' => ''],
@@ -469,13 +475,45 @@ class InvoiceIndex extends Component
         return $query;
     }
 
+    public function openPaymentModal(int $invoiceId)
+    {
+        $invoice = Invoice::with('purchaseOrder')->findOrFail($invoiceId);
+        $this->authorize('changePaidStatus', $invoice);
+
+        $this->settlingInvoiceId = $invoiceId;
+        $this->settlingInvoice = $invoice;
+        $this->settlementDate = now()->format('Y-m-d');
+        $this->showPaymentModal = true;
+    }
+
+    public function closePaymentModal()
+    {
+        $this->showPaymentModal = false;
+        $this->settlingInvoiceId = null;
+        $this->settlingInvoice = null;
+        $this->settlementDate = '';
+        $this->resetValidation('settlementDate');
+    }
+
+    public function confirmPayment()
+    {
+        if (!$this->settlingInvoiceId) {
+            return;
+        }
+
+        $this->validate([
+            'settlementDate' => 'required|date',
+        ]);
+
+        $this->markAsPaid($this->settlingInvoiceId, $this->settlementDate);
+        $this->closePaymentModal();
+    }
+
     public function markAsPaid(int $invoiceId, ?string $paidDate = null)
     {
         $invoice = Invoice::with('purchaseOrder')->findOrFail($invoiceId);
 
-        if ($invoice->purchaseOrder) {
-            $this->authorize('manageInvoices', $invoice->purchaseOrder);
-        }
+        $this->authorize('changePaidStatus', $invoice);
 
         $invoice->markAsPaid($paidDate ?: today());
 
@@ -489,9 +527,7 @@ class InvoiceIndex extends Component
     {
         $invoice = Invoice::with('purchaseOrder')->findOrFail($invoiceId);
 
-        if ($invoice->purchaseOrder) {
-            $this->authorize('manageInvoices', $invoice->purchaseOrder);
-        }
+        $this->authorize('changePaidStatus', $invoice);
 
         $invoice->markAsUnpaid();
 

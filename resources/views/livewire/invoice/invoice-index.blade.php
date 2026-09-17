@@ -487,25 +487,25 @@
                                 {{-- Actions --}}
                                 <td class="px-4 py-3.5 whitespace-nowrap text-right text-sm font-medium">
                                     <div class="flex items-center justify-end gap-1.5">
-                                        @if($invoice->purchaseOrder)
-                                            @can('manageInvoices', $invoice->purchaseOrder)
-                                                @if($invoice->paid_at)
-                                                    <button wire:click="markAsUnpaid({{ $invoice->id }})" 
-                                                            class="h-7 px-2.5 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-rose-600 flex items-center gap-1 text-[11px] font-bold transition-all border border-slate-200"
-                                                            title="Revert to Unpaid">
-                                                        <i class="bi bi-arrow-counterclockwise"></i>
-                                                        Unpay
-                                                    </button>
-                                                @else
-                                                    <button wire:click="markAsPaid({{ $invoice->id }})" 
-                                                            class="h-7 px-2.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white flex items-center gap-1 text-[11px] font-bold transition-all border border-emerald-200 shadow-2xs"
-                                                            title="Mark as Paid Today">
-                                                        <i class="bi bi-check2"></i>
-                                                        Pay
-                                                    </button>
-                                                @endif
-                                            @endcan
+                                        @can('changePaidStatus', $invoice)
+                                            @if($invoice->paid_at)
+                                                <button wire:click="markAsUnpaid({{ $invoice->id }})" 
+                                                        class="h-7 px-2.5 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-rose-600 flex items-center gap-1 text-[11px] font-bold transition-all border border-slate-200"
+                                                        title="Revert to Unpaid">
+                                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                                    Unpay
+                                                </button>
+                                            @else
+                                                <button wire:click="openPaymentModal({{ $invoice->id }})" 
+                                                        class="h-7 px-2.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white flex items-center gap-1 text-[11px] font-bold transition-all border border-emerald-200 shadow-2xs"
+                                                        title="Mark as Paid">
+                                                    <i class="bi bi-check2"></i>
+                                                    Pay
+                                                </button>
+                                            @endif
+                                        @endcan
 
+                                        @if($invoice->purchase_order_id)
                                             <a href="{{ route('po.view', $invoice->purchase_order_id) }}" 
                                                class="h-7 px-2.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white flex items-center gap-1 font-bold transition-all shadow-2xs border border-indigo-100 text-[11px]">
                                                 View PO
@@ -555,4 +555,84 @@
             </div>
         </div>
     </div>
+
+    {{-- Payment Settlement Date Modal --}}
+    @if($showPaymentModal && $settlingInvoice)
+        <template x-teleport="body">
+            <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                <div class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-100" @click.outside="$wire.closePaymentModal()">
+                    {{-- Header --}}
+                    <div class="px-6 py-4 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-b border-slate-100 flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <div class="h-9 w-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-sm">
+                                <i class="bi bi-cash-stack text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-black text-slate-900 uppercase tracking-wider">Record Payment</h3>
+                                <p class="text-[11px] text-slate-500 font-medium">Set invoice settlement date</p>
+                            </div>
+                        </div>
+                        <button wire:click="closePaymentModal" class="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors">
+                            <i class="bi bi-x-lg text-sm"></i>
+                        </button>
+                    </div>
+
+                    {{-- Invoice Summary Card --}}
+                    <div class="p-6 space-y-4">
+                        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="font-bold text-slate-500 uppercase tracking-wider text-[10px]">Invoice</span>
+                                <span class="font-mono font-bold text-slate-800">#{{ $settlingInvoice->invoice_number }}</span>
+                            </div>
+                            @if($settlingInvoice->purchaseOrder)
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="font-bold text-slate-500 uppercase tracking-wider text-[10px]">Vendor</span>
+                                    <span class="font-semibold text-slate-700 truncate max-w-[200px]" title="{{ $settlingInvoice->purchaseOrder->vendor_name }}">{{ $settlingInvoice->purchaseOrder->vendor_name }}</span>
+                                </div>
+                            @endif
+                            <div class="flex items-center justify-between text-xs pt-2 border-t border-slate-200/60">
+                                <span class="font-bold text-slate-500 uppercase tracking-wider text-[10px]">Total Amount</span>
+                                <span class="font-mono font-black text-emerald-700 text-sm">
+                                    {{ $settlingInvoice->total_currency }} {{ number_format($settlingInvoice->total, 2, '.', ',') }}
+                                </span>
+                            </div>
+                        </div>
+
+                        {{-- Date Input --}}
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="block text-xs font-bold text-slate-700">Settlement Date (Paid At)</label>
+                                <button type="button" 
+                                        wire:click="$set('settlementDate', '{{ now()->format('Y-m-d') }}')" 
+                                        class="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 hover:underline">
+                                    Set to Today
+                                </button>
+                            </div>
+                            <input type="date" wire:model="settlementDate" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm font-medium focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-xs transition-all">
+                            @error('settlementDate') 
+                                <span class="text-rose-500 text-xs mt-1 block font-medium">{{ $message }}</span> 
+                            @enderror
+                            <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                                Defaults to today (<span class="font-medium text-slate-600">{{ now()->format('d M Y') }}</span>). Select an earlier or specific date if the payment occurred on a different day.
+                            </p>
+                        </div>
+                    </div>
+
+                    {{-- Footer Actions --}}
+                    <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+                        <button wire:click="closePaymentModal" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">
+                            Cancel
+                        </button>
+                        <button wire:click="confirmPayment" 
+                                wire:loading.attr="disabled"
+                                class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow transition-all flex items-center gap-1.5 disabled:opacity-50">
+                            <i class="bi bi-check2 text-sm" wire:loading.remove wire:target="confirmPayment"></i>
+                            <span wire:loading wire:target="confirmPayment" class="inline-block animate-spin mr-1">⌛</span>
+                            Confirm & Mark Paid
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+    @endif
 </div>

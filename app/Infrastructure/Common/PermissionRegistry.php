@@ -120,11 +120,12 @@ class PermissionRegistry
             ],
             'Finance & Budget' => [
                 'permissions' => [
-                    'budget.view', 'budget.manage', 'expense.view',
+                    'budget.view', 'budget.manage', 'expense.view', 'invoice.settle',
                 ],
                 'roles' => [
                     'finance' => ['budget.view', 'budget.manage', 'expense.view'],
                     'accounting' => ['budget.view', 'expense.view'],
+                    'accounting-admin' => ['budget.view', 'expense.view', 'invoice.settle'],
                     'manager' => ['budget.view', 'expense.view'],
                 ],
             ],
