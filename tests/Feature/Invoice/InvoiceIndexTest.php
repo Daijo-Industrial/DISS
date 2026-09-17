@@ -145,13 +145,13 @@ class InvoiceIndexTest extends TestCase
             'total_currency' => 'IDR',
         ]);
 
-        // Unpaid Invoice: 750,000 IDR
-        $poUnpaid = $this->createPO(5003, 'Vendor C', 'IDR', 750000);
+        // Past Due Invoice: 750,000 IDR
+        $poPastDue = $this->createPO(5003, 'Vendor C', 'IDR', 750000);
         Invoice::create([
-            'purchase_order_id' => $poUnpaid->id,
-            'invoice_number' => 'INV-SUM-UNPAID',
-            'invoice_date' => now(),
-            'payment_date' => null, // unpaid
+            'purchase_order_id' => $poPastDue->id,
+            'invoice_number' => 'INV-SUM-PASTDUE',
+            'invoice_date' => now()->subDays(10),
+            'payment_date' => now()->subDays(3), // past due
             'total' => 750000,
             'total_currency' => 'IDR',
         ]);
@@ -162,7 +162,7 @@ class InvoiceIndexTest extends TestCase
         $stats = $component->get('stats');
         $this->assertEquals(2500000, (float) $stats['pending_approval_sum']);
         $this->assertEquals(1500000, (float) $stats['po_approved_sum']);
-        $this->assertEquals(750000, (float) $stats['unpaid_sum']);
+        $this->assertEquals(750000, (float) $stats['past_due_sum']);
 
         // Verify formatted output rendered in KPI cards
         $component->assertSee('2,500,000')
@@ -189,24 +189,24 @@ class InvoiceIndexTest extends TestCase
             'total_currency' => 'IDR',
         ]);
 
-        // Unpaid Invoice
-        $poUnpaid = $this->createPO(2002);
+        // Past Due Invoice
+        $poPastDue = $this->createPO(2002);
         Invoice::create([
-            'purchase_order_id' => $poUnpaid->id,
-            'invoice_number' => 'INV-UNPAID-ONLY',
-            'invoice_date' => now(),
-            'payment_date' => null,
+            'purchase_order_id' => $poPastDue->id,
+            'invoice_number' => 'INV-PASTDUE-ONLY',
+            'invoice_date' => now()->subDays(10),
+            'payment_date' => now()->subDays(2),
             'total' => 300000,
             'total_currency' => 'IDR',
         ]);
 
-        // Paid Invoice
-        $poPaid = $this->createPO(2003);
+        // Upcoming Invoice
+        $poUpcoming = $this->createPO(2003);
         Invoice::create([
-            'purchase_order_id' => $poPaid->id,
-            'invoice_number' => 'INV-PAID-ONLY',
+            'purchase_order_id' => $poUpcoming->id,
+            'invoice_number' => 'INV-UPCOMING-ONLY',
             'invoice_date' => now(),
-            'payment_date' => now(),
+            'payment_date' => now()->addDays(5),
             'total' => 400000,
             'total_currency' => 'IDR',
         ]);
@@ -216,14 +216,14 @@ class InvoiceIndexTest extends TestCase
             ->call('filterByStat', 'pending_approval')
             ->assertSet('poStatusFilter', 'IN_REVIEW')
             ->assertSee('INV-STAT-PENDING')
-            ->assertDontSee('INV-PAID-ONLY');
+            ->assertDontSee('INV-UPCOMING-ONLY');
 
-        // Test filterByStat('unpaid')
+        // Test filterByStat('past_due')
         Livewire::test(InvoiceIndex::class)
-            ->call('filterByStat', 'unpaid')
-            ->assertSet('paymentStatusFilter', 'unpaid')
-            ->assertSee('INV-UNPAID-ONLY')
-            ->assertDontSee('INV-PAID-ONLY');
+            ->call('filterByStat', 'past_due')
+            ->assertSet('paymentStatusFilter', 'past_due')
+            ->assertSee('INV-PASTDUE-ONLY')
+            ->assertDontSee('INV-UPCOMING-ONLY');
     }
 
     public function test_it_filters_by_payment_status()
@@ -248,6 +248,26 @@ class InvoiceIndexTest extends TestCase
             'total_currency' => 'IDR',
         ]);
 
+        $po3 = $this->createPO(3003);
+        Invoice::create([
+            'purchase_order_id' => $po3->id,
+            'invoice_number' => 'INV-PAST-DUE',
+            'invoice_date' => now()->subDays(10),
+            'payment_date' => now()->subDays(2),
+            'total' => 300000,
+            'total_currency' => 'IDR',
+        ]);
+
+        $po4 = $this->createPO(3004);
+        Invoice::create([
+            'purchase_order_id' => $po4->id,
+            'invoice_number' => 'INV-UPCOMING',
+            'invoice_date' => now(),
+            'payment_date' => now()->addDays(5),
+            'total' => 400000,
+            'total_currency' => 'IDR',
+        ]);
+
         Livewire::test(InvoiceIndex::class)
             ->set('paymentStatusFilter', 'paid')
             ->assertSee('INV-PAID')
@@ -257,6 +277,23 @@ class InvoiceIndexTest extends TestCase
             ->set('paymentStatusFilter', 'unpaid')
             ->assertSee('INV-UNPAID')
             ->assertDontSee('INV-PAID');
+
+        Livewire::test(InvoiceIndex::class)
+            ->set('paymentStatusFilter', 'past_due')
+            ->assertSee('INV-PAST-DUE')
+            ->assertDontSee('INV-UPCOMING')
+            ->assertDontSee('INV-UNPAID');
+
+        Livewire::test(InvoiceIndex::class)
+            ->set('paymentStatusFilter', 'upcoming')
+            ->assertSee('INV-UPCOMING')
+            ->assertDontSee('INV-PAST-DUE')
+            ->assertDontSee('INV-UNPAID');
+
+        Livewire::test(InvoiceIndex::class)
+            ->set('paymentStatusFilter', 'unscheduled')
+            ->assertSee('INV-UNPAID')
+            ->assertDontSee('INV-UPCOMING');
     }
 
     public function test_it_filters_by_vendor_and_currency()

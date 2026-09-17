@@ -124,8 +124,15 @@ class InvoiceIndex extends Component
             case 'po_approved':
                 $this->poStatusFilter = 'APPROVED';
                 break;
+            case 'past_due':
+                $this->paymentStatusFilter = 'past_due';
+                break;
+            case 'upcoming':
+                $this->paymentStatusFilter = 'upcoming';
+                break;
+            case 'unscheduled':
             case 'unpaid':
-                $this->paymentStatusFilter = 'unpaid';
+                $this->paymentStatusFilter = 'unscheduled';
                 break;
             case 'all':
                 // Already cleared
@@ -190,10 +197,12 @@ class InvoiceIndex extends Component
                 'ORPHANED' => 'Orphaned (No PO)',
             ],
             'payment_statuses' => [
-                '' => 'All Payment Statuses',
-                'paid' => 'Paid',
-                'unpaid' => 'Unpaid / Pending',
-                'overdue' => 'Overdue (> 30 Days)',
+                '' => 'All Payment Schedules',
+                'past_due' => 'Past Due (< Today)',
+                'upcoming' => 'Upcoming (>= Today)',
+                'unscheduled' => 'Unscheduled (No Date)',
+                'paid' => 'Paid (Legacy)',
+                'unpaid' => 'Unpaid (Legacy)',
             ],
             'attachment_statuses' => [
                 '' => 'All Attachments',
@@ -218,6 +227,8 @@ class InvoiceIndex extends Component
 
     public function getStatsProperty(): array
     {
+        $today = today();
+
         return [
             'total_count' => Invoice::count(),
             'pending_approval' => Invoice::whereHas('purchaseOrder', function ($q) {
@@ -232,6 +243,13 @@ class InvoiceIndex extends Component
             'po_approved_sum' => (float) Invoice::whereHas('purchaseOrder', function ($q) {
                 $q->withWorkflowStatus('APPROVED');
             })->where('total_currency', 'IDR')->sum('total'),
+            'past_due' => Invoice::whereNotNull('payment_date')->where('payment_date', '<', $today)->count(),
+            'past_due_sum' => (float) Invoice::whereNotNull('payment_date')->where('payment_date', '<', $today)->where('total_currency', 'IDR')->sum('total'),
+            'upcoming' => Invoice::whereNotNull('payment_date')->where('payment_date', '>=', $today)->count(),
+            'upcoming_sum' => (float) Invoice::whereNotNull('payment_date')->where('payment_date', '>=', $today)->where('total_currency', 'IDR')->sum('total'),
+            'unscheduled' => Invoice::whereNull('payment_date')->count(),
+            'unscheduled_sum' => (float) Invoice::whereNull('payment_date')->where('total_currency', 'IDR')->sum('total'),
+            // Backward-compatibility
             'unpaid' => Invoice::whereNull('payment_date')->count(),
             'unpaid_sum' => (float) Invoice::whereNull('payment_date')->where('total_currency', 'IDR')->sum('total'),
             'total_amount_idr' => (float) Invoice::where('total_currency', 'IDR')->sum('total'),
@@ -271,19 +289,23 @@ class InvoiceIndex extends Component
             }
         }
 
-        // 3. Payment status filter
+        // 3. Payment schedule filter
         if ($this->paymentStatusFilter) {
+            $today = today();
             switch ($this->paymentStatusFilter) {
-                case 'paid':
-                    $query->whereNotNull('payment_date');
+                case 'past_due':
+                case 'overdue':
+                    $query->whereNotNull('payment_date')->where('payment_date', '<', $today);
                     break;
+                case 'upcoming':
+                    $query->whereNotNull('payment_date')->where('payment_date', '>=', $today);
+                    break;
+                case 'unscheduled':
                 case 'unpaid':
                     $query->whereNull('payment_date');
                     break;
-                case 'overdue':
-                    $query->whereNull('payment_date')
-                        ->whereNotNull('invoice_date')
-                        ->where('invoice_date', '<', now()->subDays(30));
+                case 'paid':
+                    $query->whereNotNull('payment_date');
                     break;
             }
         }
