@@ -168,6 +168,10 @@ class InvoiceIndex extends Component
                 $this->paymentStatusFilter = 'upcoming';
                 $this->settlementFilter = 'unpaid';
                 break;
+            case 'unscheduled':
+                $this->paymentStatusFilter = 'unscheduled';
+                $this->settlementFilter = 'unpaid';
+                break;
             case 'unpaid':
                 $this->settlementFilter = 'unpaid';
                 break;
