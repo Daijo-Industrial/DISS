@@ -46,8 +46,7 @@ class PurchasingDetailController extends Controller
         if ($materials->isEmpty()) {
             return redirect()
                 ->back()
-                ->withErrors(['error' => 'Vendor code not exist (Internal)']);
-            // return redirect()->back()->with('error', 'No materials found for the provided vendor code');
+                ->with('error', "No forecast data found for vendor: {$vendorCode} (Internal)");
         }
 
         $allmonth = [];
@@ -115,8 +114,7 @@ class PurchasingDetailController extends Controller
         if ($materials->isEmpty()) {
             return redirect()
                 ->back()
-                ->withErrors(['error' => 'Vendor code not exist (Customer)']);
-            // return redirect()->back()->with('error', 'No materials found for the provided vendor code');
+                ->with('error', "No forecast data found for vendor: {$vendorCode} (Customer)");
         }
 
         $allmonth = [];
@@ -166,6 +164,11 @@ class PurchasingDetailController extends Controller
 
         // Get vendor information using the getVendorInfo function
         $vendorInfo = $getVendorInfo($vendorCode);
+        if (! $vendorInfo) {
+            return redirect()
+                ->back()
+                ->with('error', "No forecast data found to export for vendor: {$vendorCode}");
+        }
         $vendorName = $vendorInfo->vendor_name;
 
         // // Get data based on vendor code
@@ -276,6 +279,11 @@ class PurchasingDetailController extends Controller
         };
 
         $vendorInfo = $getVendorInfo($vendorCode);
+        if (! $vendorInfo) {
+            return redirect()
+                ->back()
+                ->with('error', "No forecast data found to export for vendor: {$vendorCode}");
+        }
         $vendorName = $vendorInfo->vendor_name;
         $contact = PurchasingContact::where('vendor_code', $vendorCode)->first();
 

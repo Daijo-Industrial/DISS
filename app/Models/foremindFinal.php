@@ -33,6 +33,8 @@ class foremindFinal extends Model
         'quantity_bomWip',
         'material_prediction',
         'U/M',
+        'forecast_date',
+        'quantity',
         // Add other attributes as needed
     ];
 }
