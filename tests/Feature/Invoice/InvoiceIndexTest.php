@@ -219,7 +219,7 @@ class InvoiceIndexTest extends TestCase
         $poPaid = $this->createPO(2003);
         Invoice::create([
             'purchase_order_id' => $poPaid->id,
-            'invoice_number' => 'INV-PAID-ONLY',
+            'invoice_number' => 'INV-UPCOMING-ONLY',
             'invoice_date' => now(),
             'payment_date' => now(),
             'paid_at' => now(),
@@ -297,6 +297,20 @@ class InvoiceIndexTest extends TestCase
             ->assertSee('INV-PAST-DUE')
             ->assertDontSee('INV-PAID')
             ->assertDontSee('INV-UNPAID');
+
+        // Test paymentStatusFilter = paid (Settled / Paid)
+        Livewire::test(InvoiceIndex::class)
+            ->set('paymentStatusFilter', 'paid')
+            ->assertSee('INV-PAID')
+            ->assertDontSee('INV-UNPAID')
+            ->assertDontSee('INV-PAST-DUE');
+
+        // Test paymentStatusFilter = unpaid (Unpaid / Open)
+        Livewire::test(InvoiceIndex::class)
+            ->set('paymentStatusFilter', 'unpaid')
+            ->assertSee('INV-UNPAID')
+            ->assertSee('INV-PAST-DUE')
+            ->assertDontSee('INV-PAID');
     }
 
     public function test_it_filters_by_vendor_and_currency()
