@@ -90,11 +90,40 @@
                     class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-slate-100 text-slate-700 border border-slate-200">
                     Terakhir di update :
                     <span class="ml-1 font-medium text-slate-900">
-                        {{$log->updated_at}}
+                        {{ $log?->updated_at ?? '-' }}
                     </span>
                 </span>
             </div>
         </div>
+
+        {{-- ALERT NOTIFICATIONS --}}
+        @if (session('error'))
+            <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 flex items-center justify-between text-sm shadow-sm" role="alert">
+                <div class="flex items-center gap-2.5">
+                    <i class="bx bx-error-circle text-xl text-rose-600 flex-shrink-0"></i>
+                    <span>{{ session('error') }}</span>
+                </div>
+                <button type="button" onclick="this.parentElement.remove()" class="text-rose-500 hover:text-rose-700 transition-colors">
+                    <i class="bx bx-x text-xl"></i>
+                </button>
+            </div>
+        @endif
+
+        @if (!empty($errors) && $errors->any())
+            <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 flex items-center justify-between text-sm shadow-sm" role="alert">
+                <div class="flex items-center gap-2.5">
+                    <i class="bx bx-error-circle text-xl text-rose-600 flex-shrink-0"></i>
+                    <ul class="list-disc list-inside">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+                <button type="button" onclick="this.parentElement.remove()" class="text-rose-500 hover:text-rose-700 transition-colors">
+                    <i class="bx bx-x text-xl"></i>
+                </button>
+            </div>
+        @endif
 
         {{-- FORM: INTERNAL VENDOR --}}
         <form method="GET" action="/foremind-detail/print" target="_blank"
@@ -112,9 +141,11 @@
                     </div>
                     <div class="md:col-span-5">
                         <select
-                            class="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                            id="vendor_code_internal" name="vendor_code" required>
-                            <option value="" selected disabled>Select Vendor Name</option>
+                            class="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                            id="vendor_code_internal" name="vendor_code" required @disabled($contacts->isEmpty())>
+                            <option value="" selected disabled>
+                                {{ $contacts->isEmpty() ? 'No vendors with forecast data available' : 'Select Vendor Name' }}
+                            </option>
                             @foreach ($contacts as $contact)
                                 <option value="{{ $contact->vendor_code }}">
                                     {{ $contact->vendor_code }} - {{ $contact->vendor_name }}@if(!empty($contact->p_member)) (PIC: {{ $contact->p_member }})@endif
@@ -124,8 +155,8 @@
                     </div>
                     <div class="md:col-span-3 md:text-right">
                         <button
-                            class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
-                            type="submit">
+                            class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            type="submit" @disabled($contacts->isEmpty())>
                             Print Internal
                         </button>
                     </div>
@@ -149,9 +180,11 @@
                     </div>
                     <div class="md:col-span-5">
                         <select
-                            class="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                            id="vendor_code_customer" name="vendor_code" required>
-                            <option value="" selected disabled>Select Vendor Name</option>
+                            class="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                            id="vendor_code_customer" name="vendor_code" required @disabled($contacts->isEmpty())>
+                            <option value="" selected disabled>
+                                {{ $contacts->isEmpty() ? 'No vendors with forecast data available' : 'Select Vendor Name' }}
+                            </option>
                             @foreach ($contacts as $contact)
                                 <option value="{{ $contact->vendor_code }}">
                                     {{ $contact->vendor_code }} - {{ $contact->vendor_name }}@if(!empty($contact->p_member)) (PIC: {{ $contact->p_member }})@endif
@@ -161,8 +194,8 @@
                     </div>
                     <div class="md:col-span-3 md:text-right">
                         <button
-                            class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium border border-blue-600"
-                            type="submit">
+                            class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium border border-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                            type="submit" @disabled($contacts->isEmpty())>
                             Print Customer
                         </button>
                     </div>
@@ -199,70 +232,78 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-200">
-                            @php
-                                $monthlyTotals = array_fill(0, count($qforecast[0]), 0);
-                                $currentMaterialCode = null;
-                            @endphp
-
-                            @foreach ($materials as $key => $material)
-                                <tr class="hover:bg-slate-50">
-                                    @if ($material->material_code != $currentMaterialCode)
-                                        {{-- First row for material code --}}
-                                        <td class="px-4 py-3 text-sm text-slate-900">{{ $material->material_code }}</td>
-                                        <td class="px-4 py-3 text-sm text-slate-900">{{ $material->material_name }}</td>
-                                        @php $currentMaterialCode = $material->material_code; @endphp
-                                    @else
-                                        {{-- Subsequent rows: empty cells for code & name --}}
-                                        <td class="px-4 py-3"></td>
-                                        <td class="px-4 py-3"></td>
-                                    @endif
-
-                                    <td class="px-4 py-3 text-sm text-slate-700">{{ $material->item_no }}</td>
-                                    <td class="px-4 py-3 text-sm text-slate-700">{{ $material->vendor_code }}</td>
-                                    <td class="px-4 py-3 text-sm text-slate-700">{{ $material->unit_of_measure }}</td>
-                                    <td class="px-4 py-3 text-sm text-slate-700">{{ $material->quantity_material }}</td>
-
-                                    @php $total = 0; @endphp
-
-                                    @foreach ($qforecast[$loop->index] as $index => $value)
-                                        @php
-                                            $calculation = $value * $material->quantity_material;
-                                            $total += $calculation;
-                                            $monthlyTotals[$index] += $calculation;
-                                        @endphp
-
-                                        <td class="px-4 py-3 text-sm">
-                                            <div class="text-slate-600">{{ $value }}</div>
-                                            <div class="font-semibold text-slate-900">{{ $calculation }}</div>
-                                        </td>
-                                    @endforeach
-
-                                    <td class="px-4 py-3 text-sm font-semibold text-slate-900">{{ $total }}</td>
+                            @if ($materials->isEmpty() || empty($qforecast))
+                                <tr>
+                                    <td colspan="{{ 7 + count($mon) }}" class="px-4 py-8 text-center text-slate-500">
+                                        No forecast material predictions available.
+                                    </td>
                                 </tr>
+                            @else
+                                @php
+                                    $monthlyTotals = array_fill(0, count($qforecast[0] ?? []), 0);
+                                    $currentMaterialCode = null;
+                                @endphp
 
-                                {{-- Ketika material_code berganti, tampilkan subtotal + separator --}}
-                                @if (!$loop->last && $material->material_code != $materials[$loop->index + 1]->material_code)
-                                    <tr class="bg-slate-50 font-semibold border-t-2 border-slate-300">
-                                        <td colspan="5" class="px-4 py-3"></td>
-                                        <td class="px-4 py-3 text-sm text-slate-700">Monthly Total</td>
-                                        @foreach ($monthlyTotals as $monthlyTotal)
-                                            <td class="px-4 py-3 text-sm text-slate-900 font-semibold">{{ $monthlyTotal }}
+                                @foreach ($materials as $key => $material)
+                                    <tr class="hover:bg-slate-50">
+                                        @if ($material->material_code != $currentMaterialCode)
+                                            {{-- First row for material code --}}
+                                            <td class="px-4 py-3 text-sm text-slate-900">{{ $material->material_code }}</td>
+                                            <td class="px-4 py-3 text-sm text-slate-900">{{ $material->material_name }}</td>
+                                            @php $currentMaterialCode = $material->material_code; @endphp
+                                        @else
+                                            {{-- Subsequent rows: empty cells for code & name --}}
+                                            <td class="px-4 py-3"></td>
+                                            <td class="px-4 py-3"></td>
+                                        @endif
+
+                                        <td class="px-4 py-3 text-sm text-slate-700">{{ $material->item_no }}</td>
+                                        <td class="px-4 py-3 text-sm text-slate-700">{{ $material->vendor_code }}</td>
+                                        <td class="px-4 py-3 text-sm text-slate-700">{{ $material->unit_of_measure }}</td>
+                                        <td class="px-4 py-3 text-sm text-slate-700">{{ $material->quantity_material }}</td>
+
+                                        @php $total = 0; @endphp
+
+                                        @foreach ($qforecast[$loop->index] as $index => $value)
+                                            @php
+                                                $calculation = $value * $material->quantity_material;
+                                                $total += $calculation;
+                                                $monthlyTotals[$index] += $calculation;
+                                            @endphp
+
+                                            <td class="px-4 py-3 text-sm">
+                                                <div class="text-slate-600">{{ $value }}</div>
+                                                <div class="font-semibold text-slate-900">{{ $calculation }}</div>
                                             </td>
                                         @endforeach
-                                        <td class="px-4 py-3 text-sm text-slate-900 font-semibold">
-                                            {{ array_sum($monthlyTotals) }}</td>
+
+                                        <td class="px-4 py-3 text-sm font-semibold text-slate-900">{{ $total }}</td>
                                     </tr>
 
-                                    @php
-                                        $monthlyTotals = array_fill(0, count($qforecast[0]), 0);
-                                    @endphp
+                                    {{-- Ketika material_code berganti, tampilkan subtotal + separator --}}
+                                    @if (!$loop->last && $material->material_code != $materials[$loop->index + 1]->material_code)
+                                        <tr class="bg-slate-50 font-semibold border-t-2 border-slate-300">
+                                            <td colspan="5" class="px-4 py-3"></td>
+                                            <td class="px-4 py-3 text-sm text-slate-700">Monthly Total</td>
+                                            @foreach ($monthlyTotals as $monthlyTotal)
+                                                <td class="px-4 py-3 text-sm text-slate-900 font-semibold">{{ $monthlyTotal }}
+                                                </td>
+                                            @endforeach
+                                            <td class="px-4 py-3 text-sm text-slate-900 font-semibold">
+                                                {{ array_sum($monthlyTotals) }}</td>
+                                        </tr>
 
-                                    <tr>
-                                        <td colspan="{{ 6 + count($qforecast[0]) + 1 }}"
-                                            class="border-t-2 border-slate-300"></td>
-                                    </tr>
-                                @endif
-                            @endforeach
+                                        @php
+                                            $monthlyTotals = array_fill(0, count($qforecast[0] ?? []), 0);
+                                        @endphp
+
+                                        <tr>
+                                            <td colspan="{{ 6 + count($qforecast[0] ?? []) + 1 }}"
+                                                class="border-t-2 border-slate-300"></td>
+                                        </tr>
+                                    @endif
+                                @endforeach
+                            @endif
                         </tbody>
                     </table>
                 </div>

@@ -77,6 +77,8 @@ class PurchasingMaterialController extends Controller
                     'quantity_material' => $inventoryMtrData->material_quantity,
                     'material_prediction' => $inventoryMtrData->material_quantity * $item->quantity,
                     'U/M' => $inventoryMtrData->Measure,
+                    'forecast_date' => $item->forecast_date,
+                    'quantity' => $item->quantity,
                 ];
 
                 if (count($inserts) >= 500) {
@@ -113,6 +115,8 @@ class PurchasingMaterialController extends Controller
                         'quantity_material' => $inventoryQuantity->material_quantity,
                         'material_prediction' => $inventoryQuantity->material_quantity * $item->quantity,
                         'U/M' => $inventoryQuantity->Measure,
+                        'forecast_date' => $item->forecast_date,
+                        'quantity' => $item->quantity,
                     ];
 
                     if (count($inserts) >= 500) {
@@ -155,6 +159,8 @@ class PurchasingMaterialController extends Controller
                         'quantity_bomWip' => $bom_quantity,
                         'material_prediction' => $inventoryQuantity->material_quantity * $bom_quantity * $item->quantity,
                         'U/M' => $inventoryQuantity->Measure,
+                        'forecast_date' => $item->forecast_date,
+                        'quantity' => $item->quantity,
                     ];
 
                     if (count($inserts) >= 500) {
@@ -197,6 +203,8 @@ class PurchasingMaterialController extends Controller
                         'quantity_bomWip' => $bom_quantity,
                         'material_prediction' => $secondInventory->material_quantity * $bom_quantity * $item->quantity,
                         'U/M' => $secondInventory->Measure,
+                        'forecast_date' => $item->forecast_date,
+                        'quantity' => $item->quantity,
                     ];
 
                     if (count($inserts) >= 500) {
@@ -237,6 +245,8 @@ class PurchasingMaterialController extends Controller
                         'quantity_bomWip' => $bom_quantity,
                         'material_prediction' => $thirdInventory->material_quantity * $bom_quantity * $item->quantity,
                         'U/M' => $thirdInventory->Measure,
+                        'forecast_date' => $item->forecast_date,
+                        'quantity' => $item->quantity,
                     ];
 
                     if (count($inserts) >= 500) {

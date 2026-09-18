@@ -56,8 +56,29 @@ class PurchasingController extends Controller
 
         // Retrieve forecasts from the foremindFinal table
         $forecasts = ForemindFinal::all();
-        $transformedData = [];
-        $contacts = PurchasingContact::all();
+        // Retrieve distinct vendor codes that actually exist in forecast_material_predictions
+        $availableVendorCodes = DB::table('forecast_material_predictions')
+            ->distinct()
+            ->pluck('vendor_code')
+            ->filter()
+            ->toArray();
+
+        if (!empty($availableVendorCodes)) {
+            $contacts = PurchasingContact::whereIn('vendor_code', $availableVendorCodes)->get();
+            $existingCodes = $contacts->pluck('vendor_code')->toArray();
+            $missingCodes = array_diff($availableVendorCodes, $existingCodes);
+            if (!empty($missingCodes)) {
+                $extraVendors = DB::table('forecast_material_predictions')
+                    ->whereIn('vendor_code', $missingCodes)
+                    ->select('vendor_code', 'vendor_name')
+                    ->distinct()
+                    ->get();
+                $contacts = $contacts->concat($extraVendors);
+            }
+            $contacts = $contacts->sortBy('vendor_name')->values();
+        } else {
+            $contacts = collect();
+        }
 
         // Get unique months from all forecasts
         $allMonths = [];
@@ -73,25 +94,16 @@ class PurchasingController extends Controller
 
         // Fetch your materials data from the database
         $materials = DB::table('forecast_material_predictions')->paginate(10);
-        $allmonth = [];
-        foreach ($materials as $material) {
-            // $decodedForecast = json_decode($material->quantity_forecast, true);
-            // dd($decodedForecast);
-            $stringForecast = json_decode($material->quantity_forecast, true);
-            // dd($stringForecast);
-            // $decodedMonths = json_decode($material->months, true);
-            $stringMonths = json_decode($material->months, true);
-            $truevalue[] = $stringMonths;
+        $values = [];
+        $qforecast = [];
 
-            $monthm[] = array_keys($stringMonths);
+        foreach ($materials as $material) {
+            $stringForecast = json_decode($material->quantity_forecast, true) ?? [];
+            $stringMonths = json_decode($material->months, true) ?? [];
+
             $values[] = array_values($stringMonths);
             $qforecast[] = array_values($stringForecast);
-            // dd($qforecast);
-            $combinedArray = [array_values($stringForecast), array_values($stringMonths)];
-            // dd($combinedArray);
         }
-
-        // dd($qforecast);
 
         return view('purchasing.foremind_detail', [
             // 'monthm' => $monthm, // Ensure this is the correct data
