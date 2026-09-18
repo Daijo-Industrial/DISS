@@ -79,7 +79,14 @@ class BroadcastNotificationPushed
             'created_at' => now()->toIso8601String(),
         ];
 
-        event(new NotificationPushed($event->notifiable->id, $payload));
+        try {
+            event(new NotificationPushed($event->notifiable->id, $payload));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed to broadcast notification push', [
+                'error' => $e->getMessage(),
+                'notifiable_id' => $event->notifiable->id,
+            ]);
+        }
     }
 
     protected function firstFilled(array $data, array $keys): ?string
