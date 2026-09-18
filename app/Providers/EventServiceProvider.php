@@ -22,6 +22,7 @@ class EventServiceProvider extends ServiceProvider
         NotificationSent::class => [BroadcastNotificationPushed::class],
         ApprovalCompleted::class => [
             HandlePurchaseRequestApprovalNotifications::class,
+            \App\Application\PurchaseOrder\Listeners\HandlePurchaseOrderApprovalNotifications::class,
         ],
    ];
    
