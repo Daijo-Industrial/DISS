@@ -1,12 +1,20 @@
 <div>
-    <div class="px-4 sm:px-6 lg:px-8 py-5 max-w-[1600px] mx-auto space-y-4">
+    <div class="px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto space-y-4">
         {{-- Header Section (Minimal) --}}
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-                <h1 class="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                    <i class="bi bi-receipt text-emerald-600"></i>
-                    Invoices
-                </h1>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                        <i class="bi bi-receipt text-emerald-600"></i>
+                        Invoices
+                    </h1>
+                    <select wire:model.live="yearFilter"
+                            class="bg-white border border-slate-200 rounded-xl text-xs font-black uppercase tracking-wider text-slate-700 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 py-1.5 px-3 shadow-xs hover:border-slate-300 transition-all cursor-pointer">
+                        @foreach($filterOptions['years'] as $val => $lbl)
+                            <option value="{{ $val }}">{{ $lbl }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <p class="text-xs text-slate-500 mt-0.5">
                     Manage and track purchase order invoices, approval workflows, and payments.
                 </p>
@@ -78,7 +86,7 @@
                 </div>
             </div>
 
-            {{-- Past Due / Due Schedule --}}
+            {{-- Past Due (Unpaid) --}}
             <div wire:click="filterByStat('past_due')"
                  class="cursor-pointer bg-white p-3.5 rounded-xl border transition-all duration-200 hover:shadow-sm relative overflow-hidden group {{ $paymentStatusFilter === 'past_due' ? 'ring-2 ring-rose-500 border-rose-500 bg-rose-50/20' : 'border-slate-100 hover:border-rose-200' }}">
                 <div class="flex items-center justify-between">
@@ -156,10 +164,20 @@
 
             {{-- Collapsible Advanced Filters Drawer --}}
             @if($showAdvancedFilters)
-                <div class="pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fadeIn">
+                <div class="pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 animate-fadeIn">
+                    {{-- Settlement Status --}}
+                    <div>
+                        <label class="block text-[11px] font-black uppercase tracking-wider text-slate-400 mb-1.5">Settlement</label>
+                        <select wire:model.live="settlementFilter" class="w-full rounded-xl border-0 py-2 pl-3 pr-8 text-xs font-bold text-slate-800 ring-1 ring-inset ring-slate-200 focus:ring-2 focus:ring-emerald-600 bg-slate-50">
+                            @foreach($filterOptions['settlement_statuses'] as $val => $lbl)
+                                <option value="{{ $val }}">{{ $lbl }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
                     {{-- Payment Schedule --}}
                     <div>
-                        <label class="block text-[11px] font-black uppercase tracking-wider text-slate-400 mb-1.5">Payment Schedule</label>
+                        <label class="block text-[11px] font-black uppercase tracking-wider text-slate-400 mb-1.5">Schedule</label>
                         <select wire:model.live="paymentStatusFilter" class="w-full rounded-xl border-0 py-2 pl-3 pr-8 text-xs font-bold text-slate-800 ring-1 ring-inset ring-slate-200 focus:ring-2 focus:ring-emerald-600 bg-slate-50">
                             @foreach($filterOptions['payment_statuses'] as $val => $lbl)
                                 <option value="{{ $val }}">{{ $lbl }}</option>
@@ -198,12 +216,13 @@
                     </div>
 
                     {{-- Date Filter Row --}}
-                    <div class="sm:col-span-2 lg:col-span-4 pt-2 border-t border-slate-100 flex flex-wrap items-center gap-3 text-xs">
+                    <div class="sm:col-span-2 lg:col-span-5 pt-2 border-t border-slate-100 flex flex-wrap items-center gap-3 text-xs">
                         <div class="flex items-center gap-2">
                             <span class="text-[11px] font-black uppercase tracking-wider text-slate-400">Date Type:</span>
                             <select wire:model.live="dateType" class="rounded-lg border-0 py-1.5 pl-2.5 pr-7 text-xs font-bold text-slate-700 ring-1 ring-inset ring-slate-200 focus:ring-2 focus:ring-emerald-600 bg-slate-50">
                                 <option value="invoice_date">Invoice Date</option>
-                                <option value="payment_date">Payment Date</option>
+                                <option value="payment_date">Scheduled Date (Due)</option>
+                                <option value="paid_at">Settlement Date (Paid At)</option>
                             </select>
                         </div>
 
@@ -242,6 +261,13 @@
                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
                             <span>PO Status: <strong>{{ $filterOptions['po_statuses'][$poStatusFilter] ?? $poStatusFilter }}</strong></span>
                             <button wire:click="clearFilter('poStatusFilter')" class="hover:text-rose-500 text-amber-600"><i class="bi bi-x"></i></button>
+                        </span>
+                    @endif
+
+                    @if($settlementFilter)
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold {{ $settlementFilter === 'paid' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-amber-50 text-amber-800 border border-amber-200' }}">
+                            <span>Settlement: <strong>{{ $filterOptions['settlement_statuses'][$settlementFilter] ?? ucfirst($settlementFilter) }}</strong></span>
+                            <button wire:click="clearFilter('settlementFilter')" class="hover:text-rose-500 {{ $settlementFilter === 'paid' ? 'text-emerald-600' : 'text-amber-600' }}"><i class="bi bi-x"></i></button>
                         </span>
                     @endif
 
@@ -311,7 +337,7 @@
                             </th>
                             <th scope="col" class="w-[18%] px-3 py-3 text-left text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-emerald-600 transition-colors group" wire:click="sortByColumn('invoice_date')">
                                 <div class="flex items-center gap-2">
-                                    Dates & Schedule
+                                    Schedule & Settlement
                                     @if ($sortBy === 'invoice_date')
                                         <i class="bi bi-sort-{{ $sortDirection === 'asc' ? 'up' : 'down' }} text-emerald-500"></i>
                                     @else
@@ -409,33 +435,43 @@
                                     </div>
                                 </td>
                                 
-                                {{-- Dates & Schedule Status --}}
+                                {{-- Dates, Schedule & Settlement Status --}}
                                 <td class="px-3 py-3.5">
                                     <div class="flex flex-col gap-1 justify-center">
+                                        {{-- Invoice Date --}}
                                         <div class="flex items-center gap-2 text-xs">
                                             <span class="font-bold text-slate-400 uppercase text-[10px] w-7">Inv:</span>
                                             <span class="font-semibold text-slate-700">{{ $invoice->invoice_date ? $invoice->invoice_date->format('d M Y') : '-' }}</span>
                                         </div>
+
+                                        {{-- Target / Due Date --}}
                                         <div class="flex items-center gap-2 text-xs">
                                             <span class="font-bold text-slate-400 uppercase text-[10px] w-7">Due:</span>
                                             @if($invoice->payment_date)
-                                                @php
-                                                    $isPastDue = $invoice->payment_date->isPast() && !$invoice->payment_date->isToday();
-                                                @endphp
-                                                @if($isPastDue)
-                                                    <span class="font-semibold text-rose-700 bg-rose-50 border border-rose-200/60 px-1.5 py-0.5 rounded text-[11px] font-mono flex items-center gap-1" title="Payment target date has passed">
-                                                        <i class="bi bi-exclamation-circle text-[10px]"></i>
-                                                        {{ $invoice->payment_date->format('d M Y') }}
-                                                    </span>
-                                                @else
-                                                    <span class="font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200/60 px-1.5 py-0.5 rounded text-[11px] font-mono flex items-center gap-1" title="Scheduled payment date">
-                                                        <i class="bi bi-calendar-event text-[10px]"></i>
-                                                        {{ $invoice->payment_date->format('d M Y') }}
-                                                    </span>
-                                                @endif
+                                                <span class="font-mono text-[11px] {{ !$invoice->paid_at && $invoice->payment_date->isPast() && !$invoice->payment_date->isToday() ? 'text-rose-600 font-bold' : 'text-slate-600 font-medium' }}">
+                                                    {{ $invoice->payment_date->format('d M Y') }}
+                                                </span>
                                             @else
-                                                <span class="text-[10px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
-                                                    Unscheduled
+                                                <span class="text-[10px] text-slate-400 italic">Unscheduled</span>
+                                            @endif
+                                        </div>
+
+                                        {{-- Settlement Status Pill --}}
+                                        <div class="flex items-center gap-2 text-xs mt-0.5">
+                                            <span class="font-bold text-slate-400 uppercase text-[10px] w-7">Pay:</span>
+                                            @if($invoice->paid_at)
+                                                <span class="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/70 px-1.5 py-0.5 rounded text-[10px] font-mono" title="Settled on {{ $invoice->paid_at->format('d M Y') }}">
+                                                    <i class="bi bi-check-circle-fill text-[9px] text-emerald-600"></i>
+                                                    Paid: {{ $invoice->paid_at->format('d M Y') }}
+                                                </span>
+                                            @elseif($invoice->payment_date && $invoice->payment_date->isPast() && !$invoice->payment_date->isToday())
+                                                <span class="inline-flex items-center gap-1 font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded text-[10px]" title="Overdue open invoice">
+                                                    <i class="bi bi-exclamation-triangle-fill text-[9px] text-rose-500"></i>
+                                                    Past Due
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center font-bold text-amber-700 bg-amber-50 border border-amber-200/70 px-1.5 py-0.5 rounded text-[10px]">
+                                                    Unpaid
                                                 </span>
                                             @endif
                                         </div>
@@ -449,13 +485,31 @@
                                 </td>
                                 
                                 {{-- Actions --}}
-                                <td class="px-6 py-3.5 whitespace-nowrap text-right text-sm font-medium">
-                                    <div class="flex items-center justify-end gap-2">
-                                        @if($invoice->purchaseOrder)
+                                <td class="px-4 py-3.5 whitespace-nowrap text-right text-sm font-medium">
+                                    <div class="flex items-center justify-end gap-1.5">
+                                        @can('changePaidStatus', $invoice)
+                                            @if($invoice->paid_at)
+                                                <button wire:click="markAsUnpaid({{ $invoice->id }})" 
+                                                        class="h-7 px-2.5 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-rose-600 flex items-center gap-1 text-[11px] font-bold transition-all border border-slate-200"
+                                                        title="Revert to Unpaid">
+                                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                                    Unpay
+                                                </button>
+                                            @else
+                                                <button wire:click="openPaymentModal({{ $invoice->id }})" 
+                                                        class="h-7 px-2.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white flex items-center gap-1 text-[11px] font-bold transition-all border border-emerald-200 shadow-2xs"
+                                                        title="Mark as Paid">
+                                                    <i class="bi bi-check2"></i>
+                                                    Pay
+                                                </button>
+                                            @endif
+                                        @endcan
+
+                                        @if($invoice->purchase_order_id)
                                             <a href="{{ route('po.view', $invoice->purchase_order_id) }}" 
-                                               class="h-8 px-3 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white flex items-center gap-1.5 font-bold transition-all shadow-sm border border-indigo-100 text-xs">
+                                               class="h-7 px-2.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white flex items-center gap-1 font-bold transition-all shadow-2xs border border-indigo-100 text-[11px]">
                                                 View PO
-                                                <i class="bi bi-arrow-right text-[11px]"></i>
+                                                <i class="bi bi-arrow-right text-[10px]"></i>
                                             </a>
                                         @endif
                                     </div>
@@ -501,4 +555,84 @@
             </div>
         </div>
     </div>
+
+    {{-- Payment Settlement Date Modal --}}
+    @if($showPaymentModal && $settlingInvoice)
+        <template x-teleport="body">
+            <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                <div class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-100" @click.outside="$wire.closePaymentModal()">
+                    {{-- Header --}}
+                    <div class="px-6 py-4 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-b border-slate-100 flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <div class="h-9 w-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-sm">
+                                <i class="bi bi-cash-stack text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-black text-slate-900 uppercase tracking-wider">Record Payment</h3>
+                                <p class="text-[11px] text-slate-500 font-medium">Set invoice settlement date</p>
+                            </div>
+                        </div>
+                        <button wire:click="closePaymentModal" class="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors">
+                            <i class="bi bi-x-lg text-sm"></i>
+                        </button>
+                    </div>
+
+                    {{-- Invoice Summary Card --}}
+                    <div class="p-6 space-y-4">
+                        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="font-bold text-slate-500 uppercase tracking-wider text-[10px]">Invoice</span>
+                                <span class="font-mono font-bold text-slate-800">#{{ $settlingInvoice->invoice_number }}</span>
+                            </div>
+                            @if($settlingInvoice->purchaseOrder)
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="font-bold text-slate-500 uppercase tracking-wider text-[10px]">Vendor</span>
+                                    <span class="font-semibold text-slate-700 truncate max-w-[200px]" title="{{ $settlingInvoice->purchaseOrder->vendor_name }}">{{ $settlingInvoice->purchaseOrder->vendor_name }}</span>
+                                </div>
+                            @endif
+                            <div class="flex items-center justify-between text-xs pt-2 border-t border-slate-200/60">
+                                <span class="font-bold text-slate-500 uppercase tracking-wider text-[10px]">Total Amount</span>
+                                <span class="font-mono font-black text-emerald-700 text-sm">
+                                    {{ $settlingInvoice->total_currency }} {{ number_format($settlingInvoice->total, 2, '.', ',') }}
+                                </span>
+                            </div>
+                        </div>
+
+                        {{-- Date Input --}}
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="block text-xs font-bold text-slate-700">Settlement Date (Paid At)</label>
+                                <button type="button" 
+                                        wire:click="$set('settlementDate', '{{ now()->format('Y-m-d') }}')" 
+                                        class="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 hover:underline">
+                                    Set to Today
+                                </button>
+                            </div>
+                            <input type="date" wire:model="settlementDate" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm font-medium focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-xs transition-all">
+                            @error('settlementDate') 
+                                <span class="text-rose-500 text-xs mt-1 block font-medium">{{ $message }}</span> 
+                            @enderror
+                            <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                                Defaults to today (<span class="font-medium text-slate-600">{{ now()->format('d M Y') }}</span>). Select an earlier or specific date if the payment occurred on a different day.
+                            </p>
+                        </div>
+                    </div>
+
+                    {{-- Footer Actions --}}
+                    <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+                        <button wire:click="closePaymentModal" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors">
+                            Cancel
+                        </button>
+                        <button wire:click="confirmPayment" 
+                                wire:loading.attr="disabled"
+                                class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm hover:shadow transition-all flex items-center gap-1.5 disabled:opacity-50">
+                            <i class="bi bi-check2 text-sm" wire:loading.remove wire:target="confirmPayment"></i>
+                            <span wire:loading wire:target="confirmPayment" class="inline-block animate-spin mr-1">⌛</span>
+                            Confirm & Mark Paid
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+    @endif
 </div>

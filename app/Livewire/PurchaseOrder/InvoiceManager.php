@@ -21,12 +21,20 @@ class InvoiceManager extends Component
 
     public $invoiceId = null;
 
+    // Quick Settlement Modal
+    public bool $showPaymentModal = false;
+    public ?int $settlingInvoiceId = null;
+    public ?Invoice $settlingInvoice = null;
+    public string $settlementDate = '';
+
     // Form fields
     public $invoice_number = '';
 
     public $invoice_date = '';
 
     public $payment_date = '';
+
+    public $paid_at = '';
 
     public $total = '';
 
@@ -72,6 +80,7 @@ class InvoiceManager extends Component
             'invoice_number' => 'required|string|max:255',
             'invoice_date' => 'required|date',
             'payment_date' => 'nullable|date',
+            'paid_at' => 'nullable|date',
             'total' => 'required|numeric|min:0',
             'total_currency' => 'required|string|max:10',
         ];
@@ -100,6 +109,7 @@ class InvoiceManager extends Component
         $this->invoice_number = $invoice->invoice_number;
         $this->invoice_date = $invoice->invoice_date ? $invoice->invoice_date->format('Y-m-d') : '';
         $this->payment_date = $invoice->payment_date ? $invoice->payment_date->format('Y-m-d') : '';
+        $this->paid_at = $invoice->paid_at ? $invoice->paid_at->format('Y-m-d') : '';
         $this->total = $invoice->total;
         $this->total_currency = $invoice->total_currency;
         $this->checkCurrencyMismatch();
@@ -112,6 +122,23 @@ class InvoiceManager extends Component
         $this->authorize('manageInvoices', $this->purchaseOrder);
         $validated = $this->validate();
 
+        if (empty($validated['payment_date'])) {
+            $validated['payment_date'] = null;
+        }
+
+        $targetInvoice = $this->invoiceId ? Invoice::findOrFail($this->invoiceId) : null;
+        if (!auth()->user()?->can('changePaidStatus', $targetInvoice ?? Invoice::class)) {
+            if ($targetInvoice) {
+                unset($validated['paid_at']);
+            } else {
+                $validated['paid_at'] = null;
+            }
+        } else {
+            if (empty($validated['paid_at'])) {
+                $validated['paid_at'] = null;
+            }
+        }
+
         // Check for currency mismatch and add warning to the message
         $currencyWarning = '';
         if ($this->currencyMismatchWarning) {
@@ -120,7 +147,7 @@ class InvoiceManager extends Component
 
         try {
             if ($this->invoiceId) {
-                $invoice = Invoice::findOrFail($this->invoiceId);
+                $invoice = $targetInvoice ?: Invoice::findOrFail($this->invoiceId);
                 $invoice->update($validated);
                 $this->dispatch('flash', message: 'Invoice updated successfully.' . $currencyWarning, type: $currencyWarning ? 'warning' : 'success');
             } else {
@@ -201,9 +228,61 @@ class InvoiceManager extends Component
         $this->invoice_number = '';
         $this->invoice_date = '';
         $this->payment_date = '';
+        $this->paid_at = '';
         $this->total = '';
         $this->currencyMismatchWarning = false;
         $this->resetValidation();
+    }
+
+    public function openPaymentModal($invoiceId)
+    {
+        $invoice = Invoice::findOrFail($invoiceId);
+        $this->authorize('changePaidStatus', $invoice);
+
+        $this->settlingInvoiceId = $invoiceId;
+        $this->settlingInvoice = $invoice;
+        $this->settlementDate = now()->format('Y-m-d');
+        $this->showPaymentModal = true;
+    }
+
+    public function closePaymentModal()
+    {
+        $this->showPaymentModal = false;
+        $this->settlingInvoiceId = null;
+        $this->settlingInvoice = null;
+        $this->settlementDate = '';
+        $this->resetValidation('settlementDate');
+    }
+
+    public function confirmPayment()
+    {
+        if (!$this->settlingInvoiceId) {
+            return;
+        }
+
+        $this->validate([
+            'settlementDate' => 'required|date',
+        ]);
+
+        $this->togglePaid($this->settlingInvoiceId, $this->settlementDate);
+        $this->closePaymentModal();
+    }
+
+    public function togglePaid($id, ?string $paidDate = null)
+    {
+        $invoice = Invoice::findOrFail($id);
+        $this->authorize('changePaidStatus', $invoice);
+
+        if ($invoice->paid_at) {
+            $invoice->markAsUnpaid();
+            $this->dispatch('flash', message: "Invoice #{$invoice->invoice_number} marked as unpaid.", type: 'info');
+        } else {
+            $invoice->markAsPaid($paidDate ?: today());
+            $this->dispatch('flash', message: "Invoice #{$invoice->invoice_number} marked as paid on " . ($invoice->paid_at ? $invoice->paid_at->format('d M Y') : 'today') . '.', type: 'success');
+        }
+
+        $this->loadInvoices();
+        $this->dispatch('po-updated');
     }
 
     public function openAttachmentModal($invoiceId)

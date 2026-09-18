@@ -22,6 +22,7 @@ class AuthServiceProvider extends ServiceProvider
         \App\Models\PurchaseRequest::class => \App\Policies\PurchaseRequestPolicy::class,
         \App\Domain\Overtime\Models\OvertimeForm::class => \App\Policies\OvertimePolicy::class,
         \App\Models\PurchaseOrder::class => \App\Policies\PurchaseOrderPolicy::class,
+        \App\Models\Invoice::class => \App\Policies\InvoicePolicy::class,
     ];
 
     /**

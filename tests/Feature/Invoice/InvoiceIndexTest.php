@@ -10,6 +10,7 @@ use App\Models\PurchaseOrderCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class InvoiceIndexTest extends TestCase
@@ -145,14 +146,27 @@ class InvoiceIndexTest extends TestCase
             'total_currency' => 'IDR',
         ]);
 
-        // Past Due Invoice: 750,000 IDR
-        $poPastDue = $this->createPO(5003, 'Vendor C', 'IDR', 750000);
+        // Past Due Unpaid Invoice: 750,000 IDR
+        $poUnpaid = $this->createPO(5003, 'Vendor C', 'IDR', 750000);
         Invoice::create([
-            'purchase_order_id' => $poPastDue->id,
-            'invoice_number' => 'INV-SUM-PASTDUE',
+            'purchase_order_id' => $poUnpaid->id,
+            'invoice_number' => 'INV-SUM-UNPAID',
             'invoice_date' => now()->subDays(10),
-            'payment_date' => now()->subDays(3), // past due
+            'payment_date' => now()->subDays(3), // Past target date
+            'paid_at' => null, // UNPAID -> Past due!
             'total' => 750000,
+            'total_currency' => 'IDR',
+        ]);
+
+        // Settled Historical Invoice: 500,000 IDR (target was in past, but paid)
+        $poSettled = $this->createPO(5004, 'Vendor D', 'IDR', 500000);
+        Invoice::create([
+            'purchase_order_id' => $poSettled->id,
+            'invoice_number' => 'INV-SUM-SETTLED',
+            'invoice_date' => now()->subDays(20),
+            'payment_date' => now()->subDays(15),
+            'paid_at' => now()->subDays(14), // Paid! Not past due
+            'total' => 500000,
             'total_currency' => 'IDR',
         ]);
 
@@ -162,13 +176,13 @@ class InvoiceIndexTest extends TestCase
         $stats = $component->get('stats');
         $this->assertEquals(2500000, (float) $stats['pending_approval_sum']);
         $this->assertEquals(1500000, (float) $stats['po_approved_sum']);
-        $this->assertEquals(750000, (float) $stats['past_due_sum']);
+        $this->assertEquals(750000, (float) $stats['past_due_sum']); // Only the unpaid one!
 
         // Verify formatted output rendered in KPI cards
         $component->assertSee('2,500,000')
             ->assertSee('1,500,000')
             ->assertSee('750,000')
-            ->assertDontSee('Financial Category Breakdown'); // Confirms bottom card strip was removed
+            ->assertDontSee('Financial Category Breakdown');
     }
 
     public function test_it_filters_by_stat_card_presets()
@@ -189,24 +203,26 @@ class InvoiceIndexTest extends TestCase
             'total_currency' => 'IDR',
         ]);
 
-        // Past Due Invoice
+        // Past Due Unpaid Invoice
         $poPastDue = $this->createPO(2002);
         Invoice::create([
             'purchase_order_id' => $poPastDue->id,
             'invoice_number' => 'INV-PASTDUE-ONLY',
             'invoice_date' => now()->subDays(10),
             'payment_date' => now()->subDays(2),
+            'paid_at' => null,
             'total' => 300000,
             'total_currency' => 'IDR',
         ]);
 
-        // Upcoming Invoice
-        $poUpcoming = $this->createPO(2003);
+        // Settled Paid Invoice
+        $poPaid = $this->createPO(2003);
         Invoice::create([
             'purchase_order_id' => $poUpcoming->id,
             'invoice_number' => 'INV-UPCOMING-ONLY',
             'invoice_date' => now(),
-            'payment_date' => now()->addDays(5),
+            'payment_date' => now(),
+            'paid_at' => now(),
             'total' => 400000,
             'total_currency' => 'IDR',
         ]);
@@ -222,11 +238,12 @@ class InvoiceIndexTest extends TestCase
         Livewire::test(InvoiceIndex::class)
             ->call('filterByStat', 'past_due')
             ->assertSet('paymentStatusFilter', 'past_due')
+            ->assertSet('settlementFilter', 'unpaid')
             ->assertSee('INV-PASTDUE-ONLY')
-            ->assertDontSee('INV-UPCOMING-ONLY');
+            ->assertDontSee('INV-PAID-ONLY');
     }
 
-    public function test_it_filters_by_payment_status()
+    public function test_it_filters_by_payment_status_and_settlement()
     {
         $po1 = $this->createPO(3001);
         Invoice::create([
@@ -234,6 +251,7 @@ class InvoiceIndexTest extends TestCase
             'invoice_number' => 'INV-PAID',
             'invoice_date' => now(),
             'payment_date' => now(),
+            'paid_at' => now(),
             'total' => 100000,
             'total_currency' => 'IDR',
         ]);
@@ -244,6 +262,7 @@ class InvoiceIndexTest extends TestCase
             'invoice_number' => 'INV-UNPAID',
             'invoice_date' => now(),
             'payment_date' => null,
+            'paid_at' => null,
             'total' => 200000,
             'total_currency' => 'IDR',
         ]);
@@ -254,46 +273,30 @@ class InvoiceIndexTest extends TestCase
             'invoice_number' => 'INV-PAST-DUE',
             'invoice_date' => now()->subDays(10),
             'payment_date' => now()->subDays(2),
+            'paid_at' => null,
             'total' => 300000,
             'total_currency' => 'IDR',
         ]);
 
-        $po4 = $this->createPO(3004);
-        Invoice::create([
-            'purchase_order_id' => $po4->id,
-            'invoice_number' => 'INV-UPCOMING',
-            'invoice_date' => now(),
-            'payment_date' => now()->addDays(5),
-            'total' => 400000,
-            'total_currency' => 'IDR',
-        ]);
-
+        // Test settlementFilter = paid
         Livewire::test(InvoiceIndex::class)
-            ->set('paymentStatusFilter', 'paid')
+            ->set('settlementFilter', 'paid')
             ->assertSee('INV-PAID')
             ->assertDontSee('INV-UNPAID');
 
+        // Test settlementFilter = unpaid
         Livewire::test(InvoiceIndex::class)
-            ->set('paymentStatusFilter', 'unpaid')
+            ->set('settlementFilter', 'unpaid')
             ->assertSee('INV-UNPAID')
+            ->assertSee('INV-PAST-DUE')
             ->assertDontSee('INV-PAID');
 
+        // Test paymentStatusFilter = past_due
         Livewire::test(InvoiceIndex::class)
             ->set('paymentStatusFilter', 'past_due')
             ->assertSee('INV-PAST-DUE')
-            ->assertDontSee('INV-UPCOMING')
+            ->assertDontSee('INV-PAID')
             ->assertDontSee('INV-UNPAID');
-
-        Livewire::test(InvoiceIndex::class)
-            ->set('paymentStatusFilter', 'upcoming')
-            ->assertSee('INV-UPCOMING')
-            ->assertDontSee('INV-PAST-DUE')
-            ->assertDontSee('INV-UNPAID');
-
-        Livewire::test(InvoiceIndex::class)
-            ->set('paymentStatusFilter', 'unscheduled')
-            ->assertSee('INV-UNPAID')
-            ->assertDontSee('INV-UPCOMING');
     }
 
     public function test_it_filters_by_vendor_and_currency()
@@ -332,13 +335,275 @@ class InvoiceIndexTest extends TestCase
         Livewire::test(InvoiceIndex::class)
             ->set('search', 'TestSearch')
             ->set('poStatusFilter', 'IN_REVIEW')
-            ->set('paymentStatusFilter', 'unpaid')
+            ->set('paymentStatusFilter', 'past_due')
+            ->set('settlementFilter', 'unpaid')
             ->call('clearFilter', 'poStatusFilter')
             ->assertSet('poStatusFilter', '')
-            ->assertSet('paymentStatusFilter', 'unpaid')
+            ->assertSet('settlementFilter', 'unpaid')
             ->call('clearFilters')
             ->assertSet('search', '')
             ->assertSet('paymentStatusFilter', '')
+            ->assertSet('settlementFilter', '')
             ->assertSet('poStatusFilter', '');
+    }
+
+    public function test_it_marks_invoices_as_paid_and_unpaid()
+    {
+        Role::firstOrCreate(['name' => 'accounting-admin', 'guard_name' => 'web']);
+        $this->user->assignRole('accounting-admin');
+
+        $po = $this->createPO(6001);
+        $invoice = Invoice::create([
+            'purchase_order_id' => $po->id,
+            'invoice_number' => 'INV-TOGGLE-PAID',
+            'invoice_date' => now(),
+            'payment_date' => now()->addDays(5),
+            'paid_at' => null,
+            'total' => 1250000,
+            'total_currency' => 'IDR',
+        ]);
+
+        $this->assertFalse($invoice->fresh()->is_paid);
+        $this->assertNull($invoice->fresh()->paid_at);
+
+        // Mark as paid
+        Livewire::actingAs($this->user)
+            ->test(InvoiceIndex::class)
+            ->call('markAsPaid', $invoice->id);
+
+        $invoice->refresh();
+        $this->assertTrue($invoice->is_paid);
+        $this->assertNotNull($invoice->paid_at);
+        $this->assertEquals(today()->toDateString(), $invoice->paid_at->toDateString());
+
+        // Mark as unpaid
+        Livewire::actingAs($this->user)
+            ->test(InvoiceIndex::class)
+            ->call('markAsUnpaid', $invoice->id);
+
+        $invoice->refresh();
+        $this->assertFalse($invoice->is_paid);
+        $this->assertNull($invoice->paid_at);
+    }
+
+    public function test_unauthorized_user_cannot_mark_invoice_as_paid_or_unpaid()
+    {
+        $po = $this->createPO(6002);
+        $invoice = Invoice::create([
+            'purchase_order_id' => $po->id,
+            'invoice_number' => 'INV-UNAUTH-PAID',
+            'invoice_date' => now(),
+            'total' => 1000000,
+            'total_currency' => 'IDR',
+        ]);
+
+        // Regular user without accounting-admin role
+        $regularUser = User::factory()->create();
+
+        Livewire::actingAs($regularUser)
+            ->test(InvoiceIndex::class)
+            ->call('markAsPaid', $invoice->id)
+            ->assertForbidden();
+
+        $invoice->update(['paid_at' => today()]);
+
+        Livewire::actingAs($regularUser)
+            ->test(InvoiceIndex::class)
+            ->call('markAsUnpaid', $invoice->id)
+            ->assertForbidden();
+    }
+
+    public function test_super_admin_can_mark_invoice_as_paid_and_unpaid()
+    {
+        Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
+        $adminUser = User::factory()->create();
+        $adminUser->assignRole('super-admin');
+
+        $po = $this->createPO(6003);
+        $invoice = Invoice::create([
+            'purchase_order_id' => $po->id,
+            'invoice_number' => 'INV-SUPERADMIN-PAID',
+            'invoice_date' => now(),
+            'total' => 1000000,
+            'total_currency' => 'IDR',
+        ]);
+
+        Livewire::actingAs($adminUser)
+            ->test(InvoiceIndex::class)
+            ->call('markAsPaid', $invoice->id);
+
+        $this->assertTrue($invoice->fresh()->is_paid);
+
+        Livewire::actingAs($adminUser)
+            ->test(InvoiceIndex::class)
+            ->call('markAsUnpaid', $invoice->id);
+
+        $this->assertFalse($invoice->fresh()->is_paid);
+    }
+
+    public function test_it_defaults_year_filter_to_current_year_on_mount()
+    {
+        Livewire::test(InvoiceIndex::class)
+            ->assertSet('yearFilter', (string) now()->year);
+    }
+
+    public function test_it_filters_invoices_by_year()
+    {
+        $currentYear = now()->year;
+        $prevYear = $currentYear - 1;
+
+        $poCurrent = $this->createPO(7001);
+        $poPrev = $this->createPO(7002);
+
+        $invCurrent = Invoice::create([
+            'purchase_order_id' => $poCurrent->id,
+            'invoice_number' => 'INV-YEAR-CURR',
+            'invoice_date' => now(),
+            'total' => 1000000,
+            'total_currency' => 'IDR',
+        ]);
+
+        $invPrev = Invoice::create([
+            'purchase_order_id' => $poPrev->id,
+            'invoice_number' => 'INV-YEAR-PREV',
+            'invoice_date' => now()->subYear(),
+            'total' => 2000000,
+            'total_currency' => 'IDR',
+        ]);
+
+        // Default: current year only
+        Livewire::test(InvoiceIndex::class)
+            ->assertSee('INV-YEAR-CURR')
+            ->assertDontSee('INV-YEAR-PREV')
+            // Set to previous year
+            ->set('yearFilter', (string) $prevYear)
+            ->assertSee('INV-YEAR-PREV')
+            ->assertDontSee('INV-YEAR-CURR')
+            // Set to all years
+            ->set('yearFilter', 'all')
+            ->assertSee('INV-YEAR-CURR')
+            ->assertSee('INV-YEAR-PREV');
+    }
+
+    public function test_it_scopes_stats_by_selected_year()
+    {
+        $currentYear = now()->year;
+        $prevYear = $currentYear - 1;
+
+        $poCurrent = $this->createPO(8001);
+        $poPrev = $this->createPO(8002);
+
+        Invoice::create([
+            'purchase_order_id' => $poCurrent->id,
+            'invoice_number' => 'INV-STAT-CURR',
+            'invoice_date' => now(),
+            'total' => 1000000,
+            'total_currency' => 'IDR',
+        ]);
+
+        Invoice::create([
+            'purchase_order_id' => $poPrev->id,
+            'invoice_number' => 'INV-STAT-PREV',
+            'invoice_date' => now()->subYear(),
+            'total' => 500000,
+            'total_currency' => 'IDR',
+        ]);
+
+        // Default: current year only in stats
+        $component = Livewire::test(InvoiceIndex::class);
+        $this->assertEquals(1, $component->get('stats')['total_count']);
+        $this->assertEquals(1000000, $component->get('stats')['total_amount_idr']);
+
+        // Previous year in stats
+        $component->set('yearFilter', (string) $prevYear);
+        $this->assertEquals(1, $component->get('stats')['total_count']);
+        $this->assertEquals(500000, $component->get('stats')['total_amount_idr']);
+
+        // All years in stats
+        $component->set('yearFilter', 'all');
+        $this->assertEquals(2, $component->get('stats')['total_count']);
+        $this->assertEquals(1500000, $component->get('stats')['total_amount_idr']);
+    }
+
+    public function test_clear_filter_and_clear_filters_for_year_in_invoice_index()
+    {
+        Livewire::test(InvoiceIndex::class)
+            // clearFilter('yearFilter') sets it to 'all'
+            ->call('clearFilter', 'yearFilter')
+            ->assertSet('yearFilter', 'all')
+            // clearFilters() resets it to current year
+            ->call('clearFilters')
+            ->assertSet('yearFilter', (string) now()->year);
+    }
+
+    public function test_it_opens_payment_modal_with_default_date_now()
+    {
+        Role::firstOrCreate(['name' => 'accounting-admin', 'guard_name' => 'web']);
+        $this->user->assignRole('accounting-admin');
+
+        $po = $this->createPO(9001);
+        $invoice = Invoice::create([
+            'purchase_order_id' => $po->id,
+            'invoice_number' => 'INV-MODAL-001',
+            'invoice_date' => now(),
+            'total' => 1000000,
+            'total_currency' => 'IDR',
+        ]);
+
+        Livewire::actingAs($this->user)
+            ->test(InvoiceIndex::class)
+            ->call('openPaymentModal', $invoice->id)
+            ->assertSet('showPaymentModal', true)
+            ->assertSet('settlingInvoiceId', $invoice->id)
+            ->assertSet('settlementDate', now()->format('Y-m-d'))
+            ->call('closePaymentModal')
+            ->assertSet('showPaymentModal', false)
+            ->assertSet('settlingInvoiceId', null);
+    }
+
+    public function test_it_confirms_payment_with_selected_custom_date()
+    {
+        Role::firstOrCreate(['name' => 'accounting-admin', 'guard_name' => 'web']);
+        $this->user->assignRole('accounting-admin');
+
+        $po = $this->createPO(9002);
+        $invoice = Invoice::create([
+            'purchase_order_id' => $po->id,
+            'invoice_number' => 'INV-MODAL-002',
+            'invoice_date' => now(),
+            'total' => 2000000,
+            'total_currency' => 'IDR',
+        ]);
+
+        Livewire::actingAs($this->user)
+            ->test(InvoiceIndex::class)
+            ->call('openPaymentModal', $invoice->id)
+            ->set('settlementDate', '2026-09-12')
+            ->call('confirmPayment')
+            ->assertSet('showPaymentModal', false)
+            ->assertDispatched('banner-message');
+
+        $invoice->refresh();
+        $this->assertTrue($invoice->is_paid);
+        $this->assertEquals('2026-09-12', $invoice->paid_at->format('Y-m-d'));
+    }
+
+    public function test_unauthorized_user_cannot_open_payment_modal()
+    {
+        $po = $this->createPO(9003);
+        $invoice = Invoice::create([
+            'purchase_order_id' => $po->id,
+            'invoice_number' => 'INV-MODAL-UNAUTH',
+            'invoice_date' => now(),
+            'total' => 1000000,
+            'total_currency' => 'IDR',
+        ]);
+
+        $regularUser = User::factory()->create();
+
+        Livewire::actingAs($regularUser)
+            ->test(InvoiceIndex::class)
+            ->call('openPaymentModal', $invoice->id)
+            ->assertForbidden();
     }
 }
