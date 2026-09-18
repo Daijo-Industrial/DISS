@@ -218,8 +218,8 @@ class InvoiceIndexTest extends TestCase
         // Settled Paid Invoice
         $poPaid = $this->createPO(2003);
         Invoice::create([
-            'purchase_order_id' => $poPaid->id,
-            'invoice_number' => 'INV-PAID-ONLY',
+            'purchase_order_id' => $poUpcoming->id,
+            'invoice_number' => 'INV-UPCOMING-ONLY',
             'invoice_date' => now(),
             'payment_date' => now(),
             'paid_at' => now(),
@@ -232,7 +232,7 @@ class InvoiceIndexTest extends TestCase
             ->call('filterByStat', 'pending_approval')
             ->assertSet('poStatusFilter', 'IN_REVIEW')
             ->assertSee('INV-STAT-PENDING')
-            ->assertDontSee('INV-PAID-ONLY');
+            ->assertDontSee('INV-UPCOMING-ONLY');
 
         // Test filterByStat('past_due')
         Livewire::test(InvoiceIndex::class)

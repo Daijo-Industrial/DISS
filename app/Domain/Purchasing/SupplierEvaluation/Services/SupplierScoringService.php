@@ -224,7 +224,9 @@ final class SupplierScoringService
                     $requestDate = Carbon::parse($request->request_date);
                     $incomingDate = Carbon::parse($request->incoming_date);
 
-                    $totalPoint += $request->special_price === 'No' ? 10 : 5;
+                    if ($requestDate->eq($incomingDate)) {
+                        $totalPoint += $request->special_price === 'No' ? 10 : 5;
+                    }
                 }
 
                 $detail->kerjasama_permintaan_mendadak = ceil($totalPoint / $count);

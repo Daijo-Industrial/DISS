@@ -155,6 +155,13 @@ class InvoiceIndex extends Component
                 break;
             case 'past_due':
                 $this->paymentStatusFilter = 'past_due';
+                break;
+            case 'upcoming':
+                $this->paymentStatusFilter = 'upcoming';
+                break;
+            case 'unscheduled':
+            case 'unpaid':
+                $this->paymentStatusFilter = 'unscheduled';
                 $this->settlementFilter = 'unpaid';
                 break;
             case 'upcoming':
@@ -255,6 +262,12 @@ class InvoiceIndex extends Component
                 'paid' => 'Paid / Settled',
             ],
             'payment_statuses' => [
+                '' => 'All Payment Schedules',
+                'past_due' => 'Past Due (< Today)',
+                'upcoming' => 'Upcoming (>= Today)',
+                'unscheduled' => 'Unscheduled (No Date)',
+                'paid' => 'Paid (Legacy)',
+                'unpaid' => 'Unpaid (Legacy)',
                 '' => 'All Schedules',
                 'past_due' => 'Past Due (< Today & Unpaid)',
                 'upcoming' => 'Upcoming (>= Today & Unpaid)',
@@ -314,6 +327,16 @@ class InvoiceIndex extends Component
             'po_approved_sum' => (float) (clone $baseQuery)->whereHas('purchaseOrder', function ($q) {
                 $q->withWorkflowStatus('APPROVED');
             })->where('total_currency', 'IDR')->sum('total'),
+            'past_due' => Invoice::whereNotNull('payment_date')->where('payment_date', '<', $today)->count(),
+            'past_due_sum' => (float) Invoice::whereNotNull('payment_date')->where('payment_date', '<', $today)->where('total_currency', 'IDR')->sum('total'),
+            'upcoming' => Invoice::whereNotNull('payment_date')->where('payment_date', '>=', $today)->count(),
+            'upcoming_sum' => (float) Invoice::whereNotNull('payment_date')->where('payment_date', '>=', $today)->where('total_currency', 'IDR')->sum('total'),
+            'unscheduled' => Invoice::whereNull('payment_date')->count(),
+            'unscheduled_sum' => (float) Invoice::whereNull('payment_date')->where('total_currency', 'IDR')->sum('total'),
+            // Backward-compatibility
+            'unpaid' => Invoice::whereNull('payment_date')->count(),
+            'unpaid_sum' => (float) Invoice::whereNull('payment_date')->where('total_currency', 'IDR')->sum('total'),
+            'total_amount_idr' => (float) Invoice::where('total_currency', 'IDR')->sum('total'),
             // Truly past due: UNPAID and scheduled payment_date has passed
             'past_due' => (clone $baseQuery)->whereNull('paid_at')
                 ->whereNotNull('payment_date')
@@ -394,6 +417,17 @@ class InvoiceIndex extends Component
             switch ($this->paymentStatusFilter) {
                 case 'past_due':
                 case 'overdue':
+                    $query->whereNotNull('payment_date')->where('payment_date', '<', $today);
+                    break;
+                case 'upcoming':
+                    $query->whereNotNull('payment_date')->where('payment_date', '>=', $today);
+                    break;
+                case 'unscheduled':
+                case 'unpaid':
+                    $query->whereNull('payment_date');
+                    break;
+                case 'paid':
+                    $query->whereNotNull('payment_date');
                     $query->whereNull('paid_at')
                         ->whereNotNull('payment_date')
                         ->where('payment_date', '<', $today);
