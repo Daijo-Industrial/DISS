@@ -2,14 +2,13 @@
 
 namespace App\Jobs;
 
-use App\Http\Controllers\MaterialPredictionController;
-use App\Http\Controllers\PurchasingMaterialController;
+use App\Services\Forecast\ForecastDataExplosionService;
+use App\Services\Forecast\ForecastMaterialPredictionService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class ForecastPostProcessingJob implements ShouldQueue
@@ -17,13 +16,12 @@ class ForecastPostProcessingJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
-     * Maksimal waktu eksekusi job (detik).
-     * Set tinggi karena proses prediksi bisa berat.
+     * Maximum job execution time (seconds).
      */
-    public int $timeout = 3600;
+    public int $timeout = 1800;
 
     /**
-     * Jangan retry otomatis kalau gagal.
+     * Tries count.
      */
     public int $tries = 1;
 
@@ -32,42 +30,29 @@ class ForecastPostProcessingJob implements ShouldQueue
         //
     }
 
-    public function handle(): void
-    {
-        Log::info('[ForecastPostProcessing] Job started.');
-        
-        \Illuminate\Support\Facades\DB::disableQueryLog();
+    public function handle(
+        ForecastDataExplosionService $explosionService,
+        ForecastMaterialPredictionService $predictionService
+    ): void {
+        Log::info('[ForecastPostProcessingJob] Job started.');
 
         try {
-            // Step 1: Truncate tabel foremind_detail
-            DB::table('foremind_final')->truncate();
-            Log::info('[ForecastPostProcessing] Table foremind_final truncated.');
+            // Step 1: Explode SAP forecast data into foremind_final
+            $explosionResult = $explosionService->explodeForecastData();
+            Log::info('[ForecastPostProcessingJob] Step 1 complete: ' . $explosionResult['message']);
 
-            // Step 2: Truncate tabel forecast_material_predictions
-            DB::table('forecast_material_predictions')->truncate();
-            Log::info('[ForecastPostProcessing] Table forecast_material_predictions truncated.');
+            // Step 2: Generate monthly material predictions into forecast_material_predictions
+            $predictionResult = $predictionService->generatePredictions();
+            Log::info('[ForecastPostProcessingJob] Step 2 complete: ' . $predictionResult['message']);
 
-            // Step 3: Jalankan PurchasingMaterialController::storeDataInNewTable
-            // (setara dengan GET /store-data)
-            $purchasingController = app(PurchasingMaterialController::class);
-            $purchasingController->storeDataInNewTable();
-            Log::info('[ForecastPostProcessing] storeDataInNewTable executed successfully.');
-
-            // Step 4: Jalankan materialPredictionController::processForemindFinalData
-            // (setara dengan GET /insert-material_prediction)
-            $predictionController = app(MaterialPredictionController::class);
-            $predictionController->processForemindFinalData();
-            Log::info('[ForecastPostProcessing] processForemindFinalData executed successfully.');
-
-            Log::info('[ForecastPostProcessing] Job completed successfully.');
+            Log::info('[ForecastPostProcessingJob] Job completed successfully.');
         } catch (\Throwable $e) {
-            Log::error('[ForecastPostProcessing] Job failed: ' . $e->getMessage(), [
+            Log::error('[ForecastPostProcessingJob] Job failed: ' . $e->getMessage(), [
                 'file'  => $e->getFile(),
                 'line'  => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            // Re-throw agar job ditandai FAILED di queue
             throw $e;
         }
     }
