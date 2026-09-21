@@ -194,6 +194,39 @@ final class SapSyncService
     }
 
     /**
+     * Synchronize the entire BOM WIP group (levels 1, 2, 3) and perform post-processing union.
+     */
+    public function syncBomWipGroup(string $startDate): array
+    {
+        $keys = ['sap_fct_bom_wip', 'sap_fct_bom_wip_semi', 'sap_fct_bom_wip_semi_semi'];
+
+        foreach ($keys as $key) {
+            $res = $this->syncEndpoint($key, $startDate);
+            if (! $res['success']) {
+                return $res;
+            }
+        }
+
+        $unionRes = $this->processBomWipUnion();
+        if (! $unionRes['success']) {
+            return $unionRes;
+        }
+
+        return [
+            'success' => true,
+            'message' => 'Synced all 3 BOM WIP levels and generated BOM WIP union successfully.',
+        ];
+    }
+
+    /**
+     * Synchronize the forecast demand group.
+     */
+    public function syncForecastGroup(string $startDate): array
+    {
+        return $this->syncEndpoint('sap_forecast', $startDate);
+    }
+
+    /**
      * Sync a single endpoint by its key.
      */
     public function syncEndpoint(string $key, string $startDate): array
@@ -302,9 +335,6 @@ final class SapSyncService
                 return ['success' => false, 'message' => "Table 'sap_fct_bom_wip' does not exist."];
             }
 
-            // Clear sap_fct_bom_wip
-            DB::table('sap_fct_bom_wip')->truncate();
-
             // Query existing first, second, third tables and insert combined data
             $sources = ['sap_fct_bom_wip_first', 'sap_fct_bom_wip_second', 'sap_fct_bom_wip_third'];
             $activeSources = array_filter($sources, fn($table) => Schema::hasTable($table));
@@ -319,25 +349,27 @@ final class SapSyncService
             }, $activeSources);
 
             $sql = "INSERT INTO sap_fct_bom_wip (fg_code, semi_first, semi_second, semi_third, level, bom_quantity, item_group) " . implode(" UNION ALL ", $unionSql);
-            DB::statement($sql);
 
-            $insertedCount = DB::table('sap_fct_bom_wip')->count();
-            Log::info("SAP Sync: Union successfully populated 'sap_fct_bom_wip' with {$insertedCount} records.");
+            // Execute union insertion and distinct code extraction atomically
+            $insertedCount = 0;
+            $fgCount = 0;
 
-            // Clear and populate sap_fct_bom_wip_fgcode
-            if (Schema::hasTable('sap_fct_bom_wip_fgcode')) {
-                DB::table('sap_fct_bom_wip_fgcode')->truncate();
+            DB::transaction(function () use ($sql, &$insertedCount, &$fgCount) {
+                DB::table('sap_fct_bom_wip')->delete();
+                DB::statement($sql);
+                $insertedCount = DB::table('sap_fct_bom_wip')->count();
 
-                DB::statement("
-                    INSERT INTO sap_fct_bom_wip_fgcode (FinishG_Code)
-                    SELECT DISTINCT fg_code FROM sap_fct_bom_wip WHERE fg_code IS NOT NULL AND fg_code != ''
-                ");
+                if (Schema::hasTable('sap_fct_bom_wip_fgcode')) {
+                    DB::table('sap_fct_bom_wip_fgcode')->delete();
+                    DB::statement("
+                        INSERT INTO sap_fct_bom_wip_fgcode (FinishG_Code)
+                        SELECT DISTINCT fg_code FROM sap_fct_bom_wip WHERE fg_code IS NOT NULL AND fg_code != ''
+                    ");
+                    $fgCount = DB::table('sap_fct_bom_wip_fgcode')->count();
+                }
+            });
 
-                $fgCount = DB::table('sap_fct_bom_wip_fgcode')->count();
-                Log::info("SAP Sync: Distinct FG codes populated in 'sap_fct_bom_wip_fgcode'. Count: {$fgCount}");
-            } else {
-                Log::warning("Table 'sap_fct_bom_wip_fgcode' does not exist. Skipping distinct FG code step.");
-            }
+            Log::info("SAP Sync: Union successfully populated 'sap_fct_bom_wip' with {$insertedCount} records and {$fgCount} distinct FG codes.");
 
             return [
                 'success' => true,
@@ -370,8 +402,6 @@ final class SapSyncService
             Log::warning("SAP Sync: Target table '{$tableName}' does not exist in database. Skipping.");
             return;
         }
-
-        DB::table($tableName)->truncate();
 
         if (empty($rows)) {
             Log::info("SAP Sync: No data to insert for table '{$tableName}'.");
@@ -426,9 +456,13 @@ final class SapSyncService
             $insertData[] = $filtered;
         }
 
-        foreach (array_chunk($insertData, 500) as $chunk) {
-            DB::table($tableName)->insert($chunk);
-        }
+        DB::transaction(function () use ($tableName, $insertData) {
+            DB::table($tableName)->delete();
+
+            foreach (array_chunk($insertData, 500) as $chunk) {
+                DB::table($tableName)->insert($chunk);
+            }
+        });
 
         Log::info("SAP Sync: Loaded " . count($insertData) . " records into table '{$tableName}'.");
     }
@@ -436,7 +470,7 @@ final class SapSyncService
     /**
      * Sync the sap_fct_inventory_mtr endpoint by unioning data from 4 API endpoints.
      */
-    private function syncInventoryMtrUnion(string $startDate): array
+    public function syncInventoryMtrUnion(string $startDate): array
     {
         if ($this->token === null) {
             if (!$this->login()) {
@@ -507,7 +541,7 @@ final class SapSyncService
             }
         }
 
-        // Fetch vendor mappings from purchasing_contacts
+        // Fetch unambiguous vendor mappings from purchasing_contacts (names with exactly 1 unique vendor_code)
         try {
             $contacts = DB::table('purchasing_contacts')
                 ->whereNotNull('vendor_name')
@@ -516,14 +550,23 @@ final class SapSyncService
                 ->where('vendor_code', '!=', '')
                 ->select('vendor_name', 'vendor_code')
                 ->get();
-            
-            $vendorMap = [];
+
+            $grouped = [];
             foreach ($contacts as $contact) {
-                $vendorMap[strtolower(trim($contact->vendor_name))] = $contact->vendor_code;
+                $name = strtolower(trim($contact->vendor_name));
+                $grouped[$name][$contact->vendor_code] = true;
+            }
+
+            // Only allow fallback if this vendor name has exactly 1 vendor_code in purchasing_contacts
+            $singleVendorMap = [];
+            foreach ($grouped as $name => $codes) {
+                if (count($codes) === 1) {
+                    $singleVendorMap[$name] = array_key_first($codes);
+                }
             }
         } catch (Throwable $e) {
             Log::warning("SAP Sync (Inventory MTR Union): Failed to fetch purchasing_contacts mapping. " . $e->getMessage());
-            $vendorMap = [];
+            $singleVendorMap = [];
         }
 
         $tableName = 'sap_fct_inventory_mtr';
@@ -564,11 +607,11 @@ final class SapSyncService
             // Force item_group to 104
             $rowArray['item_group'] = 104;
 
-            // Replace vendor_code based on matching vendor_name with purchasing_contacts
-            if (isset($rowArray['vendor_name']) && is_string($rowArray['vendor_name'])) {
+            // Preserve SAP vendor_code; only fallback if vendor_code is missing/empty
+            if (empty($rowArray['vendor_code']) && isset($rowArray['vendor_name']) && is_string($rowArray['vendor_name'])) {
                 $vendorNameLower = strtolower(trim($rowArray['vendor_name']));
-                if (isset($vendorMap[$vendorNameLower])) {
-                    $rowArray['vendor_code'] = $vendorMap[$vendorNameLower];
+                if (isset($singleVendorMap[$vendorNameLower])) {
+                    $rowArray['vendor_code'] = $singleVendorMap[$vendorNameLower];
                 }
             }
 
@@ -577,11 +620,13 @@ final class SapSyncService
         }
 
         try {
-            DB::table($tableName)->truncate();
+            DB::transaction(function () use ($tableName, $insertData) {
+                DB::table($tableName)->delete();
 
-            foreach (array_chunk($insertData, 500) as $chunk) {
-                DB::table($tableName)->insert($chunk);
-            }
+                foreach (array_chunk($insertData, 500) as $chunk) {
+                    DB::table($tableName)->insert($chunk);
+                }
+            });
 
             return [
                 'success' => true,
@@ -599,7 +644,7 @@ final class SapSyncService
     /**
      * Sync the sap_fct_inventory_fg endpoint by unioning data from 4 API endpoints.
      */
-    private function syncInventoryFgUnion(string $startDate): array
+    public function syncInventoryFgUnion(string $startDate): array
     {
         if ($this->token === null) {
             if (!$this->login()) {
@@ -762,14 +807,16 @@ final class SapSyncService
         }
 
         try {
-            DB::table($tableName)->truncate();
-
             $uniqueBy = ['item_code'];
             $updateColumns = array_diff($columns, $uniqueBy);
 
-            foreach (array_chunk($insertData, 500) as $chunk) {
-                DB::table($tableName)->upsert($chunk, $uniqueBy, $updateColumns);
-            }
+            DB::transaction(function () use ($tableName, $insertData, $uniqueBy, $updateColumns) {
+                DB::table($tableName)->delete();
+
+                foreach (array_chunk($insertData, 500) as $chunk) {
+                    DB::table($tableName)->upsert($chunk, $uniqueBy, $updateColumns);
+                }
+            });
 
             return [
                 'success' => true,
@@ -787,7 +834,7 @@ final class SapSyncService
     /**
      * Sync the sap_fct_lineproduction endpoint by unioning data from 4 API endpoints.
      */
-    private function syncLineProductionUnion(string $startDate): array
+    public function syncLineProductionUnion(string $startDate): array
     {
         if ($this->token === null) {
             if (!$this->login()) {
@@ -918,11 +965,13 @@ final class SapSyncService
         }
 
         try {
-            DB::table($tableName)->truncate();
+            DB::transaction(function () use ($tableName, $insertData) {
+                DB::table($tableName)->delete();
 
-            foreach (array_chunk($insertData, 500) as $chunk) {
-                DB::table($tableName)->insert($chunk);
-            }
+                foreach (array_chunk($insertData, 500) as $chunk) {
+                    DB::table($tableName)->insert($chunk);
+                }
+            });
 
             return [
                 'success' => true,
