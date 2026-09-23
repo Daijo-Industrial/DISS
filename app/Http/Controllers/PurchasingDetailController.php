@@ -17,12 +17,71 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class PurchasingDetailController extends Controller
 {
+    /**
+     * Resolve vendor details, consolidated vendor codes, and contact info.
+     *
+     * @param string $vendorCode
+     * @return array{vendorName: string, allVendorCodes: array<string>, vendorCodeDisplay: string, contact: object|null}
+     */
+    private function resolveConsolidatedVendor(string $vendorCode): array
+    {
+        $vendorInfo = DB::table('forecast_material_predictions')
+            ->where('vendor_code', $vendorCode)
+            ->first();
+
+        $vendorName = $vendorInfo?->vendor_name
+            ?? DB::table('purchasing_contacts')->where('vendor_code', $vendorCode)->value('vendor_name')
+            ?? $vendorCode;
+
+        $allVendorCodes = DB::table('forecast_material_predictions')
+            ->where('vendor_name', $vendorName)
+            ->distinct()
+            ->pluck('vendor_code')
+            ->filter()
+            ->sort()
+            ->values()
+            ->toArray();
+
+        if (empty($allVendorCodes)) {
+            $allVendorCodes = [$vendorCode];
+        }
+
+        $vendorCodeDisplay = implode(', ', $allVendorCodes);
+
+        $contact = DB::table('purchasing_contacts')
+            ->whereIn('vendor_code', $allVendorCodes)
+            ->where(function ($query) {
+                $query->whereNotNull('persontocontact')
+                      ->orWhereNotNull('p_member');
+            })
+            ->first()
+            ?? DB::table('purchasing_contacts')
+                ->whereIn('vendor_code', $allVendorCodes)
+                ->first();
+
+        return [
+            'vendorName'        => $vendorName,
+            'allVendorCodes'    => $allVendorCodes,
+            'vendorCodeDisplay' => $vendorCodeDisplay,
+            'contact'           => $contact,
+        ];
+    }
+
     public function index(Request $request)
     {
         $vendorCode = $request->input('vendor_code');
+        if (! $vendorCode) {
+            return redirect()->back()->with('error', 'Vendor code is required.');
+        }
+
+        $vendorData = $this->resolveConsolidatedVendor($vendorCode);
+        $vendorName = $vendorData['vendorName'];
+        $allVendorCodes = $vendorData['allVendorCodes'];
+        $vendorCodeDisplay = $vendorData['vendorCodeDisplay'];
+        $contact = $vendorData['contact'];
 
         $materials = DB::table('forecast_material_predictions')
-            ->where('vendor_code', $vendorCode)
+            ->whereIn('vendor_code', $allVendorCodes)
             ->orderBy('material_code')
             ->orderBy('item_no')
             ->get();
@@ -30,7 +89,7 @@ class PurchasingDetailController extends Controller
         if ($materials->isEmpty()) {
             return redirect()
                 ->back()
-                ->with('error', "No forecast data found for vendor: {$vendorCode} (Internal)");
+                ->with('error', "No forecast data found for vendor: {$vendorName} ({$vendorCodeDisplay}) (Internal)");
         }
 
         // Get unique months efficiently from foremind_final
@@ -43,15 +102,6 @@ class PurchasingDetailController extends Controller
             ->sort()
             ->values()
             ->toArray();
-
-        // Vendor details for document header
-        $vendorInfo = DB::table('forecast_material_predictions')
-            ->where('vendor_code', $vendorCode)
-            ->first();
-        $vendorName = $vendorInfo?->vendor_name ?? $vendorCode;
-        $contact = DB::table('purchasing_contacts')
-            ->where('vendor_code', $vendorCode)
-            ->first();
 
         $monthm = [];
         $values = [];
@@ -67,23 +117,33 @@ class PurchasingDetailController extends Controller
         }
 
         return view('purchasing.foremind_detail_print', [
-            'monthm' => $monthm,
-            'materials' => $materials,
-            'values' => $values,
-            'mon' => $uniqueMonths,
-            'vendorCode' => $vendorCode,
-            'vendorName' => $vendorName,
-            'contact' => $contact,
-            'qforecast' => $qforecast,
+            'monthm'            => $monthm,
+            'materials'         => $materials,
+            'values'            => $values,
+            'mon'               => $uniqueMonths,
+            'vendorCode'        => $vendorCode,
+            'vendorCodeDisplay' => $vendorCodeDisplay,
+            'vendorName'        => $vendorName,
+            'contact'           => $contact,
+            'qforecast'         => $qforecast,
         ]);
     }
 
     public function indexCustomer(Request $request)
     {
         $vendorCode = $request->input('vendor_code');
+        if (! $vendorCode) {
+            return redirect()->back()->with('error', 'Vendor code is required.');
+        }
+
+        $vendorData = $this->resolveConsolidatedVendor($vendorCode);
+        $vendorName = $vendorData['vendorName'];
+        $allVendorCodes = $vendorData['allVendorCodes'];
+        $vendorCodeDisplay = $vendorData['vendorCodeDisplay'];
+        $contact = $vendorData['contact'];
 
         $materials = DB::table('forecast_material_predictions')
-            ->where('vendor_code', $vendorCode)
+            ->whereIn('vendor_code', $allVendorCodes)
             ->orderBy('material_code')
             ->orderBy('item_no')
             ->get();
@@ -91,7 +151,7 @@ class PurchasingDetailController extends Controller
         if ($materials->isEmpty()) {
             return redirect()
                 ->back()
-                ->with('error', "No forecast data found for vendor: {$vendorCode} (Customer)");
+                ->with('error', "No forecast data found for vendor: {$vendorName} ({$vendorCodeDisplay}) (Customer)");
         }
 
         // Get unique months efficiently from foremind_final
@@ -104,15 +164,6 @@ class PurchasingDetailController extends Controller
             ->sort()
             ->values()
             ->toArray();
-
-        // Vendor details for document header
-        $vendorInfo = DB::table('forecast_material_predictions')
-            ->where('vendor_code', $vendorCode)
-            ->first();
-        $vendorName = $vendorInfo?->vendor_name ?? $vendorCode;
-        $contact = DB::table('purchasing_contacts')
-            ->where('vendor_code', $vendorCode)
-            ->first();
 
         $monthm = [];
         $values = [];
@@ -128,216 +179,129 @@ class PurchasingDetailController extends Controller
         }
 
         return view('purchasing.foremind_detail_print_customer', [
-            'monthm' => $monthm,
-            'materials' => $materials,
-            'values' => $values,
-            'mon' => $uniqueMonths,
-            'vendorCode' => $vendorCode,
-            'vendorName' => $vendorName,
-            'contact' => $contact,
-            'qforecast' => $qforecast,
+            'monthm'            => $monthm,
+            'materials'         => $materials,
+            'values'            => $values,
+            'mon'               => $uniqueMonths,
+            'vendorCode'        => $vendorCode,
+            'vendorCodeDisplay' => $vendorCodeDisplay,
+            'vendorName'        => $vendorName,
+            'contact'           => $contact,
+            'qforecast'         => $qforecast,
         ]);
     }
 
     public function exportExcel($vendorCode)
     {
-        // Function to get vendor information based on vendor code
-        $getVendorInfo = function ($vendorCode) {
-            return DB::table('forecast_material_predictions') // Replace with your actual table name
-                ->where('vendor_code', $vendorCode)
-                ->first();
-        };
+        $vendorData = $this->resolveConsolidatedVendor($vendorCode);
+        $vendorName = $vendorData['vendorName'];
+        $allVendorCodes = $vendorData['allVendorCodes'];
+        $vendorCodeDisplay = $vendorData['vendorCodeDisplay'];
 
-        // Get vendor information using the getVendorInfo function
-        $vendorInfo = $getVendorInfo($vendorCode);
-        if (! $vendorInfo) {
+        $materials = DB::table('forecast_material_predictions as fmp')
+            ->leftJoin('sap_fct_inventory_fgs as inv', 'fmp.item_no', '=', 'inv.item_code')
+            ->whereIn('fmp.vendor_code', $allVendorCodes)
+            ->select('fmp.*', 'inv.item_name as item_desc')
+            ->orderBy('fmp.material_code')
+            ->orderBy('fmp.item_no')
+            ->get();
+
+        if ($materials->isEmpty()) {
             return redirect()
                 ->back()
                 ->with('error', "No forecast data found to export for vendor: {$vendorCode}");
         }
-        $vendorName = $vendorInfo->vendor_name;
 
-        // // Get data based on vendor code
-        $materials = DB::table('forecast_material_predictions')
-            ->where('vendor_code', $vendorCode)
-            ->get();
+        $uniqueMonths = DB::table('foremind_final')
+            ->whereNotNull('day_forecast')
+            ->distinct()
+            ->pluck('day_forecast')
+            ->map(fn ($d) => Carbon::parse($d)->format('Y-m'))
+            ->unique()
+            ->sort()
+            ->values()
+            ->toArray();
 
-        $forecasts = ForemindFinal::all();
-        $transformedData = [];
+        $monthm = [];
+        $values = [];
+        $qforecast = [];
 
-        // Get unique months from all forecasts
-        $allMonths = [];
-
-        foreach ($forecasts as $forecast) {
-            $dayForecast = Carbon::parse($forecast->day_forecast);
-            $allMonths[] = $dayForecast->format('Y-m');
-        }
-
-        // Ensure unique months and sort them
-        $uniqueMonths = array_unique($allMonths);
-        sort($uniqueMonths);
-
-        // Fetch your materials data from the database based on vendor code
-        if ($vendorCode) {
-            $materials = DB::table('forecast_material_predictions as fmp')
-                ->leftJoin('sap_fct_inventory_fgs as inv', 'fmp.item_no', '=', 'inv.item_code')
-                ->where('fmp.vendor_code', $vendorCode)
-                ->select('fmp.*', 'inv.item_name as item_desc') // tambahin alias
-                ->get();
-        } else {
-            $materials = []; // Empty array if no vendor code provided
-        }
-
-        $allmonth = [];
         foreach ($materials as $material) {
-            // $decodedMonths = json_decode($material->months, true);
-            $stringMonths = json_decode($material->months, true);
-            // $decodedForecast = json_decode($material->quantity_forecast, true);
-            // dd($decodedForecast);
-            $stringForecast = json_decode($material->quantity_forecast, true);
-            // dd($stringForecast);
-            $truevalue[] = $stringMonths;
+            $stringMonths = json_decode($material->months ?? '{}', true) ?? [];
+            $stringForecast = json_decode($material->quantity_forecast ?? '{}', true) ?? [];
 
-            //  if (json_last_error() !== JSON_ERROR_NONE || !is_array($decodedMonths)) {
-            //     // Handle JSON decoding error
-            //     dd('JSON Decoding Error:', json_last_error_msg());
-            // }
-            // $decodedForecast = json_decode($material->quantity_forecast, true);
-            // dd($decodedForecast);
-            $stringForecast = json_decode($material->quantity_forecast, true);
-            // dd($stringForecast);
             $monthm[] = array_keys($stringMonths);
             $values[] = array_values($stringMonths);
             $qforecast[] = array_values($stringForecast);
         }
-
-        // dd($qforecast);
 
         $export = new ForExport(
             $monthm,
             $materials,
             $values,
             $uniqueMonths,
-            $vendorCode,
+            $vendorCodeDisplay,
             $qforecast,
             $vendorName,
         );
 
         $fileName = $vendorName ? $vendorName . '_exported_data_INTERNAL.xlsx' : 'filename.xlsx';
 
-        $userEmail = auth()->user()->email;
-        $userName = auth()->user()->name;
-
-        // Tambahan testing send email saat klik export
-
-        Excel::store($export, 'public/' . $fileName);
-        // Export data to Excel file and store it temporarily
-
-        $filePath = Storage::url($fileName);
-        // dd($filePath);
-
-        // Config::set('mail.from.address', $userEmail);
-        // Config::set('mail.from.name', $userName);
-
-        // $recipientEmail = 'andreasleonardo.al@gmail.com'; // Replace with the recipient's email address
-        // $emailSubject = 'Exported Data'; // atur subject email
-        // $emailMessage = 'poantexJONZ';
-
-        // // Mail::to($recipientEmail)
-        // // ->send(new sendMail($emailSubject, $emailMessage, $filePath));
-
-        // Mail::to($recipientEmail)
-        //     ->send(new ExportedDataEmail($emailSubject, $emailMessage, $filePath));
-
-        // // Tambahan testing send email saat klik export
-
         return Excel::download($export, $fileName);
     }
 
     public function exportExcelcustomer($vendorCode)
     {
-        // dd($vendorCode);
-        // Function to get vendor information based on vendor code
-        $getVendorInfo = function ($vendorCode) {
-            return DB::table('forecast_material_predictions') // Replace with your actual table name
-                ->where('vendor_code', $vendorCode)
-                ->first();
-        };
+        $vendorData = $this->resolveConsolidatedVendor($vendorCode);
+        $vendorName = $vendorData['vendorName'];
+        $allVendorCodes = $vendorData['allVendorCodes'];
+        $vendorCodeDisplay = $vendorData['vendorCodeDisplay'];
+        $contact = $vendorData['contact'];
 
-        $vendorInfo = $getVendorInfo($vendorCode);
-        if (! $vendorInfo) {
+        $materials = DB::table('forecast_material_predictions')
+            ->whereIn('vendor_code', $allVendorCodes)
+            ->orderBy('material_code')
+            ->orderBy('item_no')
+            ->get();
+
+        if ($materials->isEmpty()) {
             return redirect()
                 ->back()
                 ->with('error', "No forecast data found to export for vendor: {$vendorCode}");
         }
-        $vendorName = $vendorInfo->vendor_name;
-        $contact = PurchasingContact::where('vendor_code', $vendorCode)->first();
 
-        // // Get data based on vendor code
-        $materials = DB::table('forecast_material_predictions')
-            ->where('vendor_code', $vendorCode)
-            ->get();
+        $uniqueMonths = DB::table('foremind_final')
+            ->whereNotNull('day_forecast')
+            ->distinct()
+            ->pluck('day_forecast')
+            ->map(fn ($d) => Carbon::parse($d)->format('Y-m'))
+            ->unique()
+            ->sort()
+            ->values()
+            ->toArray();
 
-        $forecasts = ForemindFinal::all();
-        $transformedData = [];
+        $monthm = [];
+        $values = [];
+        $qforecast = [];
 
-        $customers = ForecastCustomerMaster::get();
-
-        // dd($materials);
-        // Get unique months from all forecasts
-        $allMonths = [];
-
-        foreach ($forecasts as $forecast) {
-            $dayForecast = Carbon::parse($forecast->day_forecast);
-            $allMonths[] = $dayForecast->format('Y-m');
-        }
-
-        // Ensure unique months and sort them
-        $uniqueMonths = array_unique($allMonths);
-        sort($uniqueMonths);
-
-        // Fetch your materials data from the database based on vendor code
-        if ($vendorCode) {
-            $materials = DB::table('forecast_material_predictions')
-                ->where('vendor_code', $vendorCode)
-                ->get();
-        } else {
-            $materials = []; // Empty array if no vendor code provided
-        }
-
-        $allmonth = [];
         foreach ($materials as $material) {
-            // $decodedMonths = json_decode($material->months, true);
-            $stringMonths = json_decode($material->months, true);
-            // $decodedForecast = json_decode($material->quantity_forecast, true);
-            // dd($decodedForecast);
-            $stringForecast = json_decode($material->quantity_forecast, true);
-            // dd($stringForecast);
-            $truevalue[] = $stringMonths;
+            $stringMonths = json_decode($material->months ?? '{}', true) ?? [];
+            $stringForecast = json_decode($material->quantity_forecast ?? '{}', true) ?? [];
 
-            //  if (json_last_error() !== JSON_ERROR_NONE || !is_array($decodedMonths)) {
-            //     // Handle JSON decoding error
-            //     dd('JSON Decoding Error:', json_last_error_msg());
-            // }
-            // $decodedForecast = json_decode($material->quantity_forecast, true);
-            // dd($decodedForecast);
-            $stringForecast = json_decode($material->quantity_forecast, true);
-            // dd($stringForecast);
             $monthm[] = array_keys($stringMonths);
             $values[] = array_values($stringMonths);
             $qforecast[] = array_values($stringForecast);
         }
 
-        // dd($qforecast);
-        // CODE UNTUK REPLACE CUSTOMER
+        $customers = ForecastCustomerMaster::get();
         foreach ($materials as $material) {
             foreach ($customers as $customer) {
                 if ($material->customer === '5H45') {
                     $material->customer = 'ITSP/IKUYO';
-                    break; // Break both inner and outer loops once the replacement is done
+                    break;
                 } elseif ($material->customer === $customer->forecast_name) {
                     $material->customer = $customer->customer;
-                    break; // Break the inner loop once the replacement is done
+                    break;
                 }
             }
         }
@@ -347,7 +311,7 @@ class PurchasingDetailController extends Controller
             $materials,
             $values,
             $uniqueMonths,
-            $vendorCode,
+            $vendorCodeDisplay,
             $qforecast,
             $vendorName,
             $contact,

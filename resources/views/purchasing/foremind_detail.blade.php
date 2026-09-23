@@ -148,7 +148,7 @@
                             </option>
                             @foreach ($contacts as $contact)
                                 <option value="{{ $contact->vendor_code }}">
-                                    {{ $contact->vendor_code }} - {{ $contact->vendor_name }}@if(!empty($contact->p_member)) (PIC: {{ $contact->p_member }})@endif
+                                    {{ $contact->vendor_name }} ({{ $contact->codes_display }})@if(!empty($contact->p_member)) (PIC: {{ $contact->p_member }})@endif
                                 </option>
                             @endforeach
                         </select>
@@ -187,7 +187,7 @@
                             </option>
                             @foreach ($contacts as $contact)
                                 <option value="{{ $contact->vendor_code }}">
-                                    {{ $contact->vendor_code }} - {{ $contact->vendor_name }}@if(!empty($contact->p_member)) (PIC: {{ $contact->p_member }})@endif
+                                    {{ $contact->vendor_name }} ({{ $contact->codes_display }})@if(!empty($contact->p_member)) (PIC: {{ $contact->p_member }})@endif
                                 </option>
                             @endforeach
                         </select>
