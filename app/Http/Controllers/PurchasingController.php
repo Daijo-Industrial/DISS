@@ -56,26 +56,41 @@ class PurchasingController extends Controller
 
         // Retrieve forecasts from the foremindFinal table
         $forecasts = ForemindFinal::all();
-        // Retrieve distinct vendor codes that actually exist in forecast_material_predictions
-        $availableVendorCodes = DB::table('forecast_material_predictions')
+        // Retrieve distinct vendor codes and names from forecast_material_predictions
+        $predictionVendors = DB::table('forecast_material_predictions')
+            ->select('vendor_code', 'vendor_name')
             ->distinct()
-            ->pluck('vendor_code')
-            ->filter()
-            ->toArray();
+            ->whereNotNull('vendor_code')
+            ->where('vendor_code', '!=', '')
+            ->get();
 
-        if (!empty($availableVendorCodes)) {
-            $contacts = PurchasingContact::whereIn('vendor_code', $availableVendorCodes)->get();
-            $existingCodes = $contacts->pluck('vendor_code')->toArray();
-            $missingCodes = array_diff($availableVendorCodes, $existingCodes);
-            if (!empty($missingCodes)) {
-                $extraVendors = DB::table('forecast_material_predictions')
-                    ->whereIn('vendor_code', $missingCodes)
-                    ->select('vendor_code', 'vendor_name')
-                    ->distinct()
-                    ->get();
-                $contacts = $contacts->concat($extraVendors);
-            }
-            $contacts = $contacts->sortBy('vendor_name')->values();
+        if ($predictionVendors->isNotEmpty()) {
+            $availableVendorCodes = $predictionVendors->pluck('vendor_code')->unique()->toArray();
+            $contactsRaw = PurchasingContact::whereIn('vendor_code', $availableVendorCodes)->get();
+
+            // Group by trimmed vendor_name
+            $groupedByVendor = $predictionVendors->groupBy(function ($item) {
+                return trim($item->vendor_name ?: $item->vendor_code);
+            });
+
+            $contacts = $groupedByVendor->map(function ($items, $vendorName) use ($contactsRaw) {
+                $codes = $items->pluck('vendor_code')->unique()->sort()->values();
+                $primaryCode = $codes->first();
+
+                // Find best matching contact record for these codes
+                $contactRecord = $contactsRaw->whereIn('vendor_code', $codes)->first(function ($c) {
+                    return !empty($c->persontocontact) || !empty($c->p_member);
+                }) ?? $contactsRaw->whereIn('vendor_code', $codes)->first();
+
+                return (object) [
+                    'vendor_code'     => $primaryCode,
+                    'vendor_name'     => $vendorName,
+                    'all_codes'       => $codes->toArray(),
+                    'codes_display'   => $codes->implode(', '),
+                    'p_member'        => $contactRecord?->p_member,
+                    'persontocontact' => $contactRecord?->persontocontact,
+                ];
+            })->sortBy('vendor_name', SORT_NATURAL | SORT_FLAG_CASE)->values();
         } else {
             $contacts = collect();
         }

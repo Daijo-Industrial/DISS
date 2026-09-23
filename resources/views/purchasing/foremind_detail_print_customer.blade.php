@@ -118,7 +118,7 @@
                     </div>
                     <div>
                         <span class="text-slate-500 block">Vendor Code</span>
-                        <strong class="text-slate-800 text-sm">{{ $vendorCode }}</strong>
+                        <strong class="text-slate-800 text-sm">{{ $vendorCodeDisplay ?? $vendorCode }}</strong>
                     </div>
                     <div>
                         <span class="text-slate-500 block">ATT (Contact Person)</span>
