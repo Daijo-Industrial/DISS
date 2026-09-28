@@ -87,7 +87,7 @@ class Kernel extends ConsoleKernel
 
         $schedule->command('queue:prune-failed --hours=72')->daily();
 
-        // Google Drive Backups
+        // Automated Application Backups
         // ponytail: fast daily DB-only backup (data changes daily)
         $schedule->command('backup:run --only-db')
             ->dailyAt('02:00')
