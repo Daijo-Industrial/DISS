@@ -4,6 +4,8 @@ namespace App\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Enums\VehicleStatus;
 use App\Models\ServiceRecord;
+use App\Models\VehicleDocument;
+use App\Models\VehicleInspection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -11,7 +13,20 @@ class Vehicle extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['plate_number', 'driver_name', 'brand', 'model', 'year', 'vin', 'odometer', 'status', 'sold_at'];
+    protected $fillable = [
+        'plate_number',
+        'driver_name',
+        'brand',
+        'model',
+        'category',
+        'fuel_type',
+        'requires_kir',
+        'year',
+        'vin',
+        'odometer',
+        'status',
+        'sold_at',
+    ];
 
     protected $appends = ['display_name'];
 
@@ -19,6 +34,7 @@ class Vehicle extends Model
         'status' => VehicleStatus::class,
         'year' => 'integer',
         'odometer' => 'integer',
+        'requires_kir' => 'boolean',
         'sold_at' => 'date',
     ];
 
@@ -55,6 +71,47 @@ class Vehicle extends Model
     public function latestService()
     {
         return $this->hasOne(ServiceRecord::class)->latestOfMany('service_date');
+    }
+
+    public function documents()
+    {
+        return $this->hasMany(VehicleDocument::class)->orderBy('expired_date');
+    }
+
+    public function inspections()
+    {
+        return $this->hasMany(VehicleInspection::class)->orderByDesc('created_at');
+    }
+
+    public function activeCheckOut()
+    {
+        return $this->hasOne(VehicleInspection::class)
+            ->where('inspection_type', VehicleInspection::TYPE_CHECK_OUT)
+            ->whereDoesntHave('checkInRecord')
+            ->latestOfMany();
+    }
+
+    public function getIsOutOnTripAttribute(): bool
+    {
+        return $this->activeCheckOut !== null;
+    }
+
+    public function getCategoryLabelAttribute(): string
+    {
+        return match ($this->category) {
+            'commercial_truck' => 'Truk / Mobil Gede',
+            'pickup' => 'Pick-up / Bak',
+            default => 'Mobil Penumpang / Kecil',
+        };
+    }
+
+    public function getFuelTypeLabelAttribute(): string
+    {
+        return match ($this->fuel_type) {
+            'diesel' => 'Solar / Diesel',
+            'ev' => 'Listrik (EV)',
+            default => 'Bensin',
+        };
     }
 
     public function getDisplayNameAttribute(): string

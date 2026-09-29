@@ -48,6 +48,11 @@ class Kernel extends ConsoleKernel
 
         $schedule->command('email:daily-stock-report')->dailyAt('01:30');
 
+        // Vehicle Fleet compliance reminders (KIR, STNK)
+        $schedule->command('fleet:check-reminders')
+            ->dailyAt('07:30')
+            ->timezone('Asia/Jakarta');
+
         //! under development
         // $schedule
         //     ->command('notify:missing-reports')

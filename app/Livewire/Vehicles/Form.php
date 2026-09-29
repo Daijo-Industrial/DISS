@@ -20,6 +20,12 @@ class Form extends Component
 
     public ?string $model = null;
 
+    public string $category = 'passenger';
+
+    public string $fuel_type = 'petrol';
+
+    public bool $requires_kir = false;
+
     public ?int $year = null;
 
     public ?string $vin = null;
@@ -31,6 +37,13 @@ class Form extends Component
     public bool $fullFeature = false;
 
     public ?string $sold_at = null;
+
+    public function updatedCategory(string $value): void
+    {
+        if ($value === 'commercial_truck') {
+            $this->requires_kir = true;
+        }
+    }
 
     protected function rules(): array
     {
@@ -58,6 +71,9 @@ class Form extends Component
             ],
             'brand' => ['nullable', 'string', 'max:80'],
             'model' => ['nullable', 'string', 'max:120'],
+            'category' => ['required', 'string', 'in:passenger,commercial_truck,pickup,motorcycle,other'],
+            'fuel_type' => ['required', 'string', 'in:petrol,diesel,ev'],
+            'requires_kir' => ['boolean'],
             'year' => ['nullable', 'integer', 'min:1900', 'max:' . date('Y')],
             'vin' => ['nullable', 'string', 'max:50'],
             'odometer' => ['nullable', 'integer', 'min:0'],
@@ -75,7 +91,7 @@ class Form extends Component
 
             // Fill only the fields allowed for this role
             $fields = $this->fullFeature
-                ? ['driver_name', 'plate_number', 'brand', 'model', 'year', 'vin', 'odometer', 'status', 'sold_at']
+                ? ['driver_name', 'plate_number', 'brand', 'model', 'category', 'fuel_type', 'requires_kir', 'year', 'vin', 'odometer', 'status', 'sold_at']
                 : ['driver_name', 'plate_number'];
 
             $data = Arr::only($vehicle->toArray(), $fields);
@@ -93,6 +109,9 @@ class Form extends Component
             'plate_number' => $this->plate_number,
             'brand' => $this->brand,
             'model' => $this->model,
+            'category' => $this->category,
+            'fuel_type' => $this->fuel_type,
+            'requires_kir' => (bool) $this->requires_kir,
             'year' => $this->year ?: null,
             'vin' => $this->vin ?: null,
             'odometer' => (int) ($this->odometer ?: 0),

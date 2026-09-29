@@ -66,6 +66,9 @@
         plate_number: @entangle('plate_number'),
         @if ($fullFeature) brand: @entangle('brand'),
                     model: @entangle('model'),
+                    category: @entangle('category'),
+                    fuel_type: @entangle('fuel_type'),
+                    requires_kir: @entangle('requires_kir'),
                     year: @entangle('year'),
                     vin: @entangle('vin'),
                     odometer: @entangle('odometer'),
@@ -178,11 +181,54 @@
             @if ($fullFeature)
                 <div class="h-px bg-slate-100 my-1"></div>
 
-                {{-- Section: Vehicle Specs --}}
+                {{-- Section: Vehicle Specs & Classification --}}
                 <div class="space-y-3">
                     <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Vehicle Specs
+                        Vehicle Specs &amp; Classification
                     </h2>
+
+                    {{-- Classification: Category, Fuel, KIR --}}
+                    <div class="grid gap-3 md:grid-cols-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">
+                                Category <span class="text-rose-500">*</span>
+                            </label>
+                            <select wire:model.live="category" x-model="category"
+                                class="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                <option value="passenger">Mobil Penumpang / Operasional Biasa</option>
+                                <option value="commercial_truck">Truk / Mobil Gede (Mobil Niaga)</option>
+                                <option value="pickup">Pick-up / Mobil Bak</option>
+                                <option value="other">Lainnya</option>
+                            </select>
+                            @error('category')
+                                <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">
+                                Bahan Bakar / Daya <span class="text-rose-500">*</span>
+                            </label>
+                            <select x-model="fuel_type"
+                                class="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                <option value="petrol">Bensin (Gasoline)</option>
+                                <option value="diesel">Solar (Diesel)</option>
+                                <option value="ev">Listrik (EV)</option>
+                            </select>
+                            @error('fuel_type')
+                                <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="flex items-center pt-5">
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="checkbox" x-model="requires_kir" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                <span class="ml-2 text-xs font-medium text-slate-700">
+                                    Wajib Uji Berkala KIR (Reminder Aktif)
+                                </span>
+                            </label>
+                        </div>
+                    </div>
 
                     <div class="grid gap-3 md:grid-cols-3">
                         {{-- Brand --}}

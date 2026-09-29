@@ -1,543 +1,442 @@
-<div class="max-w-6xl mx-auto px-3 md:px-4 py-4 space-y-4">
-    {{-- Toolbar --}}
-    <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div class="flex flex-col gap-3 p-3 lg:flex-row lg:items-center">
+<div class="max-w-7xl mx-auto px-3 md:px-6 py-5 space-y-6">
+    {{-- Page Header --}}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold ring-1 ring-inset ring-indigo-200/60 mb-1">
+                <i class="bi bi-shield-check"></i>
+                <span>Operations &amp; Fleet Management</span>
+            </div>
+            <h1 class="text-2xl font-bold tracking-tight text-slate-900">
+                Fleet Command Center
+            </h1>
+            <p class="text-xs text-slate-500 mt-0.5">
+                Monitoring armada real-time, kesiapan pemeriksaan harian (P2H), dan pengawasan legalitas dokumen (KIR &amp; STNK).
+            </p>
+        </div>
 
-            {{-- Left: search + status filter --}}
-            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:flex-1">
-                {{-- Search --}}
-                <div class="w-full max-w-xs">
-                    <div class="relative">
-                        <span
-                            class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                            <i class="bi bi-search text-sm"></i>
+        <div class="flex items-center gap-2">
+            <a href="{{ route('vehicles.create') }}"
+                class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 transition active:scale-[0.98]">
+                <i class="bi bi-plus-lg mr-1.5 text-sm"></i>
+                Registrasi Armada Baru
+            </a>
+        </div>
+    </div>
+
+    {{-- Top KPI Metrics Grid --}}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 md:gap-4">
+        {{-- Card 1: Total Armada --}}
+        <div class="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs hover:shadow-md transition">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Armada</span>
+                <span class="h-9 w-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                    <i class="bi bi-truck text-base"></i>
+                </span>
+            </div>
+            <div class="mt-3 flex items-baseline gap-2">
+                <span class="text-2xl font-extrabold text-slate-900">{{ $metrics['total'] }}</span>
+                <span class="text-xs text-slate-400 font-medium">unit kendaraan</span>
+            </div>
+        </div>
+
+        {{-- Card 2: On-Trip --}}
+        <div class="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-white to-amber-50/40 p-4 shadow-xs hover:shadow-md transition">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-amber-900 uppercase tracking-wider">Sedang di Jalan</span>
+                <span class="h-9 w-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                    <i class="bi bi-signpost-2 text-base"></i>
+                </span>
+            </div>
+            <div class="mt-3 flex items-baseline gap-2">
+                <span class="text-2xl font-extrabold text-amber-700">{{ $metrics['on_trip'] }}</span>
+                <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800">
+                    <span class="h-2 w-2 rounded-full bg-amber-500 animate-ping"></span>
+                    On-Trip
+                </span>
+            </div>
+        </div>
+
+        {{-- Card 3: Standby di Pool --}}
+        <div class="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-white to-emerald-50/40 p-4 shadow-xs hover:shadow-md transition">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-emerald-900 uppercase tracking-wider">Standby di Pool</span>
+                <span class="h-9 w-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                    <i class="bi bi-house-check text-base"></i>
+                </span>
+            </div>
+            <div class="mt-3 flex items-baseline gap-2">
+                <span class="text-2xl font-extrabold text-emerald-700">{{ $metrics['in_pool'] }}</span>
+                <span class="text-xs text-emerald-600 font-medium">siap ditugaskan</span>
+            </div>
+        </div>
+
+        {{-- Card 4: Dokumen & Servis Alert --}}
+        <div class="rounded-2xl border {{ $metrics['alerts'] > 0 ? 'border-rose-300 bg-rose-50/40' : 'border-slate-200 bg-white' }} p-4 shadow-xs hover:shadow-md transition">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold {{ $metrics['alerts'] > 0 ? 'text-rose-900' : 'text-slate-500' }} uppercase tracking-wider">
+                    Perhatian KIR/STNK
+                </span>
+                <span class="h-9 w-9 rounded-xl {{ $metrics['alerts'] > 0 ? 'bg-rose-100 text-rose-700 animate-bounce' : 'bg-slate-100 text-slate-500' }} flex items-center justify-center">
+                    <i class="bi bi-shield-exclamation text-base"></i>
+                </span>
+            </div>
+            <div class="mt-3 flex items-baseline gap-2">
+                <span class="text-2xl font-extrabold {{ $metrics['alerts'] > 0 ? 'text-rose-700' : 'text-slate-700' }}">{{ $metrics['alerts'] }}</span>
+                <span class="text-xs {{ $metrics['alerts'] > 0 ? 'text-rose-600 font-semibold' : 'text-slate-400' }}">
+                    {{ $metrics['alerts'] > 0 ? 'butuh perpanjangan' : 'semua aman' }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    {{-- Compliance Expiry Alert Banner --}}
+    @if ($fullFeature && $complianceAlerts->isNotEmpty())
+        <div class="rounded-2xl border border-amber-300 bg-gradient-to-r from-amber-50 via-orange-50/50 to-amber-50 p-4 shadow-xs">
+            <div class="flex items-start gap-3.5">
+                <div class="h-9 w-9 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <i class="bi bi-bell-fill text-base"></i>
+                </div>
+                <div class="flex-1">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-amber-950">
+                            Peringatan Jatuh Tempo Uji Berkala (KIR) &amp; Pajak STNK
+                        </h3>
+                        <span class="text-[11px] font-bold text-amber-800 bg-amber-200/70 px-2 py-0.5 rounded-full">
+                            {{ $complianceAlerts->count() }} Dokumen Mendesak
                         </span>
-                        <input type="text" placeholder="Search plate / brand / model / driver"
-                            wire:model.live.debounce.300ms="q" aria-label="Search vehicles"
-                            class="block w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-8 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                        @if ($q !== '')
-                            <button type="button" wire:click="$set('q','')"
-                                class="absolute inset-y-0 right-0 flex items-center pr-2 text-slate-400 hover:text-slate-600"
-                                aria-label="Clear search">
-                                <i class="bi bi-x text-sm"></i>
-                            </button>
-                        @endif
                     </div>
-                </div>
-
-                {{-- Status filter --}}
-                @php use App\Enums\VehicleStatus; @endphp
-                @if ($fullFeature)
-                    <div class="overflow-x-auto">
-                        <div class="inline-flex flex-wrap gap-2">
-                            {{-- All --}}
-                            <button type="button" wire:click="$set('status','all')"
-                                class="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition
-                       {{ $status === 'all'
-                           ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
-                           : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50' }}">
-                                <i class="bi bi-ui-checks-grid mr-1 text-[0.8rem]"></i>
-                                All
-                            </button>
-
-                            {{-- Enum-driven options --}}
-                            @foreach (VehicleStatus::cases() as $st)
-                                @php
-                                    $isActive = $status === $st->value;
-                                    $activeClass = $st->filterActiveClasses();
-                                    $inactiveClass = $st->filterInactiveClasses();
-                                @endphp
-
-                                <button type="button" wire:click="$set('status','{{ $st->value }}')"
-                                    class="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium transition
-                           {{ $isActive ? $activeClass : $inactiveClass }}">
-                                    <i class="bi bi-{{ $st->icon() }} mr-1 text-[0.8rem]"></i>
-                                    {{ $st->label() }}
-                                </button>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
-            </div>
-
-            {{-- Right: per page + New Vehicle --}}
-            <div class="flex items-center justify-between gap-3 lg:justify-end lg:ml-auto">
-                <div class="flex items-center gap-2 text-xs text-slate-600">
-                    <span>Per page</span>
-                    <select wire:model.live="perPage" aria-label="Rows per page"
-                        class="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                        <option>10</option>
-                        <option>25</option>
-                        <option>50</option>
-                    </select>
-                </div>
-                <a href="{{ route('vehicles.create') }}"
-                    class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">
-                    <i class="bi bi-plus-lg mr-1 text-[0.8rem]"></i>
-                    New Vehicle
-                </a>
-            </div>
-        </div>
-    </div>
-
-    {{-- Desktop table (md+) --}}
-    <div class="relative hidden md:block rounded-xl border border-slate-200 bg-white shadow-sm">
-        @php
-            $aria = fn($f) => $sort === $f ? ($dir === 'asc' ? 'ascending' : 'descending') : 'none';
-            $chev = fn($f) => $sort === $f
-                ? ($dir === 'asc'
-                    ? 'bi-chevron-up'
-                    : 'bi-chevron-down')
-                : 'bi-chevron-expand';
-        @endphp
-
-        <div class="max-h-[70vh] overflow-auto" wire:loading.class="opacity-50"
-            wire:target="q,status,perPage,page,sort,dir">
-            <table class="min-w-full text-sm text-left text-slate-700">
-                @if ($fullFeature)
-                    <thead
-                        class="sticky top-0 z-10 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        <tr>
-                            <th scope="col" role="button" wire:click="sortBy('plate_number')"
-                                aria-sort="{{ $aria('plate_number') }}" class="cursor-pointer px-4 py-2">
-                                <div class="inline-flex items-center gap-1">
-                                    <span>Vehicle</span>
-                                    <i class="bi {{ $chev('plate_number') }} text-[0.7rem]"></i>
-                                </div>
-                            </th>
-                            <th scope="col" role="button" wire:click="sortBy('driver_name')"
-                                aria-sort="{{ $aria('driver_name') }}"
-                                class="cursor-pointer whitespace-nowrap px-4 py-2">
-                                <div class="inline-flex items-center gap-1">
-                                    <span>Driver</span>
-                                    <i class="bi {{ $chev('driver_name') }} text-[0.7rem]"></i>
-                                </div>
-                            </th>
-                            <th scope="col" role="button" wire:click="sortBy('odometer')"
-                                aria-sort="{{ $aria('odometer') }}" class="cursor-pointer whitespace-nowrap px-4 py-2">
-                                <div class="inline-flex items-center gap-1">
-                                    <span>Odometer</span>
-                                    <i class="bi {{ $chev('odometer') }} text-[0.7rem]"></i>
-                                </div>
-                            </th>
-                            <th scope="col" role="button" wire:click="sortBy('status')"
-                                aria-sort="{{ $aria('status') }}" class="cursor-pointer px-4 py-2">
-                                <div class="inline-flex items-center gap-1">
-                                    <span>Status</span>
-                                    <i class="bi {{ $chev('status') }} text-[0.7rem]"></i>
-                                </div>
-                            </th>
-                            <th scope="col" role="button" wire:click="sortBy('last_service_date')"
-                                aria-sort="{{ $aria('last_service_date') }}" class="cursor-pointer px-4 py-2">
-                                <div class="inline-flex items-center gap-1">
-                                    <span>Last Service</span>
-                                    <i class="bi {{ $chev('last_service_date') }} text-[0.7rem]"></i>
-                                </div>
-                            </th>
-                            <th scope="col" class="px-4 py-2">
-                                Checked / Parts
-                            </th>
-                            <th scope="col" class="px-4 py-2 text-right">
-                                Actions
-                            </th>
-                        </tr>
-                    </thead>
-
-                    <tbody class="divide-y divide-slate-100">
-                        @forelse ($vehicles as $v)
-                            @php $last = $v->latestService; @endphp
-                            <tr wire:key="veh-{{ $v->id }}" class="hover:bg-slate-50/70">
-                                {{-- Vehicle --}}
-                                <td class="px-4 py-3 align-top">
-                                    <div class="font-semibold text-slate-900">
-                                        {{ $v->display_name }}
-                                    </div>
-                                    <div class="mt-0.5 text-xs text-slate-500 truncate max-w-xs">
-                                        VIN:
-                                        <span class="font-monospace">
-                                            {{ $v->vin ?? '—' }}
-                                        </span>
-                                    </div>
-                                </td>
-
-                                {{-- Driver --}}
-                                <td class="px-4 py-3 align-top whitespace-nowrap text-sm">
-                                    <span class="inline-flex items-center gap-1 text-slate-700">
-                                        <i class="bi bi-person text-slate-400 text-[0.85rem]"></i>
-                                        {{ $v->driver_name ?? '—' }}
-                                    </span>
-                                </td>
-
-                                {{-- Odometer --}}
-                                <td class="px-4 py-3 align-top text-sm text-slate-800">
-                                    {{ number_format($v->odometer) }}
-                                    <span class="text-xs text-slate-400">km</span>
-                                </td>
-
-                                {{-- Status --}}
-                                <td class="px-4 py-3 align-top text-sm">
-                                    @php
-                                        $variant = $v->status->variant();
-                                        $statusClass = match ($variant) {
-                                            'success' => 'bg-emerald-50 text-emerald-800 ring-emerald-200',
-                                            'warning' => 'bg-amber-50 text-amber-800 ring-amber-200',
-                                            'danger' => 'bg-rose-50 text-rose-800 ring-rose-200',
-                                            'info' => 'bg-sky-50 text-sky-800 ring-sky-200',
-                                            default => 'bg-slate-50 text-slate-700 ring-slate-200',
-                                        };
-                                    @endphp
-                                    <span
-                                        class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset {{ $statusClass }}">
-                                        <i class="bi bi-{{ $v->status->icon() }} mr-1 text-[0.8rem]"></i>
-                                        {{ $v->status->label() }}
-                                    </span>
-                                </td>
-
-                                {{-- Last service --}}
-                                <td class="px-4 py-3 align-top whitespace-nowrap text-sm">
-                                    @if ($last)
-                                        <div class="font-semibold text-slate-900">
-                                            <time datetime="{{ $last->service_date->toDateString() }}">
-                                                {{ $last->service_date->isoFormat('DD MMM YYYY') }}
-                                            </time>
-                                        </div>
-                                        <div class="mt-0.5 text-xs text-slate-500">
-                                            at {{ $last->workshop ?? 'Internal' }}
-                                            • {{ number_format($last->odometer ?? 0) }} km
-                                        </div>
-                                    @else
-                                        <span class="text-xs text-slate-400">No service yet</span>
-                                    @endif
-                                </td>
-
-                                {{-- Checked / Parts --}}
-                                @php
-                                    /** @var \App\Models\ServiceRecord|null $last */
-                                    $last = $v->latestService;
-                                    $shown = $last?->items?->count() ?? 0;
-                                    $total = $last?->items_count ?? $shown;
-                                @endphp
-                                <td class="px-4 py-3 align-top text-xs">
-                                    @if ($total > 0)
-                                        <div class="flex flex-wrap gap-1">
-                                            @foreach ($last?->items ?? collect() as $it)
-                                                <span
-                                                    class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-700">
-                                                    {{ $it->part_name }}
-                                                    <span class="ml-1 text-slate-400">
-                                                        ({{ $it->action }})
-                                                    </span>
-                                                </span>
-                                            @endforeach
-
-                                            @if ($total > $shown)
-                                                <span class="text-[11px] text-slate-400">
-                                                    +{{ $total - $shown }} more
-                                                </span>
-                                            @endif
-                                        </div>
-                                    @else
-                                        <span class="text-xs text-slate-400">No items</span>
-                                    @endif
-                                </td>
-
-                                {{-- Actions --}}
-                                <td class="px-4 py-3 align-top text-right text-sm">
-                                    <div class="inline-flex items-center gap-1">
-                                        <a href="{{ route('vehicles.show', $v) }}"
-                                            class="inline-flex items-center rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 shadow-sm hover:bg-slate-50"
-                                            title="View detail">
-                                            <i class="bi bi-eye text-[0.8rem] mr-1"></i>
-                                            Detail
-                                        </a>
-                                        <a href="{{ route('vehicles.edit', $v) }}"
-                                            class="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs text-indigo-700 shadow-sm hover:bg-indigo-100"
-                                            title="Edit vehicle">
-                                            <i class="bi bi-pencil text-[0.8rem] mr-1"></i>
-                                            Edit
-                                        </a>
-                                        <a href="{{ route('services.create', $v) }}"
-                                            class="inline-flex items-center rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700"
-                                            title="Add service">
-                                            <i class="bi bi-wrench-adjustable text-[0.8rem] mr-1"></i>
-                                            Service
-                                        </a>
-                                        <button type="button" wire:click="deleteVehicle({{ $v->id }})"
-                                            wire:confirm="Delete {{ $v->display_name }}? This cannot be undone."
-                                            wire:loading.attr="disabled" wire:target="deleteVehicle"
-                                            class="inline-flex items-center rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-xs text-rose-700 shadow-sm hover:bg-rose-100 disabled:opacity-50">
-                                            <span wire:loading wire:target="deleteVehicle"
-                                                class="mr-1 inline-block h-3 w-3 animate-spin rounded-full border-2 border-rose-400 border-t-transparent"></span>
-                                            <i class="bi bi-trash text-[0.8rem]" wire:loading.remove
-                                                wire:target="deleteVehicle"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="px-4 py-10 text-center text-sm text-slate-500">
-                                    <div class="flex flex-col items-center gap-2">
-                                        <i class="bi bi-truck text-2xl text-slate-300"></i>
-                                        <div class="font-semibold text-slate-700">No vehicles found</div>
-                                        <p class="text-xs text-slate-500">
-                                            Try adjusting your search or add a new vehicle.
-                                        </p>
-                                        <a href="{{ route('vehicles.create') }}"
-                                            class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700">
-                                            <i class="bi bi-plus-lg mr-1 text-[0.8rem]"></i>
-                                            New Vehicle
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                @else
-                    {{-- Simplified head --}}
-                    <thead
-                        class="sticky top-0 z-10 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        <tr>
-                            <th scope="col" role="button" wire:click="sortBy('plate_number')"
-                                aria-sort="{{ $aria('plate_number') }}" class="cursor-pointer px-4 py-2">
-                                <div class="inline-flex items-center gap-1">
-                                    <span>Vehicle</span>
-                                    <i class="bi {{ $chev('plate_number') }} text-[0.7rem]"></i>
-                                </div>
-                            </th>
-                            <th scope="col" role="button" wire:click="sortBy('driver_name')"
-                                aria-sort="{{ $aria('driver_name') }}"
-                                class="cursor-pointer whitespace-nowrap px-4 py-2">
-                                <div class="inline-flex items-center gap-1">
-                                    <span>Driver</span>
-                                    <i class="bi {{ $chev('driver_name') }} text-[0.7rem]"></i>
-                                </div>
-                            </th>
-                            <th scope="col" class="px-4 py-2 text-right">
-                                Actions
-                            </th>
-                        </tr>
-                    </thead>
-
-                    <tbody class="divide-y divide-slate-100">
-                        @forelse ($vehicles as $v)
-                            <tr wire:key="veh-{{ $v->id }}" class="hover:bg-slate-50/70">
-                                <td class="px-4 py-3 align-top">
-                                    <div class="font-semibold text-slate-900">
-                                        {{ $v->display_name }}
-                                    </div>
-                                </td>
-                                <td class="px-4 py-3 align-top whitespace-nowrap text-sm">
-                                    <span class="inline-flex items-center gap-1 text-slate-700">
-                                        <i class="bi bi-person text-slate-400 text-[0.85rem]"></i>
-                                        {{ $v->driver_name ?? '—' }}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 align-top text-right">
-                                    <a href="{{ route('vehicles.edit', $v) }}"
-                                        class="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs text-indigo-700 shadow-sm hover:bg-indigo-100"
-                                        title="Edit vehicle">
-                                        <i class="bi bi-pencil text-[0.8rem] mr-1"></i>
-                                        Edit
-                                    </a>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="3" class="px-4 py-10 text-center text-sm text-slate-500">
-                                    <div class="flex flex-col items-center gap-2">
-                                        <i class="bi bi-truck text-2xl text-slate-300"></i>
-                                        <div class="font-semibold text-slate-700">No vehicles found</div>
-                                        <a href="{{ route('vehicles.create') }}"
-                                            class="mt-2 inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700">
-                                            <i class="bi bi-plus-lg mr-1 text-[0.8rem]"></i>
-                                            New Vehicle
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                @endif
-            </table>
-        </div>
-
-        {{-- Footer + pagination --}}
-        <div class="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-4 py-2 text-xs text-slate-500"
-            wire:loading.class="opacity-50" wire:target="q,status,perPage,page,sort,dir">
-            <div>
-                Showing {{ $vehicles->firstItem() }}–{{ $vehicles->lastItem() }} of {{ $vehicles->total() }}
-            </div>
-            <div class="text-right">
-                {{ $vehicles->links() }}
-            </div>
-        </div>
-
-        {{-- Loading overlay --}}
-        <div wire:loading.flex wire:target="q,status,perPage,page,sort,dir"
-            class="absolute inset-0 z-20 hidden items-center justify-center bg-white/75">
-            <div class="h-6 w-6 animate-spin rounded-full border-2 border-slate-400 border-t-transparent"></div>
-        </div>
-    </div>
-
-    {{-- Mobile cards (< md) --}}
-    <div class="space-y-2 md:hidden">
-        @forelse ($vehicles as $v)
-            @php
-                $last = $v->latestService;
-                $shown = $last?->items?->count() ?? 0;
-                $total = $last?->items_total ?? ($last?->items_count ?? $shown);
-                $variant = $v->status->variant();
-                $statusClass = match ($variant) {
-                    'success' => 'bg-emerald-50 text-emerald-800 ring-emerald-200',
-                    'warning' => 'bg-amber-50 text-amber-800 ring-amber-200',
-                    'danger' => 'bg-rose-50 text-rose-800 ring-rose-200',
-                    'info' => 'bg-sky-50 text-sky-800 ring-sky-200',
-                    default => 'bg-slate-50 text-slate-700 ring-slate-200',
-                };
-            @endphp
-
-            @if ($fullFeature)
-                <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <div class="p-3">
-                        <div class="flex items-start justify-between gap-2">
-                            <div>
-                                <div class="text-sm font-semibold text-slate-900">
-                                    {{ $v->display_name }}
-                                </div>
-                                <div class="mt-0.5 text-[11px] text-slate-500">
-                                    VIN:
-                                    <span class="font-monospace">
-                                        {{ $v->vin ?? '—' }}
-                                    </span>
-                                </div>
-                            </div>
-                            <span
-                                class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ring-inset {{ $statusClass }}">
-                                <i class="bi bi-{{ $v->status->icon() }} mr-1 text-[0.8rem]"></i>
-                                {{ $v->status->label() }}
-                            </span>
-                        </div>
-
-                        <div class="mt-2 space-y-1 text-xs text-slate-700">
-                            <div class="flex items-center gap-1">
-                                <i class="bi bi-person text-slate-400 text-[0.85rem]"></i>
-                                <span>{{ $v->driver_name ?? '—' }}</span>
-                            </div>
-                            <div class="flex items-center gap-1">
-                                <i class="bi bi-speedometer text-slate-400 text-[0.85rem]"></i>
-                                <span>{{ number_format($v->odometer) }} km</span>
-                            </div>
-                            <div class="flex items-center gap-1">
-                                <i class="bi bi-wrench-adjustable text-slate-400 text-[0.85rem]"></i>
-                                @if ($last)
-                                    <span>
-                                        {{ $last->service_date->isoFormat('DD MMM YYYY') }}
-                                        • {{ number_format($last->odometer ?? 0) }} km
-                                    </span>
-                                @else
-                                    <span class="text-slate-400">No service yet</span>
-                                @endif
-                            </div>
-                        </div>
-
-                        @if ($total > 0)
-                            <div class="mt-2 flex flex-wrap gap-1">
-                                @foreach ($last?->items ?? collect() as $it)
-                                    <span
-                                        class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-700">
-                                        {{ $it->part_name }}
-                                        <span class="ml-1 text-slate-400">
-                                            ({{ $it->action }})
-                                        </span>
-                                    </span>
-                                @endforeach
-                                @if ($total > $shown)
-                                    <span class="text-[11px] text-slate-400">
-                                        +{{ $total - $shown }} more
-                                    </span>
-                                @endif
-                            </div>
-                        @endif
-                    </div>
-
-                    <div class="flex gap-2 border-t border-slate-100 px-3 py-2 text-xs"
-                        wire:loading.class="opacity-50" wire:target="q,status,perPage,page">
-                        <a href="{{ route('vehicles.show', $v) }}"
-                            class="inline-flex flex-1 items-center justify-center rounded-md border border-slate-200 bg-white px-2 py-1 text-slate-700 hover:bg-slate-50">
-                            <i class="bi bi-eye mr-1 text-[0.8rem]"></i>
-                            Detail
-                        </a>
-                        <a href="{{ route('vehicles.edit', $v) }}"
-                            class="inline-flex flex-1 items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1 text-indigo-700 hover:bg-indigo-100">
-                            <i class="bi bi-pencil mr-1 text-[0.8rem]"></i>
-                            Edit
-                        </a>
-                        @if (!$v->is_sold)
-                            <a href="{{ route('services.create', $v) }}"
-                                class="inline-flex flex-1 items-center justify-center rounded-md bg-indigo-600 px-2 py-1 font-semibold text-white hover:bg-indigo-700">
-                                <i class="bi bi-wrench-adjustable mr-1 text-[0.8rem]"></i>
-                                Service
+                    <p class="text-xs text-amber-900 mt-0.5">
+                        Dokumen di bawah ini memerlukan tindak lanjut perpanjangan sebelum batas waktu jatuh tempo:
+                    </p>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        @foreach ($complianceAlerts as $alertDoc)
+                            <a href="{{ route('vehicles.show', ['vehicle' => $alertDoc->vehicle_id, 'tab' => 'documents']) }}"
+                                class="inline-flex items-center gap-2 rounded-xl border bg-white px-3 py-1.5 text-xs shadow-xs hover:bg-slate-50 transition {{ $alertDoc->status === 'expired' ? 'border-rose-300 text-rose-900' : 'border-amber-300 text-amber-900' }}">
+                                <span class="font-mono font-bold">{{ $alertDoc->vehicle?->plate_number }}</span>
+                                <span class="text-slate-300">|</span>
+                                <span class="font-medium">{{ $alertDoc->type_label }}</span>
+                                <span class="rounded-md px-1.5 py-0.5 text-[10px] font-bold {{ $alertDoc->status_badge_classes }}">
+                                    {{ $alertDoc->status_label }}
+                                </span>
                             </a>
-                        @endif
-                        <button type="button" wire:click="deleteVehicle({{ $v->id }})"
-                            wire:confirm="Delete {{ $v->display_name }}? This cannot be undone."
-                            wire:loading.attr="disabled" wire:target="deleteVehicle"
-                            class="inline-flex flex-1 items-center justify-center rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-rose-700 hover:bg-rose-100 disabled:opacity-50">
-                            <span wire:loading wire:target="deleteVehicle"
-                                class="mr-1 inline-block h-3 w-3 animate-spin rounded-full border-2 border-rose-400 border-t-transparent"></span>
-                            <i class="bi bi-trash text-[0.8rem]" wire:loading.remove wire:target="deleteVehicle"></i>
-                            <span class="ml-1">Delete</span>
-                        </button>
+                        @endforeach
                     </div>
                 </div>
-            @else
-                <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <div class="p-3">
-                        <div class="flex items-start justify-between gap-2">
-                            <div>
-                                <div class="text-sm font-semibold text-slate-900">
-                                    {{ $v->display_name }}
-                                </div>
-                                <div class="mt-0.5 text-xs text-slate-500">
-                                    <i class="bi bi-person mr-1 text-[0.85rem] text-slate-400"></i>
-                                    {{ $v->driver_name ?? '—' }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex gap-2 border-t border-slate-100 px-3 py-2 text-xs"
-                        wire:loading.class="opacity-50" wire:target="q,status,perPage,page">
-                        <a href="{{ route('vehicles.edit', $v) }}"
-                            class="inline-flex flex-1 items-center justify-center rounded-md border border-indigo-200 bg-indigo-50 px-2 py-1 text-indigo-700 hover:bg-indigo-100">
-                            <i class="bi bi-pencil mr-1 text-[0.8rem]"></i>
-                            Edit
-                        </a>
-                    </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Filter & Control Bar --}}
+    <div class="rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        {{-- Search & Category Filter --}}
+        <div class="flex flex-wrap items-center gap-2.5 flex-1">
+            <div class="relative w-full sm:w-64">
+                <i class="bi bi-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                <input type="text" placeholder="Cari plat, merk, driver..."
+                    wire:model.live.debounce.300ms="q"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50/60 py-1.5 pl-8 pr-8 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                @if ($q !== '')
+                    <button type="button" wire:click="$set('q','')" class="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600">
+                        <i class="bi bi-x-circle text-xs"></i>
+                    </button>
+                @endif
+            </div>
+
+            {{-- Category Filter --}}
+            <div class="w-44">
+                <select wire:model.live="category"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50/60 py-1.5 px-2.5 text-xs text-slate-700 focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
+                    <option value="all">Semua Kategori</option>
+                    <option value="passenger">Mobil Penumpang / Kantor</option>
+                    <option value="commercial_truck">Truk / Mobil Gede (Niaga)</option>
+                    <option value="pickup">Pick-up / Mobil Bak</option>
+                    <option value="other">Lainnya</option>
+                </select>
+            </div>
+
+            {{-- Status Filter Pills --}}
+            @php use App\Enums\VehicleStatus; @endphp
+            @if ($fullFeature)
+                <div class="hidden sm:flex items-center gap-1.5 overflow-x-auto">
+                    <button type="button" wire:click="$set('status','all')"
+                        class="rounded-xl px-3 py-1.5 text-xs font-semibold transition
+                        {{ $status === 'all' ? 'bg-slate-900 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
+                        Semua
+                    </button>
+                    @foreach (VehicleStatus::cases() as $st)
+                        <button type="button" wire:click="$set('status','{{ $st->value }}')"
+                            class="rounded-xl px-2.5 py-1.5 text-xs font-medium transition
+                            {{ $status === $st->value ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
+                            {{ $st->label() }}
+                        </button>
+                    @endforeach
                 </div>
             @endif
-        @empty
-            <div class="rounded-xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 shadow-sm">
-                <div class="mb-2 flex justify-center">
-                    <i class="bi bi-truck text-2xl text-slate-300"></i>
-                </div>
-                <div class="font-semibold text-slate-700">No vehicles found</div>
-                <a href="{{ route('vehicles.create') }}"
-                    class="mt-3 inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700">
-                    <i class="bi bi-plus-lg mr-1 text-[0.8rem]"></i>
-                    New Vehicle
-                </a>
-            </div>
-        @endforelse
+        </div>
 
-        <div class="mt-3">
-            {{ $vehicles->links() }}
+        {{-- Right Controls: Per Page & View Mode Switcher --}}
+        <div class="flex items-center justify-between sm:justify-end gap-3 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+            <div class="flex items-center gap-1 text-xs text-slate-500">
+                <span>Per hal:</span>
+                <select wire:model.live="perPage"
+                    class="rounded-lg border border-slate-200 bg-slate-50 py-1 px-1.5 text-xs text-slate-700 focus:outline-none">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+
+            {{-- View Mode Toggle --}}
+            <div class="inline-flex rounded-xl bg-slate-100 p-0.5 border border-slate-200">
+                <button type="button" wire:click="setViewMode('grid')"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition
+                    {{ $viewMode === 'grid' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
+                    <i class="bi bi-grid-fill text-xs"></i>
+                    <span class="hidden sm:inline">Galeri</span>
+                </button>
+                <button type="button" wire:click="setViewMode('table')"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition
+                    {{ $viewMode === 'table' ? 'bg-white text-indigo-700 shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
+                    <i class="bi bi-table text-xs"></i>
+                    <span class="hidden sm:inline">Tabel</span>
+                </button>
+            </div>
         </div>
     </div>
 
-    {{-- Floating add button (mobile) --}}
-    <a href="{{ route('vehicles.create') }}"
-        class="fixed bottom-4 right-4 z-30 inline-flex h-11 w-11 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-500/40 hover:bg-indigo-700 md:hidden">
-        <i class="bi bi-plus-lg text-lg"></i>
-    </a>
+    {{-- VIEW MODE 1: MODERN GALLERY CARDS --}}
+    @if ($viewMode === 'grid')
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            @forelse ($vehicles as $v)
+                @php
+                    $isOut = $v->is_out_on_trip;
+                    $lastService = $v->latestService;
+                    $kirDoc = $v->documents->where('document_type', 'kir')->sortByDesc('expired_date')->first();
+                    $stnkDoc = $v->documents->where('document_type', 'stnk_annual')->sortByDesc('expired_date')->first();
+                @endphp
+                <div wire:key="veh-card-{{ $v->id }}"
+                    class="group relative flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-xs hover:-translate-y-0.5 hover:shadow-md hover:border-indigo-300 transition-all duration-200">
+                    
+                    {{-- Top Card Header --}}
+                    <div>
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-center gap-2.5">
+                                <span class="h-10 w-10 rounded-xl flex items-center justify-center text-lg {{ $v->category === 'commercial_truck' ? 'bg-amber-100 text-amber-700' : ($v->category === 'motorcycle' ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-100 text-indigo-700') }}">
+                                    @if ($v->category === 'commercial_truck')
+                                        <i class="bi bi-truck"></i>
+                                    @elseif ($v->category === 'motorcycle')
+                                        <i class="bi bi-bicycle"></i>
+                                    @else
+                                        <i class="bi bi-car-front"></i>
+                                    @endif
+                                </span>
+                                <div>
+                                    <div class="font-mono text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition">
+                                        {{ $v->plate_number }}
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 font-medium">
+                                        {{ trim($v->brand . ' ' . $v->model) ?: 'Kendaraan' }} {{ $v->year ? "({$v->year})" : '' }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Operational Status Badge --}}
+                            @if ($isOut)
+                                <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-200 animate-pulse">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                                    On-Trip
+                                </span>
+                            @else
+                                <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                                    In Pool
+                                </span>
+                            @endif
+                        </div>
+
+                        {{-- Active Trip Detail if Out --}}
+                        @if ($isOut && $v->activeCheckOut)
+                            <div class="mt-3 rounded-xl bg-amber-50/80 border border-amber-200/80 p-2.5 text-xs text-amber-900">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[11px] font-semibold text-amber-800">Pengemudi: {{ $v->activeCheckOut->driver_name }}</span>
+                                    <span class="text-[10px] text-amber-600">{{ $v->activeCheckOut->created_at->format('H:i') }} WIB</span>
+                                </div>
+                                @if ($v->activeCheckOut->trip_purpose)
+                                    <p class="text-[11px] text-amber-700 truncate mt-0.5">"{{ $v->activeCheckOut->trip_purpose }}"</p>
+                                @endif
+                            </div>
+                        @else
+                            {{-- Info Row: Driver & Odometer --}}
+                            <div class="mt-3.5 grid grid-cols-2 gap-2 text-xs border-y border-slate-100 py-2.5">
+                                <div>
+                                    <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Driver Tetap</span>
+                                    <span class="font-medium text-slate-700 truncate block mt-0.5">{{ $v->driver_name ?: '—' }}</span>
+                                </div>
+                                <div>
+                                    <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Odometer</span>
+                                    <span class="font-bold text-slate-900 block mt-0.5">{{ number_format($v->odometer) }} km</span>
+                                </div>
+                            </div>
+                        @endif
+
+                        {{-- Legal Document Compliance Dots --}}
+                        <div class="mt-3 flex items-center justify-between text-xs">
+                            <div class="flex items-center gap-3">
+                                {{-- STNK 1th --}}
+                                <div class="flex items-center gap-1.5" title="Pajak STNK 1 Tahunan">
+                                    <span class="h-2 w-2 rounded-full {{ $stnkDoc ? ($stnkDoc->status === 'expired' ? 'bg-rose-500' : ($stnkDoc->status === 'warning' || $stnkDoc->status === 'critical' ? 'bg-amber-500' : 'bg-emerald-500')) : 'bg-slate-300' }}"></span>
+                                    <span class="text-[11px] text-slate-600 font-medium">STNK</span>
+                                </div>
+
+                                {{-- KIR (Wajib for Truck) --}}
+                                @if ($v->requires_kir)
+                                    <div class="flex items-center gap-1.5" title="Uji Berkala KIR (Mobil Gede/Niaga)">
+                                        <span class="h-2 w-2 rounded-full {{ $kirDoc ? ($kirDoc->status === 'expired' ? 'bg-rose-500' : ($kirDoc->status === 'warning' || $kirDoc->status === 'critical' ? 'bg-amber-500' : 'bg-emerald-500')) : 'bg-rose-400' }}"></span>
+                                        <span class="text-[11px] text-slate-600 font-medium">KIR</span>
+                                    </div>
+                                @endif
+                            </div>
+
+                            <span class="text-[11px] text-slate-400 font-medium">
+                                {{ $v->fuel_type_label }}
+                            </span>
+                        </div>
+                    </div>
+
+                    {{-- Card Footer Actions --}}
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                        @if (!$v->is_sold)
+                            @if ($isOut)
+                                <a href="{{ route('vehicles.inspect', ['vehicle' => $v, 'type' => 'check_in']) }}"
+                                    class="inline-flex items-center justify-center rounded-xl bg-amber-500 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-amber-600 transition">
+                                    <i class="bi bi-box-arrow-in-down mr-1"></i> Check-in
+                                </a>
+                            @else
+                                <a href="{{ route('vehicles.inspect', ['vehicle' => $v, 'type' => 'check_out']) }}"
+                                    class="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 transition">
+                                    <i class="bi bi-box-arrow-up-right mr-1"></i> P2H Check-out
+                                </a>
+                            @endif
+                        @endif
+
+                        <div class="flex items-center gap-1.5 ml-auto">
+                            <a href="{{ route('vehicles.show', $v) }}"
+                                class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+                                title="Buka Detail Cockpit">
+                                <i class="bi bi-eye mr-1"></i> Cockpit
+                            </a>
+                            <a href="{{ route('services.create', $v) }}"
+                                class="inline-flex items-center rounded-xl bg-slate-100 px-2 py-1.5 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition"
+                                title="Tambah Riwayat Servis">
+                                <i class="bi bi-wrench"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <div class="col-span-full rounded-2xl border border-dashed border-slate-300 p-12 text-center">
+                    <i class="bi bi-truck text-4xl text-slate-300"></i>
+                    <h3 class="mt-2 text-sm font-bold text-slate-700">Tidak ada armada ditemukan</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Coba ubah kata kunci pencarian atau filter kategori.</p>
+                </div>
+            @endforelse
+        </div>
+    @endif
+
+    {{-- VIEW MODE 2: COMPACT DATA TABLE --}}
+    @if ($viewMode === 'table')
+        <div class="rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200 text-left text-xs">
+                    <thead class="bg-slate-50 font-semibold text-slate-600 uppercase tracking-wider">
+                        <tr>
+                            <th class="px-4 py-3">Armada / Plat</th>
+                            <th class="px-4 py-3">Kategori</th>
+                            <th class="px-4 py-3">Driver</th>
+                            <th class="px-4 py-3">Odometer</th>
+                            <th class="px-4 py-3">Status Operasional</th>
+                            <th class="px-4 py-3">Servis Terakhir</th>
+                            <th class="px-4 py-3 text-right">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 bg-white text-slate-700">
+                        @forelse ($vehicles as $v)
+                            @php
+                                $last = $v->latestService;
+                                $isOut = $v->is_out_on_trip;
+                            @endphp
+                            <tr wire:key="veh-table-{{ $v->id }}" class="hover:bg-slate-50/70 transition">
+                                <td class="px-4 py-3.5">
+                                    <div class="font-mono font-bold text-slate-900">{{ $v->plate_number }}</div>
+                                    <div class="text-[11px] text-slate-500">{{ trim($v->brand . ' ' . $v->model) }}</div>
+                                </td>
+                                <td class="px-4 py-3.5 whitespace-nowrap">
+                                    <span class="inline-flex items-center rounded-lg bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                                        {{ $v->category_label }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3.5 whitespace-nowrap">
+                                    <span class="text-slate-800 font-medium">{{ $v->driver_name ?: '—' }}</span>
+                                </td>
+                                <td class="px-4 py-3.5 whitespace-nowrap font-semibold">
+                                    {{ number_format($v->odometer) }} km
+                                </td>
+                                <td class="px-4 py-3.5 whitespace-nowrap">
+                                    @if ($isOut)
+                                        <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-200 animate-pulse">
+                                            On-Trip
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                                            In Pool
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3.5 whitespace-nowrap">
+                                    @if ($last)
+                                        <div class="font-medium text-slate-800">{{ $last->service_date->isoFormat('DD/MM/YY') }}</div>
+                                        <div class="text-[10px] text-slate-400">{{ $last->workshop ?? 'Internal' }}</div>
+                                    @else
+                                        <span class="text-slate-400">—</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3.5 text-right whitespace-nowrap">
+                                    <div class="inline-flex items-center gap-1.5">
+                                        @if (!$v->is_sold)
+                                            @if ($isOut)
+                                                <a href="{{ route('vehicles.inspect', ['vehicle' => $v, 'type' => 'check_in']) }}"
+                                                    class="rounded-lg bg-amber-500 px-2.5 py-1 text-xs font-bold text-white hover:bg-amber-600 shadow-xs">
+                                                    Check-in
+                                                </a>
+                                            @else
+                                                <a href="{{ route('vehicles.inspect', ['vehicle' => $v, 'type' => 'check_out']) }}"
+                                                    class="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-emerald-700 shadow-xs">
+                                                    P2H
+                                                </a>
+                                            @endif
+                                        @endif
+                                        <a href="{{ route('vehicles.show', $v) }}"
+                                            class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                                            Cockpit
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="px-4 py-8 text-center text-xs text-slate-400">
+                                    Tidak ada data armada.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endif
+
+    {{-- Pagination --}}
+    <div class="pt-2">
+        {{ $vehicles->links() }}
+    </div>
 </div>
