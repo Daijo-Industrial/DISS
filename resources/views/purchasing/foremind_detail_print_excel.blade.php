@@ -50,9 +50,10 @@
                     <tbody>
                         @php
                             $previousMaterialCode = null;
-                            $monthlyTotalPredictions = array_fill(0, count($mon), 0);
+                            $colCount = count($qforecast[0] ?? []);
+                            $monthlyTotalPredictions = array_fill(0, $colCount, 0);
                             $i = 1;
-                            $monthlyfgs = array_fill(0, count($mon), 0);
+                            $monthlyfgs = array_fill(0, $colCount, 0);
                         @endphp
 
                         @foreach ($materials as $material)
@@ -78,12 +79,12 @@
 
                                         @foreach ($monthlyTotalPredictions as $monthlyTotalPrediction)
                                             <td align="center" style="vertical-align: middle;">
-                                                <strong>{{ $monthlyTotalPrediction }}</strong>
+                                                <strong>{{ number_format($monthlyTotalPrediction, 2) }}</strong>
                                             </td>
                                         @endforeach
                                         <td></td>
                                         <td align="center" style="vertical-align: middle;">
-                                            <strong>{{ array_sum($monthlyTotalPredictions) }}</strong>
+                                            <strong>{{ number_format(array_sum($monthlyTotalPredictions), 2) }}</strong>
                                         </td>
                                     </tr>
 
@@ -94,8 +95,8 @@
                                 @endif
                                 <!-- Reset monthly total predictions for the new material code -->
                                 @php
-                                    $monthlyTotalPredictions = array_fill(0, count($mon), 0);
-                                    $monthlyfgs = array_fill(0, count($mon), 0);
+                                    $monthlyTotalPredictions = array_fill(0, $colCount, 0);
+                                    $monthlyfgs = array_fill(0, $colCount, 0);
                                 @endphp
                             @endif
 
@@ -109,7 +110,7 @@
                                 <td rowspan=2 align="center" style="vertical-align: middle;">
                                     {{ $material->item_no }}
                                 </td>
-                                <td rowspan=2 align="center" style="vertical-align: middle;">{{ $material->item_desc }}
+                                <td rowspan=2 align="center" style="vertical-align: middle;">{{ $material->item_desc ?? '' }}
                                 </td>
                                 <td rowspan=2 align="center" style="vertical-align: middle;">
                                     {{ $material->vendor_code }}</td>
@@ -122,12 +123,12 @@
                                     $finalfg = 0;
                                 @endphp
 
-                                @foreach ($qforecast[$loop->index] as $index => $value)
+                                @foreach ($qforecast[$loop->index] ?? [] as $index => $value)
                                     @php
                                         $calculation = $value * $material->quantity_material;
                                         $total += $calculation;
 
-                                        $monthlyTotalPredictions[$index] += $calculation;
+                                        $monthlyTotalPredictions[$index] = ($monthlyTotalPredictions[$index] ?? 0) + $calculation;
 
                                     @endphp
 
@@ -138,13 +139,13 @@
 
                                         $totalfg = $value;
 
-                                        $monthlyfgs[$index] += $totalfg;
+                                        $monthlyfgs[$index] = ($monthlyfgs[$index] ?? 0) + $totalfg;
                                     @endphp
                                 @endforeach
                             </tr>
 
                             <tr>
-                                @foreach ($qforecast[$loop->index] as $index => $value)
+                                @foreach ($qforecast[$loop->index] ?? [] as $index => $value)
                                     @php
                                         $calculation = $value * $material->quantity_material;
                                         $total += $calculation;
@@ -152,7 +153,7 @@
                                     @endphp
 
                                     <td align="center" style="vertical-align: middle;">
-                                        <b>{{ $calculation }}</b>
+                                        <b>{{ number_format($calculation, 2) }}</b>
                                     </td>
                                 @endforeach
                             </tr>
@@ -182,12 +183,12 @@
 
                             @foreach ($monthlyTotalPredictions as $monthlyTotalPrediction)
                                 <td align="center" style="vertical-align: middle;">
-                                    <strong>{{ $monthlyTotalPrediction }}</strong>
+                                    <strong>{{ number_format($monthlyTotalPrediction, 2) }}</strong>
                                 </td>
                             @endforeach
                             <td></td>
                             <td align="center" style="vertical-align: middle;">
-                                <strong>{{ array_sum($monthlyTotalPredictions) }}</strong>
+                                <strong>{{ number_format(array_sum($monthlyTotalPredictions), 2) }}</strong>
                             </td>
                         </tr>
                         <td>** Daijo tidak bertanggung jawab atas perubahan Qty Forecast, sewaktu - waktu Qty bisa berubah sesuai permintaan customer kami</td>
