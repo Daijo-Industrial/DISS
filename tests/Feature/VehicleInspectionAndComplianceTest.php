@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\VehicleStatus;
 use App\Infrastructure\Persistence\Eloquent\Models\Vehicle;
+use App\Livewire\Vehicles\Form as VehicleForm;
 use App\Livewire\Vehicles\InspectionForm;
 use App\Models\User;
 use App\Models\VehicleDocument;
@@ -11,6 +12,7 @@ use App\Notifications\VehicleDocumentExpiryNotification;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class VehicleInspectionAndComplianceTest extends TestCase
@@ -47,6 +49,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $this->assertEquals('Solar / Diesel', $this->vehicle->fuel_type_label);
         $this->assertTrue($this->vehicle->requires_kir);
         $this->assertFalse($this->vehicle->is_out_on_trip);
+        $this->assertStringContainsString('DKI Jakarta', $this->vehicle->region_name);
     }
 
     public function test_vehicle_document_status_calculation()
@@ -162,5 +165,65 @@ class VehicleInspectionAndComplianceTest extends TestCase
                 return $notification->document->id === $doc->id;
             }
         );
+    }
+
+    public function test_vehicle_form_validation_and_category_kir_auto_toggle()
+    {
+        Role::firstOrCreate(['name' => 'super-admin']);
+        $this->user->assignRole('super-admin');
+
+        Livewire::test(VehicleForm::class)
+            ->assertSet('category', 'passenger')
+            ->assertSet('requires_kir', false)
+            ->set('category', 'commercial_truck')
+            ->assertSet('requires_kir', true)
+            ->set('plate_number', 'B 8888 NEW')
+            ->set('driver_name', 'Budi Santoso')
+            ->set('brand', 'Isuzu')
+            ->set('model', 'Giga')
+            ->set('fuel_type', 'diesel')
+            ->set('odometer', 12000)
+            ->set('status', 'active')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('vehicles', [
+            'plate_number' => 'B 8888 NEW',
+            'category' => 'commercial_truck',
+            'fuel_type' => 'diesel',
+            'requires_kir' => 1,
+            'brand' => 'Isuzu',
+            'model' => 'Giga',
+        ]);
+    }
+
+    public function test_indonesian_plate_number_standard_validation_and_auto_normalization()
+    {
+        Role::firstOrCreate(['name' => 'super-admin']);
+        $this->user->assignRole('super-admin');
+
+        // 1. Invalid plate number format should fail regex validation
+        Livewire::test(VehicleForm::class)
+            ->set('plate_number', 'INVALID_PLATE')
+            ->call('save')
+            ->assertHasErrors(['plate_number' => 'regex']);
+
+        Livewire::test(VehicleForm::class)
+            ->set('plate_number', 'B 0123 XYZ') // Cannot start with 0
+            ->call('save')
+            ->assertHasErrors(['plate_number' => 'regex']);
+
+        // 2. Unspaced or lowercase plate should be auto-normalized into standard Indonesian format (B 1234 XYZ)
+        Livewire::test(VehicleForm::class)
+            ->set('plate_number', 'b1234xyz')
+            ->set('category', 'passenger')
+            ->set('fuel_type', 'petrol')
+            ->set('status', 'active')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('vehicles', [
+            'plate_number' => 'B 1234 XYZ',
+        ]);
     }
 }

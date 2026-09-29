@@ -120,4 +120,15 @@ class Vehicle extends Model
 
         return sprintf('%s — %s (%s)', $this->plate_number, $name ?: 'Vehicle', $this->year ?: 'N/A');
     }
+
+    public function getRegionNameAttribute(): ?string
+    {
+        if (! $this->plate_number) {
+            return null;
+        }
+
+        $code = strtoupper(explode(' ', trim($this->plate_number))[0] ?? '');
+
+        return config("fleet.plate_regions.{$code}");
+    }
 }

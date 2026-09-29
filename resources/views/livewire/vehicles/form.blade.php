@@ -1,420 +1,349 @@
-<div class="max-w-4xl mx-auto px-3 md:px-4 py-4 space-y-4">
+<div class="max-w-4xl mx-auto px-4 py-6 space-y-6">
 
-    {{-- Breadcrumb --}}
-    <nav class="text-xs text-slate-500" aria-label="Breadcrumb">
-        <ol class="flex flex-wrap items-center gap-1">
-            <li>
-                <a href="{{ route('vehicles.index') }}" class="hover:text-slate-800 hover:underline">
-                    Vehicles
-                </a>
-            </li>
-            <li class="text-slate-400">/</li>
-            <li class="font-medium text-slate-700">
-                {{ $vehicle?->exists ? 'Edit Vehicle' : 'New Vehicle' }}
-            </li>
-        </ol>
-    </nav>
+    {{-- Header --}}
+    <div class="flex items-center justify-between gap-4 pb-3 border-b border-slate-200">
+        <div>
+            <nav class="text-xs text-slate-400 mb-1">
+                <a href="{{ route('vehicles.index') }}" class="hover:text-slate-700">Armada</a>
+                <span class="mx-1">/</span>
+                <span class="text-slate-600 font-medium">{{ $vehicle?->exists ? 'Edit' : 'Tambah Baru' }}</span>
+            </nav>
+            <h1 class="text-lg font-bold text-slate-900">
+                {{ $vehicle?->exists ? 'Edit Armada: ' . $vehicle->plate_number : 'Registrasi Armada Baru' }}
+            </h1>
+        </div>
 
-    {{-- Page header / hero --}}
-    <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div class="flex items-start justify-between gap-3 px-4 py-3 md:px-5 md:py-4">
-            <div class="flex items-center gap-3">
-                <div class="flex h-11 w-11 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
-                    <i class="bi bi-truck text-lg"></i>
-                </div>
-                <div>
-                    <h1 class="text-base font-semibold text-slate-900">
-                        {{ $vehicle?->exists ? 'Edit Vehicle' : 'New Vehicle' }}
-                    </h1>
-                    <p class="mt-0.5 text-xs text-slate-500">
-                        Keep your fleet info up to date.
-                    </p>
-                </div>
-            </div>
-
-            {{-- Desktop actions --}}
-            <div class="hidden md:flex items-center gap-2">
-                @if ($fullFeature && $vehicle?->exists)
-                    <button type="button" wire:click="delete"
-                        wire:confirm="Delete this vehicle? This cannot be undone." wire:loading.attr="disabled"
-                        wire:target="delete"
-                        class="inline-flex items-center rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 shadow-sm hover:bg-rose-100 disabled:opacity-60">
-                        <span wire:loading wire:target="delete"
-                            class="mr-1 inline-block h-3 w-3 animate-spin rounded-full border-2 border-rose-400 border-t-transparent"></span>
-                        <i class="bi bi-trash mr-1 text-[0.9rem]" wire:loading.remove wire:target="delete"></i>
-                        Delete
-                    </button>
-                @endif
-
-                <a href="{{ route('vehicles.index') }}"
-                    class="inline-flex items-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50">
-                    Cancel
-                </a>
-
-                <button type="button" wire:click="save"
-                    class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700">
-                    <i class="bi bi-save mr-1 text-[0.9rem]"></i>
-                    Save
+        <div class="flex items-center gap-2">
+            <a href="{{ route('vehicles.index') }}"
+                class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">
+                Batal
+            </a>
+            @if ($fullFeature && $vehicle?->exists)
+                <button type="button" wire:click="delete"
+                    wire:confirm="Hapus data armada ini?"
+                    class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition">
+                    Hapus
                 </button>
-            </div>
+            @endif
+            <button type="button" wire:click="save" wire:loading.attr="disabled"
+                class="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 shadow-sm transition flex items-center gap-1.5">
+                <span wire:loading wire:target="save" class="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                <i class="bi bi-check2 text-sm" wire:loading.remove wire:target="save"></i>
+                <span>Simpan</span>
+            </button>
         </div>
     </div>
 
-    {{-- Main card / form --}}
+    {{-- Restricted Access Alert (for Non-fullFeature users) --}}
+    @if (! $fullFeature)
+        <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800 flex items-center gap-2.5">
+            <i class="bi bi-shield-lock text-base"></i>
+            <span>Mode Terbatas: Anda hanya dapat memperbarui Plat Nomor dan Driver.</span>
+        </div>
+    @endif
+
+    {{-- Form --}}
     <form wire:submit.prevent="save" x-data="{
         driver_name: @entangle('driver_name'),
         plate_number: @entangle('plate_number'),
-        @if ($fullFeature) brand: @entangle('brand'),
-                    model: @entangle('model'),
-                    category: @entangle('category'),
-                    fuel_type: @entangle('fuel_type'),
-                    requires_kir: @entangle('requires_kir'),
-                    year: @entangle('year'),
-                    vin: @entangle('vin'),
-                    odometer: @entangle('odometer'),
-                    status: @entangle('status'),
-                    sold_at: @entangle('sold_at'), @endif
-    }"
-        class="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div class="px-4 py-4 md:px-5 md:py-5 space-y-4">
+        @if ($fullFeature)
+            brand: @entangle('brand'),
+            model: @entangle('model'),
+            category: @entangle('category'),
+            fuel_type: @entangle('fuel_type'),
+            requires_kir: @entangle('requires_kir'),
+            year: @entangle('year'),
+            vin: @entangle('vin'),
+            odometer: @entangle('odometer'),
+            status: @entangle('status'),
+            sold_at: @entangle('sold_at'),
+        @else
+            status: '{{ $vehicle?->status->value ?? 'active' }}',
+            category: '{{ $vehicle?->category ?? 'passenger' }}',
+            fuel_type: '{{ $vehicle?->fuel_type ?? 'petrol' }}',
+            requires_kir: {{ $vehicle?->requires_kir ? 'true' : 'false' }},
+            brand: '{{ addslashes($vehicle?->brand ?? '') }}',
+            model: '{{ addslashes($vehicle?->model ?? '') }}',
+            year: '{{ $vehicle?->year ?? '' }}',
+            vin: '{{ addslashes($vehicle?->vin ?? '') }}',
+            odometer: {{ $vehicle?->odometer ?? 0 }},
+        @endif
+        regionMap: @js(config('fleet.plate_regions', [])),
+        plateRegex: new RegExp(@js(config('fleet.plate.regex', '^[A-Z]{1,2}\s[1-9][0-9]{0,3}\s[A-Z]{1,4}$'))),
+        isPlateValid() {
+            return this.plateRegex.test((this.plate_number || '').trim());
+        },
+        getPlateRegion() {
+            if (!this.plate_number) return '';
+            let code = (this.plate_number.trim().split(' ')[0] || '').toUpperCase();
+            return this.regionMap[code] || '';
+        },
+        formatPlateInput() {
+            if (!this.plate_number) return;
+            this.plate_number = this.plate_number.toUpperCase().replace(/[^A-Z0-9 ]/g, '').replace(/\s+/g, ' ');
+        },
+        normalizePlateOnBlur() {
+            if (!this.plate_number) return;
+            let clean = this.plate_number.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            let match = clean.match(/^([A-Z]{1,2})([1-9][0-9]{0,3})([A-Z]{1,4})$/);
+            if (match) {
+                this.plate_number = match[1] + ' ' + match[2] + ' ' + match[3];
+            } else {
+                this.plate_number = this.plate_number.trim();
+            }
+        },
+        selectCategory(cat) {
+            @if ($fullFeature)
+                this.category = cat;
+                if (cat === 'commercial_truck') {
+                    this.requires_kir = true;
+                }
+            @endif
+        }
+    }" class="space-y-5">
 
-            {{-- Section: Driver & Plate --}}
-            <div>
-                <div class="mb-2 flex items-center justify-between">
-                    <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Driver &amp; Plate
-                    </h2>
+        {{-- Section 1: Identitas Armada --}}
+        <div class="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Identitas Armada</h2>
 
-                    @if ($fullFeature)
-                        <span
-                            class="inline-flex items-center rounded-full bg-slate-50 px-2.5 py-1 text-[11px] text-slate-600 ring-1 ring-inset ring-slate-200">
-                            <span class="mr-1 text-[0.7rem] text-slate-400">Status:</span>
-                            <span class="font-semibold capitalize" x-text="status || 'active'"></span>
+            <div class="grid gap-4 sm:grid-cols-2">
+                {{-- Plat Nomor --}}
+                <div class="sm:col-span-2">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="text-xs font-semibold text-slate-700">
+                            Plat Nomor <span class="text-rose-500">*</span>
+                        </label>
+                        <span x-show="isPlateValid() && getPlateRegion()" x-text="getPlateRegion()"
+                            class="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200"></span>
+                    </div>
+
+                    <div class="relative flex items-center rounded-xl bg-slate-900 border border-slate-700 px-3.5 py-2.5 shadow-inner focus-within:border-indigo-400 focus-within:ring-1 focus-within:ring-indigo-400">
+                        <span class="text-[10px] font-mono font-bold text-slate-400 border-r border-slate-700 pr-2.5 mr-2.5 select-none">RI</span>
+                        <input type="text"
+                            x-model="plate_number"
+                            @input="formatPlateInput()"
+                            @blur="normalizePlateOnBlur()"
+                            placeholder="B 1234 XYZ"
+                            class="w-full bg-transparent font-mono text-xl font-bold uppercase tracking-widest text-white placeholder-slate-500 focus:outline-none">
+                        <span x-show="isPlateValid()" class="text-emerald-400 text-sm pl-2">
+                            <i class="bi bi-check-circle-fill"></i>
                         </span>
-                    @endif
+                    </div>
+                    @error('plate_number')
+                        <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
-                <div class="grid gap-3 md:grid-cols-3">
-                    {{-- Driver name --}}
-                    <div>
-                        <label class="block text-xs font-medium text-slate-700 mb-1">
-                            Driver Name
-                        </label>
-                        <div
-                            class="flex items-center rounded-md border border-slate-300 bg-white text-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500">
-                            <span class="pl-2 pr-1 text-slate-400">
-                                <i class="bi bi-person text-[0.9rem]"></i>
-                            </span>
-                            <input type="text" x-model="driver_name" autocomplete="name" placeholder="Raymond"
-                                class="w-full rounded-r-md border-0 bg-transparent px-2 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none">
-                        </div>
-                        @error('driver_name')
-                            <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
-                        @enderror
-                        <p class="mt-1 text-[11px] text-slate-400">
-                            Optional, assign current driver.
-                        </p>
-                    </div>
+                {{-- Driver --}}
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Driver Penanggung Jawab</label>
+                    <input type="text" x-model="driver_name" placeholder="Nama driver / penanggung jawab"
+                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    @error('driver_name')
+                        <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
+                    @enderror
+                </div>
 
-                    {{-- Plate number --}}
-                    <div>
-                        <label class="block text-xs font-medium text-slate-700 mb-1">
-                            Plate Number <span class="text-rose-500">*</span>
-                        </label>
-                        <div
-                            class="flex items-center rounded-md border border-slate-300 bg-white text-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500">
-                            <span class="pl-2 pr-1 text-slate-400">
-                                <i class="bi bi-credit-card-2-front text-[0.9rem]"></i>
-                            </span>
-                            <input type="text" x-model.trim="plate_number"
-                                @input="plate_number = (plate_number || '').toUpperCase()" autocomplete="off"
-                                placeholder="B 1234 XYZ"
-                                class="w-full rounded-r-md border-0 bg-transparent px-2 py-1.5 text-sm uppercase text-slate-900 placeholder:text-slate-400 focus:outline-none">
-                        </div>
-                        @error('plate_number')
-                            <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
-                        @enderror
-                        <p class="mt-1 text-[11px] text-slate-400">
-                            Unique per vehicle.
-                        </p>
-                    </div>
-
-                    {{-- Status --}}
-                    @php use App\Enums\VehicleStatus; @endphp
-
+                {{-- Status --}}
+                @php use App\Enums\VehicleStatus; @endphp
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Status Operasional <span class="text-rose-500">*</span></label>
                     @if ($fullFeature)
-                        <div>
-                            <label class="block text-xs font-medium text-slate-700 mb-1">
-                                Status
-                            </label>
-
-                            <div class="flex flex-wrap gap-1">
-                                @foreach (VehicleStatus::cases() as $case)
-                                    @php $v = $case->value; @endphp
-
-                                    <label class="inline-flex items-center cursor-pointer">
-                                        <input type="radio" class="peer sr-only" id="st-{{ $v }}"
-                                            value="{{ $v }}" x-model="status" autocomplete="off">
-
-                                        <span
-                                            class="inline-flex items-center rounded-md border border-slate-300 bg-white
-                               px-2.5 py-1 text-[11px] font-medium text-slate-700
-                               hover:bg-slate-50 transition
-                               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-slate-400
-                               {{ $case->radioCheckedClasses() }}">
-                                            <i class="bi bi-{{ $case->icon() }} mr-1 text-[0.85rem]"></i>
-                                            {{ $case->label() }}
-                                        </span>
-                                    </label>
-                                @endforeach
-                            </div>
-
-                            @error('status')
-                                <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
+                        <div class="grid grid-cols-4 gap-1.5">
+                            @foreach (VehicleStatus::cases() as $case)
+                                @php $v = $case->value; @endphp
+                                <button type="button" @click="status = '{{ $v }}'"
+                                    :class="status === '{{ $v }}'
+                                        ? '{{ $case->filterActiveClasses() }} font-semibold shadow-xs'
+                                        : '{{ $case->filterInactiveClasses() }}'"
+                                    class="rounded-lg border py-2 text-xs transition text-center">
+                                    {{ $case->label() }}
+                                </button>
+                            @endforeach
+                        </div>
+                        @error('status')
+                            <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
+                        @enderror
+                    @else
+                        <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 flex items-center justify-between">
+                            <span class="capitalize">{{ $vehicle?->status->label() ?? 'Active' }}</span>
+                            <span class="text-[11px] text-slate-400">Terkunci</span>
                         </div>
                     @endif
-
                 </div>
             </div>
-
-            @if ($fullFeature)
-                <div class="h-px bg-slate-100 my-1"></div>
-
-                {{-- Section: Vehicle Specs & Classification --}}
-                <div class="space-y-3">
-                    <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Vehicle Specs &amp; Classification
-                    </h2>
-
-                    {{-- Classification: Category, Fuel, KIR --}}
-                    <div class="grid gap-3 md:grid-cols-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-700 mb-1">
-                                Category <span class="text-rose-500">*</span>
-                            </label>
-                            <select wire:model.live="category" x-model="category"
-                                class="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                                <option value="passenger">Mobil Penumpang / Operasional Biasa</option>
-                                <option value="commercial_truck">Truk / Mobil Gede (Mobil Niaga)</option>
-                                <option value="pickup">Pick-up / Mobil Bak</option>
-                                <option value="other">Lainnya</option>
-                            </select>
-                            @error('category')
-                                <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-medium text-slate-700 mb-1">
-                                Bahan Bakar / Daya <span class="text-rose-500">*</span>
-                            </label>
-                            <select x-model="fuel_type"
-                                class="w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                                <option value="petrol">Bensin (Gasoline)</option>
-                                <option value="diesel">Solar (Diesel)</option>
-                                <option value="ev">Listrik (EV)</option>
-                            </select>
-                            @error('fuel_type')
-                                <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div class="flex items-center pt-5">
-                            <label class="inline-flex items-center cursor-pointer">
-                                <input type="checkbox" x-model="requires_kir" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                                <span class="ml-2 text-xs font-medium text-slate-700">
-                                    Wajib Uji Berkala KIR (Reminder Aktif)
-                                </span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="grid gap-3 md:grid-cols-3">
-                        {{-- Brand --}}
-                        <div>
-                            <label class="block text-xs font-medium text-slate-700 mb-1">
-                                Brand
-                            </label>
-                            <div
-                                class="flex items-center rounded-md border border-slate-300 bg-white text-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500">
-                                <span class="pl-2 pr-1 text-slate-400">
-                                    <i class="bi bi-badge-ad text-[0.9rem]"></i>
-                                </span>
-                                <input type="text" x-model.trim="brand" placeholder="Toyota"
-                                    autocomplete="organization"
-                                    class="w-full rounded-r-md border-0 bg-transparent px-2 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none">
-                            </div>
-                            @error('brand')
-                                <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        {{-- Model --}}
-                        <div>
-                            <label class="block text-xs font-medium text-slate-700 mb-1">
-                                Model
-                            </label>
-                            <div
-                                class="flex items-center rounded-md border border-slate-300 bg-white text-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500">
-                                <span class="pl-2 pr-1 text-slate-400">
-                                    <i class="bi bi-badge-3d text-[0.9rem]"></i>
-                                </span>
-                                <input type="text" x-model.trim="model" placeholder="Avanza"
-                                    class="w-full rounded-r-md border-0 bg-transparent px-2 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none">
-                            </div>
-                            @error('model')
-                                <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        {{-- Year --}}
-                        <div>
-                            <label class="block text-xs font-medium text-slate-700 mb-1">
-                                Year
-                            </label>
-                            <div
-                                class="flex items-center rounded-md border border-slate-300 bg-white text-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500">
-                                <span class="pl-2 pr-1 text-slate-400">
-                                    <i class="bi bi-calendar3 text-[0.9rem]"></i>
-                                </span>
-                                <input type="number" min="1900" max="{{ now()->year }}"
-                                    x-model.number="year" placeholder="{{ now()->year }}"
-                                    class="w-full rounded-r-md border-0 bg-transparent px-2 py-1.5 text-sm text-slate-900 focus:outline-none">
-                            </div>
-                            @error('year')
-                                <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="grid gap-3 md:grid-cols-3 md:items-end">
-                        {{-- VIN --}}
-                        <div class="md:col-span-2">
-                            <label class="block text-xs font-medium text-slate-700 mb-1">
-                                VIN
-                            </label>
-                            <div
-                                class="flex items-center rounded-md border border-slate-300 bg-white text-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500">
-                                <span class="pl-2 pr-1 text-slate-400">
-                                    <i class="bi bi-upc-scan text-[0.9rem]"></i>
-                                </span>
-                                <input type="text" x-model.trim="vin" placeholder="Vehicle Identification Number"
-                                    class="w-full rounded-r-md border-0 bg-transparent px-2 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none">
-                            </div>
-                            @error('vin')
-                                <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
-                            <p class="mt-1 text-[11px] text-slate-400">
-                                Useful for official records and warranty.
-                            </p>
-                        </div>
-
-                        {{-- Odometer --}}
-                        <div>
-                            <label class="block text-xs font-medium text-slate-700 mb-1">
-                                Odometer
-                            </label>
-                            <div
-                                class="flex items-center rounded-md border border-slate-300 bg-white text-sm focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500">
-                                <span class="pl-2 pr-1 text-slate-400">
-                                    <i class="bi bi-speedometer text-[0.9rem]"></i>
-                                </span>
-                                <input type="number" min="0" step="1" x-model.number="odometer"
-                                    placeholder="0" inputmode="numeric"
-                                    class="w-full border-0 bg-transparent px-2 py-1.5 text-sm text-slate-900 focus:outline-none">
-                                <span class="pr-2 pl-1 text-[11px] text-slate-500">
-                                    km
-                                </span>
-                            </div>
-                            @error('odometer')
-                                <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    </div>
-
-                    {{-- Preview pill --}}
-                    <div class="md:w-1/3 md:ml-auto">
-                        <div class="rounded-lg bg-slate-50 px-3 py-2 text-center">
-                            <div class="text-[11px] uppercase tracking-wide text-slate-400">
-                                Preview
-                            </div>
-                            <div class="mt-1 text-xs font-semibold text-slate-800">
-                                <span x-text="(plate_number || 'PLATE').toUpperCase()"></span>
-                                <template x-if="brand || model">
-                                    <span>
-                                        &nbsp;—&nbsp;
-                                        <span x-text="brand || ''"></span>
-                                        <span x-text="model || 'MODEL'"></span>
-                                    </span>
-                                </template>
-                                <template x-if="year">
-                                    <span>
-                                        &nbsp;(<span x-text="year"></span>)
-                                    </span>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Sold details --}}
-                <div x-show="status === 'sold'" x-transition class="mt-4 space-y-3">
-                    <div class="h-px bg-slate-100"></div>
-                    <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Sold Details
-                    </h2>
-                    <div class="grid gap-3 md:grid-cols-4">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-700 mb-1">
-                                Sold Date <span class="text-rose-500">*</span>
-                            </label>
-                            <input type="date" x-model="sold_at" name="sold_at"
-                                class="block w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                            @error('sold_at')
-                                <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div class="md:col-span-3">
-                            <div
-                                class="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                                <i class="bi bi-info-circle mt-0.5"></i>
-                                <p class="mb-0">
-                                    Marking as <strong>Sold</strong> will hide this vehicle from active lists and
-                                    prevent new service records.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            @endif
         </div>
 
-        {{-- Mobile action bar --}}
-        <div class="flex items-center justify-between gap-2 border-t border-slate-100 bg-slate-50 px-3 py-2 md:hidden">
-            <a href="{{ route('vehicles.index') }}"
-                class="inline-flex items-center rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50">
-                Cancel
-            </a>
-            <div class="flex items-center gap-2">
-                @if ($fullFeature && $vehicle?->exists)
-                    <button type="button" wire:click="delete"
-                        wire:confirm="Delete this vehicle? This cannot be undone." wire:loading.attr="disabled"
-                        wire:target="delete"
-                        class="inline-flex items-center rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 shadow-sm hover:bg-rose-100 disabled:opacity-60">
-                        <span wire:loading wire:target="delete"
-                            class="mr-1 inline-block h-3 w-3 animate-spin rounded-full border-2 border-rose-400 border-t-transparent"></span>
-                        <i class="bi bi-trash text-[0.9rem]" wire:loading.remove wire:target="delete"></i>
-                    </button>
-                @endif
+        @if ($fullFeature)
+            {{-- Section 2: Kategori & Regulasi --}}
+            <div class="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Kategori &amp; Regulasi</h2>
 
-                <button type="submit"
-                    class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700">
-                    <i class="bi bi-save mr-1 text-[0.9rem]"></i>
-                    Save
-                </button>
+                {{-- Visual Category Cards --}}
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-2">Kategori Armada <span class="text-rose-500">*</span></label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        {{-- Mobil Penumpang --}}
+                        <div @click="selectCategory('passenger')"
+                            :class="category === 'passenger' ? 'border-indigo-600 bg-indigo-50/60 ring-1 ring-indigo-500 text-indigo-950' : 'border-slate-200 hover:border-slate-300 text-slate-700'"
+                            class="cursor-pointer rounded-xl border p-3 transition flex items-center gap-3">
+                            <div :class="category === 'passenger' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'"
+                                class="h-9 w-9 shrink-0 rounded-lg flex items-center justify-center">
+                                <i class="bi bi-car-front-fill text-base"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="font-semibold text-xs text-slate-900 truncate">Mobil Penumpang</div>
+                                <div class="text-[11px] text-slate-400 truncate">Avanza, Innova, MPV</div>
+                            </div>
+                        </div>
+
+                        {{-- Truk / Mobil Gede --}}
+                        <div @click="selectCategory('commercial_truck')"
+                            :class="category === 'commercial_truck' ? 'border-indigo-600 bg-indigo-50/60 ring-1 ring-indigo-500 text-indigo-950' : 'border-slate-200 hover:border-slate-300 text-slate-700'"
+                            class="cursor-pointer rounded-xl border p-3 transition flex items-center gap-3">
+                            <div :class="category === 'commercial_truck' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'"
+                                class="h-9 w-9 shrink-0 rounded-lg flex items-center justify-center">
+                                <i class="bi bi-truck-flatbed text-base"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="font-semibold text-xs text-slate-900 truncate">Truk / Mobil Gede</div>
+                                <div class="text-[10px] text-amber-700 font-semibold truncate">Wajib KIR</div>
+                            </div>
+                        </div>
+
+                        {{-- Pick-up / Bak --}}
+                        <div @click="selectCategory('pickup')"
+                            :class="category === 'pickup' ? 'border-indigo-600 bg-indigo-50/60 ring-1 ring-indigo-500 text-indigo-950' : 'border-slate-200 hover:border-slate-300 text-slate-700'"
+                            class="cursor-pointer rounded-xl border p-3 transition flex items-center gap-3">
+                            <div :class="category === 'pickup' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'"
+                                class="h-9 w-9 shrink-0 rounded-lg flex items-center justify-center">
+                                <i class="bi bi-truck text-base"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="font-semibold text-xs text-slate-900 truncate">Pick-up / Bak</div>
+                                <div class="text-[11px] text-slate-400 truncate">Grandmax, Carry, L300</div>
+                            </div>
+                        </div>
+
+                        {{-- Lainnya --}}
+                        <div @click="selectCategory('other')"
+                            :class="category === 'other' ? 'border-indigo-600 bg-indigo-50/60 ring-1 ring-indigo-500 text-indigo-950' : 'border-slate-200 hover:border-slate-300 text-slate-700'"
+                            class="cursor-pointer rounded-xl border p-3 transition flex items-center gap-3">
+                            <div :class="category === 'other' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'"
+                                class="h-9 w-9 shrink-0 rounded-lg flex items-center justify-center">
+                                <i class="bi bi-boxes text-base"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="font-semibold text-xs text-slate-900 truncate">Lainnya</div>
+                                <div class="text-[11px] text-slate-400 truncate">Forklift, Khusus Pool</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2 pt-1">
+                    {{-- Bahan Bakar --}}
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Bahan Bakar <span class="text-rose-500">*</span></label>
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <button type="button" @click="fuel_type = 'petrol'"
+                                :class="fuel_type === 'petrol' ? 'border-emerald-500 bg-emerald-50 text-emerald-800 font-semibold ring-1 ring-emerald-400' : 'border-slate-200 text-slate-700 hover:bg-slate-50'"
+                                class="rounded-lg border py-2 text-xs transition text-center">
+                                Bensin
+                            </button>
+                            <button type="button" @click="fuel_type = 'diesel'"
+                                :class="fuel_type === 'diesel' ? 'border-amber-500 bg-amber-50 text-amber-800 font-semibold ring-1 ring-amber-400' : 'border-slate-200 text-slate-700 hover:bg-slate-50'"
+                                class="rounded-lg border py-2 text-xs transition text-center">
+                                Solar
+                            </button>
+                            <button type="button" @click="fuel_type = 'ev'"
+                                :class="fuel_type === 'ev' ? 'border-cyan-500 bg-cyan-50 text-cyan-800 font-semibold ring-1 ring-cyan-400' : 'border-slate-200 text-slate-700 hover:bg-slate-50'"
+                                class="rounded-lg border py-2 text-xs transition text-center">
+                                Listrik (EV)
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- KIR Toggle --}}
+                    <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2 mt-auto">
+                        <div>
+                            <span class="text-xs font-semibold text-slate-800">Wajib Uji Berkala KIR</span>
+                            <span x-show="category === 'commercial_truck'" class="ml-1 text-[10px] font-bold text-amber-700">(Otomatis untuk Truk)</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" x-model="requires_kir" class="sr-only peer">
+                            <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+                </div>
             </div>
+
+            {{-- Section 3: Spesifikasi Teknis --}}
+            <div class="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Spesifikasi Teknis</h2>
+
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Merk / Brand</label>
+                        <input type="text" x-model.trim="brand" placeholder="Toyota, Hino, Isuzu"
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Model / Tipe</label>
+                        <input type="text" x-model.trim="model" placeholder="Dutro 130 HD, Avanza"
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Tahun</label>
+                        <input type="number" min="1900" max="{{ now()->year + 1 }}" x-model.number="year" placeholder="{{ now()->year }}"
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Nomor Rangka / VIN</label>
+                        <input type="text" x-model.trim="vin" placeholder="Nomor Rangka di STNK / BPKB"
+                            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-mono text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Odometer</label>
+                        <div class="relative flex items-center">
+                            <input type="number" min="0" step="1" x-model.number="odometer" placeholder="0"
+                                class="w-full rounded-lg border border-slate-300 pl-3 pr-9 py-2 text-sm font-semibold text-slate-800 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                            <span class="absolute right-3 text-xs text-slate-400 font-bold uppercase">KM</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Section 4: Data Terjual (Sold) --}}
+            <div x-show="status === 'sold'" x-transition class="rounded-xl border border-rose-200 bg-rose-50/50 p-4 space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-rose-900 uppercase">Pelepasan Armada (Sold)</span>
+                    <span class="text-[11px] text-rose-600">Unit akan diarsipkan</span>
+                </div>
+                <div class="max-w-xs">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Tanggal Terjual <span class="text-rose-500">*</span></label>
+                    <input type="date" x-model="sold_at" max="{{ now()->toDateString() }}"
+                        class="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-800 focus:border-indigo-500 focus:outline-none">
+                    @error('sold_at')
+                        <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
+                    @enderror
+                </div>
+            </div>
+        @endif
+
+        {{-- Bottom Actions --}}
+        <div class="flex items-center justify-between pt-2">
+            <a href="{{ route('vehicles.index') }}" class="text-xs font-semibold text-slate-500 hover:text-slate-800">
+                ← Kembali ke Daftar Armada
+            </a>
+            <button type="submit" wire:loading.attr="disabled"
+                class="rounded-lg bg-indigo-600 px-5 py-2 text-xs font-semibold text-white hover:bg-indigo-700 shadow-sm transition">
+                <span wire:loading wire:target="save" class="mr-1 inline-block h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                Simpan Perubahan
+            </button>
         </div>
     </form>
 </div>
