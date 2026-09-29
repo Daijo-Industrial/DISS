@@ -69,7 +69,7 @@ class Index extends Component
         $this->resetPage();
     }
 
-    public function deleteVehicle(int $id): void
+    public function deleteVehicle(string $id): void
     {
         // Only allow delete for "full feature" users
         if (! $this->fullFeature) {
@@ -93,12 +93,23 @@ class Index extends Component
     #[Url(as: 'cat')]
     public string $category = 'all';
 
+    #[Url(as: 'tab')]
+    public string $operationalTab = 'all'; // 'all', 'in_pool', 'on_trip', 'maintenance'
+
     #[Url(as: 'view')]
-    public string $viewMode = 'grid'; // 'grid' (Gallery Cards) or 'table' (Data Table)
+    public string $viewMode = 'table'; // 'grid' (Gallery Cards) or 'table' (Data Table)
 
     public function updatingCategory()
     {
         $this->resetPage();
+    }
+
+    public function setOperationalTab(string $tab): void
+    {
+        if (in_array($tab, ['all', 'in_pool', 'on_trip', 'maintenance'], true)) {
+            $this->operationalTab = $tab;
+            $this->resetPage();
+        }
     }
 
     public function setViewMode(string $mode): void
@@ -143,6 +154,15 @@ class Index extends Component
             )
             ->when($this->category !== 'all', function ($q) {
                 $q->where('category', $this->category);
+            })
+            ->when($this->operationalTab === 'in_pool', function ($q) {
+                $q->whereDoesntHave('activeCheckOut')->whereNotIn('status', ['sold', 'retired', 'maintenance']);
+            })
+            ->when($this->operationalTab === 'on_trip', function ($q) {
+                $q->whereHas('activeCheckOut');
+            })
+            ->when($this->operationalTab === 'maintenance', function ($q) {
+                $q->where('status', 'maintenance');
             })
             ->when($this->fullFeature && $this->status !== 'all', function ($q) {
                 $q->where('status', VehicleStatus::from($this->status));

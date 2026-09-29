@@ -77,6 +77,10 @@
         searchableMenu: @json($searchableMenu),
         init() {
             this.$watch("sidebarCollapsed", val => localStorage.setItem("sidebarCollapsed", val));
+            // Auto-collapse sidebar on tablet / medium desktop screens (< 1280px)
+            if (window.innerWidth < 1280) {
+                this.sidebarCollapsed = true;
+            }
         },
         getSearchResultCount() {
             if (!this.q) return 0;
@@ -89,6 +93,8 @@
     }'
     @keydown.window.cmd.b.prevent="sidebarCollapsed = !sidebarCollapsed"
     @keydown.window.ctrl.b.prevent="sidebarCollapsed = !sidebarCollapsed"
+    @keydown.window.escape="sidebarOpen = false"
+    @resize.window.debounce.150ms="if (window.innerWidth >= 1024) { sidebarOpen = false; } else { sidebarCollapsed = true; }"
     x-cloak>
     {{-- Top-level Progress Bar for any Livewire transition --}}
     <div wire:loading.delay.shorter class="fixed top-0 left-0 right-0 z-[200] pointer-events-none">
@@ -98,12 +104,12 @@
     </div>
 
 
-    {{-- Mobile sidebar --}}
-    <div class="md:hidden" x-show="sidebarOpen" x-transition.opacity>
+    {{-- Mobile & Tablet sidebar drawer (< lg / < 1024px) --}}
+    <div class="lg:hidden" x-show="sidebarOpen" x-transition.opacity>
         <div class="fixed inset-0 z-[70] bg-slate-950/40 backdrop-blur-sm" @click="sidebarOpen = false"></div>
 
         <aside
-            class="fixed inset-y-0 left-0 z-[80] flex w-72 flex-col bg-white/95 backdrop-blur-xl border-r border-slate-200/50 shadow-2xl"
+            class="fixed inset-y-0 left-0 z-[80] flex w-72 sm:w-80 flex-col bg-white/95 backdrop-blur-xl border-r border-slate-200/50 shadow-2xl"
             x-show="sidebarOpen" x-transition:enter="transition ease-out duration-300 transform"
             x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0"
             x-transition:leave="transition ease-in duration-200 transform" x-transition:leave-start="translate-x-0"
@@ -132,7 +138,7 @@
                 </button>
             </div>
 
-            <div class="flex-1 flex flex-col min-h-0">
+            <div class="flex-1 flex flex-col min-h-0" @click="if ($event.target.closest('a')) sidebarOpen = false">
                 @include('new.layouts.partials.sidebar-nav', ['isMobile' => true])
             </div>
 
@@ -162,9 +168,9 @@
     </div>
 
     <div class="min-h-screen flex">
-        {{-- Desktop sidebar --}}
+        {{-- Desktop sidebar (>= lg / >= 1024px) --}}
         <aside
-            class="hidden md:flex flex-col border-r border-slate-200/60 bg-white/95 backdrop-blur-sm transition-all duration-500 ease-in-out sticky top-0 h-screen z-50 overflow-hidden"
+            class="hidden lg:flex flex-col border-r border-slate-200/60 bg-white/95 backdrop-blur-sm transition-all duration-500 ease-in-out sticky top-0 h-screen z-50 overflow-hidden"
             :class="sidebarCollapsed ? 'w-[5rem]' : 'w-72'">
             {{-- Header --}}
             <div class="flex items-center h-16 border-b border-slate-100"
@@ -204,8 +210,8 @@
 
         {{-- Main area --}}
         <div class="flex-1 flex flex-col min-w-0">
-            {{-- Desktop Minimal Topbar --}}
-            <header class="hidden md:flex h-16 items-center justify-between border-b border-slate-200/60 bg-white/90 backdrop-blur-sm px-6 sticky top-0 z-40 transition-all duration-300">
+            {{-- Desktop Minimal Topbar (>= lg) --}}
+            <header class="hidden lg:flex h-16 items-center justify-between border-b border-slate-200/60 bg-white/90 backdrop-blur-sm px-6 sticky top-0 z-40 transition-all duration-300">
                 {{-- Command Palette Trigger --}}
                 <button type="button" @click="$dispatch('open-cmd-k')"
                     class="flex items-center gap-3 px-3.5 py-2 rounded-xl bg-slate-100/80 hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-all duration-200 group border border-slate-200/60">
@@ -267,8 +273,8 @@
                 </div>
             </header>
 
-            {{-- Mobile Minimal Header --}}
-            <header class="md:hidden h-16 flex items-center justify-between border-b border-slate-200/60 bg-white/90 backdrop-blur-sm px-4 sticky top-0 z-40">
+            {{-- Mobile & Tablet Minimal Header (< lg) --}}
+            <header class="lg:hidden h-16 flex items-center justify-between border-b border-slate-200/60 bg-white/90 backdrop-blur-sm px-4 sm:px-6 sticky top-0 z-40">
                 <div class="flex items-center gap-3">
                     <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 shadow-sm shrink-0">
                         <img class="h-5 w-5 brightness-0 invert" src="{{ asset('image/Asset 1.svg') }}" alt="logo">
@@ -287,7 +293,7 @@
             </header>
 
             {{-- Main content --}}
-            <main class="flex-1 overflow-y-auto px-6 py-8 md:px-10 md:py-10 scroll-smooth custom-scrollbar">
+            <main class="flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8 scroll-smooth custom-scrollbar">
                 <div x-data="{ loaded: false }" x-init="$nextTick(() => { setTimeout(() => loaded = true, 50) })"
                     :class="loaded ? 'opacity-100' : 'opacity-0 translate-y-4'"
                     class="transition-all duration-700 cubic-bezier(0.4, 0, 0.2, 1)">

@@ -15,6 +15,7 @@ The fleet module integrates directly with the existing `Vehicle` system rather t
 
 ### Core Tables
 1. **`vehicles`** (Master armada unit)
+   - Primary Key: **UUID** (`char(36)` string) using `Illuminate\Database\Eloquent\Concerns\HasUuids`.
    - Extended columns:
      - `category`: `in:passenger,commercial_truck,pickup,other` (Note: `motorcycle` is explicitly excluded from company fleet).
      - `fuel_type`: `in:petrol,diesel,ev`.
@@ -22,15 +23,16 @@ The fleet module integrates directly with the existing `Vehicle` system rather t
    - Model: `App\Infrastructure\Persistence\Eloquent\Models\Vehicle` (aliased by `App\Models\Vehicle`).
    - Relationships: `documents()`, `inspections()`, `activeCheckOut()`, `services()`.
    - Accessors: `region_name`, `category_label`, `fuel_type_label`, `display_name`, `is_out_on_trip`.
+   - QR Code Physical Sticker: Encodes strictly the vehicle UUID `(string) $vehicle->id` with High Error Correction.
 
 2. **`vehicle_documents`** (Legalitas KIR, STNK, Asuransi)
-   - Columns: `vehicle_id`, `document_type`, `document_number`, `expired_date`, `document_file_path`, `notes`.
+   - Columns: `vehicle_id` (foreign UUID), `document_type`, `document_number`, `expired_date`, `document_file_path`, `notes`.
    - Types: `kir`, `stnk_annual` (1 tahun), `stnk_five_year` (5 tahun), `insurance`.
    - Model: `App\Models\VehicleDocument`.
    - Statuses: `expired` (sisa $\le 0$ hari), `warning` ($\le 30$ hari), `valid` ($> 30$ hari).
 
 3. **`vehicle_inspections`** (Inspeksi Harian P2H - Pemeliharaan Pemeriksaan Harian)
-   - Columns: `vehicle_id`, `parent_inspection_id`, `inspection_type` (`check_out` | `check_in`), `driver_name`, `odometer`, `fuel_percentage`, `trip_distance`, `checklist_results` (`json`), `severity` (`none` | `minor` | `critical_grounded`), `defect_notes`, `defect_photo_path`, `inspected_by_user_id`.
+   - Columns: `vehicle_id` (foreign UUID), `parent_inspection_id`, `inspection_type` (`check_out` | `check_in`), `driver_name`, `odometer`, `fuel_percentage`, `trip_distance`, `checklist_results` (`json`), `severity` (`none` | `minor` | `critical_grounded`), `defect_notes`, `defect_photo_path`, `inspected_by_user_id`.
    - Model: `App\Models\VehicleInspection`.
 
 ---

@@ -37,12 +37,16 @@ class InspectionForm extends Component
 
     public ?string $trip_purpose = null;
 
-    public function mount(Vehicle $vehicle, string $type = VehicleInspection::TYPE_CHECK_OUT): void
+    public function mount(Vehicle $vehicle, ?string $type = null): void
     {
         $this->vehicle = $vehicle;
-        $this->type = in_array($type, [VehicleInspection::TYPE_CHECK_OUT, VehicleInspection::TYPE_CHECK_IN], true)
-            ? $type
-            : VehicleInspection::TYPE_CHECK_OUT;
+        if ($type && in_array($type, [VehicleInspection::TYPE_CHECK_OUT, VehicleInspection::TYPE_CHECK_IN], true)) {
+            $this->type = $type;
+        } else {
+            $this->type = $vehicle->is_out_on_trip
+                ? VehicleInspection::TYPE_CHECK_IN
+                : VehicleInspection::TYPE_CHECK_OUT;
+        }
 
         // Inisialisasi checklist harian sesuai catatan
         $this->checklist = [
@@ -105,6 +109,31 @@ class InspectionForm extends Component
             $this->driver_name = (string) ($vehicle->driver_name ?: '');
             $this->odometer = (int) $vehicle->odometer;
             $this->fuel_percentage = 100;
+        }
+    }
+
+    public function switchType(string $newType): void
+    {
+        if (in_array($newType, [VehicleInspection::TYPE_CHECK_OUT, VehicleInspection::TYPE_CHECK_IN], true)) {
+            $this->type = $newType;
+            if ($this->type === VehicleInspection::TYPE_CHECK_IN) {
+                $this->parentInspection = $this->vehicle->activeCheckOut;
+                if ($this->parentInspection) {
+                    $this->parent_inspection_id = $this->parentInspection->id;
+                    $this->driver_name = $this->parentInspection->driver_name;
+                    $this->odometer = (int) $this->parentInspection->odometer;
+                    $this->fuel_percentage = (int) $this->parentInspection->fuel_percentage;
+                } else {
+                    $this->odometer = (int) $this->vehicle->odometer;
+                    $this->driver_name = (string) $this->vehicle->driver_name;
+                }
+            } else {
+                $this->parentInspection = null;
+                $this->parent_inspection_id = null;
+                $this->driver_name = (string) ($this->vehicle->driver_name ?: '');
+                $this->odometer = (int) $this->vehicle->odometer;
+                $this->fuel_percentage = 100;
+            }
         }
     }
 

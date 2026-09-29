@@ -1,6 +1,6 @@
-<div class="max-w-5xl mx-auto px-3 md:px-6 py-5 space-y-6">
-    {{-- Breadcrumb & Status Pill --}}
-    <div class="flex items-center justify-between">
+<div class="max-w-5xl mx-auto px-3 sm:px-6 py-5 space-y-6">
+    {{-- Top Navigation & Mode Switcher --}}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <nav class="text-xs text-slate-500" aria-label="Breadcrumb">
             <ol class="flex items-center gap-1.5">
                 <li>
@@ -21,10 +21,17 @@
             </ol>
         </nav>
 
-        <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold {{ $type === 'check_in' ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200' : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' }}">
-            <span class="h-2 w-2 rounded-full {{ $type === 'check_in' ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500' }}"></span>
-            Mode: {{ $type === 'check_in' ? 'Pemeriksaan Kepulangan' : 'Pemeriksaan Sebelum Berangkat' }}
-        </span>
+        {{-- Mobile-first Mode Switcher --}}
+        <div class="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 self-start sm:self-auto">
+            <button type="button" wire:click="switchType('check_out')"
+                class="rounded-lg px-3 py-1.5 text-xs font-bold transition {{ $type === 'check_out' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
+                <i class="bi bi-box-arrow-up-right mr-1"></i> Check-out
+            </button>
+            <button type="button" wire:click="switchType('check_in')"
+                class="rounded-lg px-3 py-1.5 text-xs font-bold transition {{ $type === 'check_in' ? 'bg-white text-amber-700 shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
+                <i class="bi bi-box-arrow-in-down mr-1"></i> Check-in
+            </button>
+        </div>
     </div>
 
     {{-- Interactive Header Cockpit Card --}}
@@ -513,18 +520,18 @@
         @endif
 
         {{-- Sticky Floating Action Bar --}}
-        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex items-center justify-between gap-4">
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
             <a href="{{ route('vehicles.show', $vehicle) }}"
-                class="inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition">
+                class="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition">
                 <i class="bi bi-arrow-left mr-1.5"></i> Batal
             </a>
 
             <button type="submit" wire:loading.attr="disabled"
-                class="inline-flex items-center rounded-xl px-6 py-2.5 text-xs font-extrabold text-white shadow-sm transition active:scale-[0.98]
+                class="w-full sm:w-auto inline-flex items-center justify-center rounded-xl px-6 py-2.5 text-xs font-extrabold text-white shadow-sm transition active:scale-[0.98]
                 {{ $type === 'check_in' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700' }} disabled:opacity-60">
                 <span wire:loading class="mr-2 inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
                 <i class="bi {{ $type === 'check_in' ? 'bi-check2-circle' : 'bi-send-check' }} mr-1.5" wire:loading.remove></i>
-                {{ $type === 'check_in' ? 'Simpan Pemeriksaan & Catat Kepulangan' : 'Simpan Pemeriksaan & Buka Izin Jalan (Check-out)' }}
+                <span>{{ $type === 'check_in' ? 'Simpan & Catat Kepulangan' : 'Simpan & Buka Izin Jalan (Check-out)' }}</span>
             </button>
         </div>
     </form>

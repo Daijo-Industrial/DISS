@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Enums\VehicleStatus;
 use App\Infrastructure\Persistence\Eloquent\Models\Vehicle;
 use App\Livewire\Vehicles\Form as VehicleForm;
+use App\Livewire\Vehicles\Index as VehiclesIndex;
 use App\Livewire\Vehicles\InspectionForm;
+use App\Livewire\Vehicles\Show as VehicleShow;
 use App\Models\User;
 use App\Models\VehicleDocument;
 use App\Notifications\VehicleDocumentExpiryNotification;
@@ -225,5 +227,80 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $this->assertDatabaseHas('vehicles', [
             'plate_number' => 'B 1234 XYZ',
         ]);
+    }
+
+    public function test_vehicle_uuid_primary_key_generated_automatically()
+    {
+        $newVehicle = Vehicle::create([
+            'plate_number' => 'D 5678 GHI',
+            'driver_name' => 'Budi',
+            'category' => 'passenger',
+            'fuel_type' => 'petrol',
+            'status' => VehicleStatus::ACTIVE,
+        ]);
+
+        $this->assertIsString($newVehicle->id);
+        $this->assertEquals(36, strlen($newVehicle->id));
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/', $newVehicle->id);
+    }
+
+    public function test_vehicle_show_generates_qr_code_with_uuid_payload()
+    {
+        Role::firstOrCreate(['name' => 'super-admin']);
+        $this->user->assignRole('super-admin');
+
+        $component = Livewire::test(VehicleShow::class, ['vehicle' => $this->vehicle])
+            ->assertSet('showQrModal', false)
+            ->call('openQrModal')
+            ->assertSet('showQrModal', true);
+
+        $this->assertNotNull($component->get('qrCodeBase64'));
+        $this->assertNotEmpty($component->get('qrCodeBase64'));
+
+        $component->call('closeQrModal')
+            ->assertSet('showQrModal', false);
+    }
+
+    public function test_inspection_form_auto_detects_and_switches_type()
+    {
+        // When vehicle is in pool, default is check_out
+        $this->assertFalse($this->vehicle->is_out_on_trip);
+        $component = Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle]);
+        $component->assertSet('type', 'check_out');
+
+        // Can switch to check_in seamlessly
+        $component->call('switchType', 'check_in')
+            ->assertSet('type', 'check_in');
+
+        // And switch back to check_out
+        $component->call('switchType', 'check_out')
+            ->assertSet('type', 'check_out');
+    }
+
+    public function test_vehicles_index_operational_tabs_filtering()
+    {
+        Role::firstOrCreate(['name' => 'super-admin']);
+        $this->user->assignRole('super-admin');
+
+        $component = Livewire::test(VehiclesIndex::class);
+
+        // Default tab is 'all'
+        $component->assertSet('operationalTab', 'all')
+            ->assertSee($this->vehicle->plate_number);
+
+        // Filter 'in_pool' (our vehicle is not checked out, so it is in pool)
+        $component->call('setOperationalTab', 'in_pool')
+            ->assertSet('operationalTab', 'in_pool')
+            ->assertSee($this->vehicle->plate_number);
+
+        // Filter 'on_trip' (our vehicle is in pool, so on_trip should not show it)
+        $component->call('setOperationalTab', 'on_trip')
+            ->assertSet('operationalTab', 'on_trip')
+            ->assertDontSee($this->vehicle->plate_number);
+
+        // Filter 'maintenance'
+        $component->call('setOperationalTab', 'maintenance')
+            ->assertSet('operationalTab', 'maintenance')
+            ->assertDontSee($this->vehicle->plate_number);
     }
 }

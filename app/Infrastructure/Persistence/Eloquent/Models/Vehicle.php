@@ -6,12 +6,13 @@ use App\Enums\VehicleStatus;
 use App\Models\ServiceRecord;
 use App\Models\VehicleDocument;
 use App\Models\VehicleInspection;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Vehicle extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUuids;
 
     protected $fillable = [
         'plate_number',
@@ -80,7 +81,7 @@ class Vehicle extends Model
 
     public function inspections()
     {
-        return $this->hasMany(VehicleInspection::class)->orderByDesc('created_at');
+        return $this->hasMany(VehicleInspection::class)->orderByDesc('created_at')->orderByDesc('id');
     }
 
     public function activeCheckOut()

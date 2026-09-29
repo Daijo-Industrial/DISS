@@ -6,6 +6,9 @@ use App\Infrastructure\Persistence\Eloquent\Models\Vehicle;
 use App\Models\ServiceRecord;
 use App\Models\VehicleDocument;
 use App\Models\VehicleInspection;
+use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -45,6 +48,11 @@ class Show extends Component
     public string $notes = '';
 
     public $attachment = null;
+
+    // QR Code Sticker modal
+    public bool $showQrModal = false;
+
+    public ?string $qrCodeBase64 = null;
 
     public function mount(Vehicle $vehicle)
     {
@@ -86,6 +94,30 @@ class Show extends Component
     {
         $this->showDocModal = false;
         $this->resetValidation();
+    }
+
+    public function openQrModal(): void
+    {
+        try {
+            $qrCodeObj = new QrCode(
+                data: (string) $this->vehicle->id,
+                errorCorrectionLevel: ErrorCorrectionLevel::High,
+                size: 260,
+                margin: 8
+            );
+            $writer = new PngWriter;
+            $qrCodeResult = $writer->write($qrCodeObj);
+            $this->qrCodeBase64 = base64_encode($qrCodeResult->getString());
+        } catch (\Throwable $e) {
+            $this->qrCodeBase64 = null;
+        }
+
+        $this->showQrModal = true;
+    }
+
+    public function closeQrModal(): void
+    {
+        $this->showQrModal = false;
     }
 
     public function saveDocument(): void
