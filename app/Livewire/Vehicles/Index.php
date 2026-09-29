@@ -5,6 +5,7 @@ namespace App\Livewire\Vehicles;
 use App\Enums\VehicleStatus;
 use App\Infrastructure\Persistence\Eloquent\Models\Vehicle;
 use App\Models\ServiceRecord;
+use App\Models\VehicleDocument;
 use Illuminate\Database\QueryException;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -68,7 +69,7 @@ class Index extends Component
         $this->resetPage();
     }
 
-    public function deleteVehicle(int $id): void
+    public function deleteVehicle(string $id): void
     {
         // Only allow delete for "full feature" users
         if (! $this->fullFeature) {
@@ -89,6 +90,35 @@ class Index extends Component
         $this->resetPage();
     }
 
+    #[Url(as: 'cat')]
+    public string $category = 'all';
+
+    #[Url(as: 'tab')]
+    public string $operationalTab = 'all'; // 'all', 'in_pool', 'on_trip', 'maintenance'
+
+    #[Url(as: 'view')]
+    public string $viewMode = 'table'; // 'grid' (Gallery Cards) or 'table' (Data Table)
+
+    public function updatingCategory()
+    {
+        $this->resetPage();
+    }
+
+    public function setOperationalTab(string $tab): void
+    {
+        if (in_array($tab, ['all', 'in_pool', 'on_trip', 'maintenance'], true)) {
+            $this->operationalTab = $tab;
+            $this->resetPage();
+        }
+    }
+
+    public function setViewMode(string $mode): void
+    {
+        if (in_array($mode, ['grid', 'table'], true)) {
+            $this->viewMode = $mode;
+        }
+    }
+
     public function render()
     {
         // Ensure sort field is allowed for this role
@@ -97,7 +127,9 @@ class Index extends Component
         $sortField = in_array($this->sort, $allowed, true) ? $this->sort : 'plate_number';
         $sortDir = $this->dir === 'desc' ? 'desc' : 'asc';
 
-        $query = Vehicle::query()->select('vehicles.*');
+        $query = Vehicle::query()
+            ->select('vehicles.*')
+            ->with(['activeCheckOut']);
 
         if ($this->fullFeature) {
             $query
@@ -106,6 +138,7 @@ class Index extends Component
                 ->with([
                     'latestService' => fn ($q) => $q->withCount('items'),
                     'latestService.items' => fn ($q) => $q->limit(5),
+                    'documents' => fn ($q) => $q->orderBy('expired_date'),
                 ]);
         }
 
@@ -119,14 +152,49 @@ class Index extends Component
                         ->orWhere('driver_name', 'like', '%' . $this->q . '%');
                 }),
             )
+            ->when($this->category !== 'all', function ($q) {
+                $q->where('category', $this->category);
+            })
+            ->when($this->operationalTab === 'in_pool', function ($q) {
+                $q->whereDoesntHave('activeCheckOut')->whereNotIn('status', ['sold', 'retired', 'maintenance']);
+            })
+            ->when($this->operationalTab === 'on_trip', function ($q) {
+                $q->whereHas('activeCheckOut');
+            })
+            ->when($this->operationalTab === 'maintenance', function ($q) {
+                $q->where('status', 'maintenance');
+            })
             ->when($this->fullFeature && $this->status !== 'all', function ($q) {
                 $q->where('status', VehicleStatus::from($this->status));
             })
             ->orderBy($sortField, $sortDir);
 
+        // KPI Metrics
+        $baseMetricsQuery = Vehicle::query()->whereNull('deleted_at')->whereNotIn('status', ['sold', 'retired']);
+        $totalVehicles = (clone $baseMetricsQuery)->count();
+        $onTripVehicles = (clone $baseMetricsQuery)->whereHas('activeCheckOut')->count();
+        $inPoolVehicles = max(0, $totalVehicles - $onTripVehicles);
+
+        $complianceAlerts = $this->fullFeature
+            ? VehicleDocument::with('vehicle')
+                ->whereHas('vehicle', fn ($q) => $q->whereNull('deleted_at')->whereNotIn('status', ['sold', 'retired']))
+                ->where('expired_date', '<=', now()->addDays(30))
+                ->orderBy('expired_date')
+                ->get()
+            : collect();
+
+        $metrics = [
+            'total' => $totalVehicles,
+            'on_trip' => $onTripVehicles,
+            'in_pool' => $inPoolVehicles,
+            'alerts' => $complianceAlerts->count(),
+        ];
+
         return view('livewire.vehicles.index', [
             'vehicles' => $query->paginate($this->perPage),
             'fullFeature' => $this->fullFeature,
+            'complianceAlerts' => $complianceAlerts,
+            'metrics' => $metrics,
         ]);
     }
 }

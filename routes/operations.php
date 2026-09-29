@@ -47,6 +47,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/vehicle/create', VehiclesForm::class)->name('vehicles.create');
     Route::get('/vehicles/{vehicle}/edit', VehiclesForm::class)->name('vehicles.edit');
 
+    // Vehicle Inspections (P2H)
+    Route::get('/vehicles/{vehicle}/inspect/{type?}', \App\Livewire\Vehicles\InspectionForm::class)->name('vehicles.inspect');
+
     // Vehicle Services
     Route::get('/services/create/{vehicle}', ServiceForm::class)->name('services.create');
     Route::get('/services/{record}/edit', ServiceForm::class)->name('services.edit');

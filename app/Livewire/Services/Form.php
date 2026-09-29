@@ -131,6 +131,14 @@ class Form extends Component
         } else {
             $this->vehicle = $vehicle;
             $this->service_date = now()->toDateString();
+            if (request()->filled('odometer')) {
+                $this->odometer = (int) request('odometer');
+            } elseif ($vehicle) {
+                $this->odometer = (int) $vehicle->odometer;
+            }
+            if (request()->filled('notes')) {
+                $this->notes = request('notes');
+            }
         }
     }
 
