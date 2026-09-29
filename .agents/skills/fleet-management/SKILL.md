@@ -1,11 +1,11 @@
 ---
 name: fleet-management
-description: Domain knowledge, architecture, P2H daily inspection workflow, Indonesian license plate validation rules, legal compliance reminders (KIR & STNK), and Livewire UI conventions for the Fleet Management & Vehicle module in DISS.
+description: Domain knowledge, architecture, P2H daily inspection workflow, Indonesian license plate validation rules, legal compliance reminders (KIR & STNK), QR code physical stickers, responsive view engine, and Livewire UI conventions for the Fleet Management & Vehicle module in DISS.
 ---
 
 # Fleet Management, Vehicle Inspection (P2H) & Legal Compliance
 
-This skill documents domain architecture, database schemas, P2H inspection workflows, Indonesian license plate standards, compliance reminders, and UI conventions for the Fleet Management module in Daijo Industrial System (DISS).
+This skill documents domain architecture, database schemas, P2H inspection workflows, Indonesian license plate standards, compliance reminders, QR code physical sticker specifications, and UI conventions for the Fleet Management module in Daijo Industrial System (DISS).
 
 ---
 
@@ -13,25 +13,37 @@ This skill documents domain architecture, database schemas, P2H inspection workf
 
 The fleet module integrates directly with the existing `Vehicle` system rather than duplicating tables:
 
-### Core Tables
+### Core Tables & Models
+
 1. **`vehicles`** (Master armada unit)
    - Primary Key: **UUID** (`char(36)` string) using `Illuminate\Database\Eloquent\Concerns\HasUuids`.
+   - Migration: `2026_09_29_150732_change_vehicles_id_to_uuid.php`.
    - Extended columns:
      - `category`: `in:passenger,commercial_truck,pickup,other` (Note: `motorcycle` is explicitly excluded from company fleet).
      - `fuel_type`: `in:petrol,diesel,ev`.
      - `requires_kir`: `boolean` (Default: `false`, auto-enabled for `commercial_truck`).
    - Model: `App\Infrastructure\Persistence\Eloquent\Models\Vehicle` (aliased by `App\Models\Vehicle`).
-   - Relationships: `documents()`, `inspections()`, `activeCheckOut()`, `services()`.
+   - Relationships:
+     - `documents()`: HasMany `VehicleDocument`.
+     - `inspections()`: HasMany `VehicleInspection`, sorted deterministically by `orderByDesc('created_at')->orderByDesc('id')`.
+     - `activeCheckOut()`: HasOne `VehicleInspection` where `inspection_type = 'check_out'` and has no corresponding `check_in`.
+     - `services()`: HasMany `ServiceRecord`.
+     - `latestService()`: HasOne `ServiceRecord` latest by `service_date`.
    - Accessors: `region_name`, `category_label`, `fuel_type_label`, `display_name`, `is_out_on_trip`.
-   - QR Code Physical Sticker: Encodes strictly the vehicle UUID `(string) $vehicle->id` with High Error Correction.
 
-2. **`vehicle_documents`** (Legalitas KIR, STNK, Asuransi)
+2. **Foreign Key Tables (All Converted to UUID)**:
+   - `delivery_notes.vehicle_id`: UUID (`char(36)`).
+   - `service_records.vehicle_id`: UUID (`char(36)`).
+   - `vehicle_documents.vehicle_id`: UUID (`char(36)`).
+   - `vehicle_inspections.vehicle_id`: UUID (`char(36)`).
+
+3. **`vehicle_documents`** (Legalitas KIR, STNK, Asuransi)
    - Columns: `vehicle_id` (foreign UUID), `document_type`, `document_number`, `expired_date`, `document_file_path`, `notes`.
    - Types: `kir`, `stnk_annual` (1 tahun), `stnk_five_year` (5 tahun), `insurance`.
    - Model: `App\Models\VehicleDocument`.
    - Statuses: `expired` (sisa $\le 0$ hari), `warning` ($\le 30$ hari), `valid` ($> 30$ hari).
 
-3. **`vehicle_inspections`** (Inspeksi Harian P2H - Pemeliharaan Pemeriksaan Harian)
+4. **`vehicle_inspections`** (Inspeksi Harian P2H - Pemeliharaan Pemeriksaan Harian)
    - Columns: `vehicle_id` (foreign UUID), `parent_inspection_id`, `inspection_type` (`check_out` | `check_in`), `driver_name`, `odometer`, `fuel_percentage`, `trip_distance`, `checklist_results` (`json`), `severity` (`none` | `minor` | `critical_grounded`), `defect_notes`, `defect_photo_path`, `inspected_by_user_id`.
    - Model: `App\Models\VehicleInspection`.
 
@@ -71,23 +83,38 @@ All plate formatting, regex patterns, and region mappings are centralized in **`
 
 ---
 
-## 4. P2H Daily Inspection Workflow (Two-Phase P2H)
+## 4. Physical QR Code Sticker Standard
+
+Driver scans the physical sticker attached to the vehicle dashboard / steering wheel to open the inspection form:
+
+- **Payload Rule**: The QR code MUST contain **strictly the vehicle UUID** (`(string) $vehicle->id`), not the full URL or metadata.
+- **Generation**: Powered by `endroid/qr-code` in `App\Livewire\Vehicles\Show` (`openQrModal()`), output as Base64 SVG or PNG with High Error Correction (`ErrorCorrectionLevel::High`).
+- **Print Optimization (`@media print`)**:
+  - Isolated sticker styling that hides the rest of the web page during `window.print()`.
+  - Crisp high-contrast border with vehicle plate number, model, and UUID printed underneath for physical verification.
+
+---
+
+## 5. P2H Daily Inspection Workflow (Two-Phase P2H)
 
 Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/vehicles/inspection-form.blade.php`):
 
-1. **Check-out (Sebelum Berangkat)**:
+1. **Auto-Detect & Switching**:
+   - On load, automatically detects if the vehicle is currently on a trip (`$vehicle->is_out_on_trip`). If out, defaults to `check_in`; otherwise `check_out`.
+   - One-tap switch buttons (`switchType('check_out')` / `switchType('check_in')`) allow instant mode changes without re-entering form data.
+2. **Check-out (Sebelum Berangkat)**:
    - Mencatat Odometer awal, BBM %, dan 7 titik checklist: bodi, ban, km/odometer, isi mobil/kabin, baterai/aki & bensin, lampu rem, lampu depan & sein.
-2. **Check-in (Kepulangan)**:
+3. **Check-in (Kepulangan)**:
    - Mencatat Odometer akhir & BBM sisa.
    - Otomatis menghitung jarak tempuh (`trip_distance = odometer_kembali - odometer_berangkat`) dan menautkan ke `parent_inspection_id`.
-3. **Critical Defect Grounding**:
+4. **Critical Defect Grounding**:
    - Jika terdapat temuan `critical_grounded`, status kendaraan otomatis dikunci menjadi `VehicleStatus::MAINTENANCE`, mencegah keberangkatan baru sampai diservis.
-4. **Handover ke Bengkel**:
+5. **Handover ke Bengkel**:
    - Temuan P2H dapat langsung dialihkan ke form servis (`App\Livewire\Services\Form`) dengan pre-fill otomatis via query params `?vehicle_id=X&defect=Y`.
 
 ---
 
-## 5. Automated Expiry Reminders (`fleet:check-reminders`)
+## 6. Automated Expiry Reminders (`fleet:check-reminders`)
 
 - **Command**: `php artisan fleet:check-reminders` (dijadwalkan di `app/Console/Kernel.php` setiap hari jam `07:30`).
 - **Ambang Batas**: H-30, H-14, H-7, dan saat kadaluarsa (`expired_date <= today`).
@@ -96,30 +123,47 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
 
 ---
 
-## 6. UI Conventions (Ponytail Standard & KISS)
+## 7. UI Conventions, Responsiveness & Field Ergonomics (Ponytail & KISS)
 
-- **Layout**: Clean enterprise minimalist, Single-Column Studio layout without visual noise or walls of text.
-- **Plate Input**: Indonesian plate chassis with monospace bold typography, `RI` emblem, and compact region pill (`DKI Jakarta (B)`).
-- **Category & Fuel Controls**: Visual icon cards for category and crisp segmented pill buttons for fuel (`Bensin`, `Solar`, `EV`).
-- **Access Control**:
-  - `$fullFeature = $user->hasRole('super-admin') || ($user->department?->name === 'PERSONALIA');`
-  - Non-fullFeature users are hard-guarded to only edit `driver_name` and `plate_number`.
-- **Livewire 3 SPA Transitions**:
-  - Always use `$this->redirectRoute(..., navigate: true)` to avoid full page reloads.
+### Responsive View Engine (`resources/views/livewire/vehicles/index.blade.php`)
+- **Default for Tablets & Mobile (`< 1280px` / iPad portrait 768px-820px, landscape 1024px-1180px, Android tabs)**:
+  - Defaults to **Grid View (Galeri Kartu)**.
+  - Large thumb-friendly 44px primary action buttons (`P2H Check-out` / `Check-in Pulang ke Pool`).
+  - Active trip banner displaying driver name, purpose, and departure timestamp.
+- **Default for Laptop Screens (`>= 1280px`)**:
+  - Defaults to high-density **Table View (Data Table)**.
+- **Alpine.js Instant Switcher**:
+  - Both views are rendered in the DOM; switching is instantaneous (**0ms**) without server roundtrip.
+  - User selection is saved to `localStorage('diss_vehicle_view_mode')` and cleanly mirrored to URL `?view=grid` or `?view=table` using `history.replaceState`.
+  - Resizing or device rotation auto-adapts unless the user manually chose a view mode.
+
+### Cockpit View (`resources/views/livewire/vehicles/show.blade.php`)
+- **Indonesian TNKB Plate Chassis**: Monospace bold plate badge with metallic bolt styling.
+- **3 Punchy Gauges**: Minimalist KPI summary (Odometer, Status Pajak STNK 1th & 5th, Status KIR).
+- **Unified Action Buttons**: Direct modal triggers for QR code printing, service records, and editing.
+
+### Layout Navigation Drawer (`resources/views/new/layouts/app.blade.php`)
+- **Breakpoint**: Drawer active on `< 1024px` (`lg:hidden`), providing full-width screen real estate for tablets in portrait mode.
+- **Auto-Close Behavior**: Closes on link click (`@click="if ($event.target.closest('a')) sidebarOpen = false"`), backdrop click, or Escape key.
+- **Thumb Ergonomics**: Mobile topbar hamburger button is aligned on the **right** for comfortable one-handed thumb reach on tall screens (iPhone XR).
+
+### Access Control
+- `$fullFeature = $user->hasRole('super-admin') || ($user->department?->name === 'PERSONALIA');`
+- Non-fullFeature users are hard-guarded to only edit operational fields (`driver_name` and `plate_number`).
 
 ---
 
-## 7. Development & Testing Runbooks
+## 8. Development & Testing Runbooks
 
-All tests run inside the Docker Sail container (`diss-laravel.test-1`):
+All tests and tools run inside the Docker Sail container (`diss-laravel.test-1`):
 
 ```bash
-# Run fleet inspection and compliance test suite
+# Run fleet inspection and compliance test suite (11 tests, 60 assertions)
 docker exec diss-laravel.test-1 php artisan test --filter=VehicleInspectionAndComplianceTest
 
 # Check document reminders manually
 docker exec diss-laravel.test-1 php artisan fleet:check-reminders
 
-# Format code with Laravel Pint (target specific files)
-docker exec diss-laravel.test-1 ./vendor/bin/pint config/fleet.php app/Livewire/Vehicles/Form.php resources/views/livewire/vehicles/form.blade.php
+# Format code with Laravel Pint (ALWAYS target specific files to prevent timeout)
+docker exec diss-laravel.test-1 ./vendor/bin/pint config/fleet.php app/Livewire/Vehicles/Index.php app/Livewire/Vehicles/Show.php app/Livewire/Vehicles/InspectionForm.php
 ```

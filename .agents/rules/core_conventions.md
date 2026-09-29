@@ -12,4 +12,4 @@
   - Favor native PHP / Laravel built-ins (e.g., native stream filters for large file parsing).
   - Tag intentional simplifications with `// ponytail:`.
 - **Modular Skills**:
-  - Deep domain runbooks are kept in `.agents/skills/<module>/SKILL.md` (e.g. `supplier-evaluation`) to preserve token economy.
+  - Deep domain runbooks are kept in `.agents/skills/<module>/SKILL.md` (e.g. `fleet-management`, `supplier-evaluation`, `sap-sync-forecast`) to preserve token economy.
