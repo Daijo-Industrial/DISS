@@ -12,7 +12,9 @@ use App\Models\User;
 use App\Models\VehicleDocument;
 use App\Notifications\VehicleDocumentExpiryNotification;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -99,7 +101,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->set('trip_purpose', 'Kirim komponen ke pabrik Cikarang')
             ->set('severity', 'none')
             ->call('save')
-            ->assertRedirect(route('vehicles.show', $this->vehicle));
+            ->assertRedirect(route('vehicles.show', ['vehicle' => $this->vehicle, 'tab' => 'inspections']));
 
         $this->vehicle->refresh();
         $this->assertEquals(50100, $this->vehicle->odometer);
@@ -115,7 +117,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->set('fuel_percentage', 75)
             ->set('severity', 'none')
             ->call('save')
-            ->assertRedirect(route('vehicles.show', $this->vehicle));
+            ->assertRedirect(route('vehicles.show', ['vehicle' => $this->vehicle, 'tab' => 'inspections']));
 
         $this->vehicle->refresh();
         $this->assertEquals(50250, $this->vehicle->odometer);
@@ -139,10 +141,51 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->set('severity', 'critical_grounded')
             ->set('defect_notes', 'Lampu rem mati total, kabel putus')
             ->call('save')
-            ->assertRedirect(route('vehicles.show', $this->vehicle));
+            ->assertRedirect(route('vehicles.show', ['vehicle' => $this->vehicle, 'tab' => 'inspections']));
 
         $this->vehicle->refresh();
         $this->assertEquals(VehicleStatus::MAINTENANCE, $this->vehicle->status);
+    }
+
+    public function test_p2h_inspection_supports_photos_per_point_and_optional_defect_notes()
+    {
+        Storage::fake('public');
+
+        $photo1 = UploadedFile::fake()->image('headlight_crack.jpg');
+        $photo2 = UploadedFile::fake()->image('headlight_close.jpg');
+        $photoTire = UploadedFile::fake()->image('tire_tread.jpg');
+
+        Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
+            ->set('driver_name', 'Ahmad Supir')
+            ->set('odometer', 50400)
+            ->set('fuel_percentage', 90)
+            ->set('checklist.headlights.status', 'issue')
+            ->set('checklist.headlights.notes', 'Mika lampu depan retak halus')
+            ->set('point_photos.headlights', [$photo1, $photo2])
+            ->set('checklist.tires.notes', 'Tekanan angin 35 psi')
+            ->set('point_photos.tires', [$photoTire])
+            ->set('severity', 'minor')
+            ->set('defect_notes', null) // Uraian temuan is optional even when severity is minor
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('vehicles.show', ['vehicle' => $this->vehicle, 'tab' => 'inspections']));
+
+        $inspection = $this->vehicle->inspections()->latest()->first();
+        $this->assertNotNull($inspection);
+        $this->assertEquals('minor', $inspection->severity);
+        $this->assertNull($inspection->defect_notes);
+
+        $checklistResults = $inspection->checklist_results;
+        $this->assertEquals('issue', $checklistResults['headlights']['status']);
+        $this->assertEquals('Mika lampu depan retak halus', $checklistResults['headlights']['notes']);
+        $this->assertCount(2, $checklistResults['headlights']['photos']);
+        $this->assertEquals('Tekanan angin 35 psi', $checklistResults['tires']['notes']);
+        $this->assertCount(1, $checklistResults['tires']['photos']);
+
+        // Check storage has stored the files
+        Storage::disk('public')->assertExists($checklistResults['headlights']['photos'][0]);
+        Storage::disk('public')->assertExists($checklistResults['headlights']['photos'][1]);
+        Storage::disk('public')->assertExists($checklistResults['tires']['photos'][0]);
     }
 
     public function test_check_reminders_command_notifies_recipients()

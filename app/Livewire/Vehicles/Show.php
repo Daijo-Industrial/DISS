@@ -10,6 +10,7 @@ use Endroid\QrCode\ErrorCorrectionLevel;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Support\Facades\DB;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
@@ -20,6 +21,7 @@ class Show extends Component
 
     public Vehicle $vehicle;
 
+    #[Url]
     public string $tab = 'services'; // 'services', 'inspections', 'documents'
 
     // Service filters

@@ -53,12 +53,6 @@
                             </span>
                         </div>
 
-                        @if ($vehicle->region_name)
-                            <span class="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                                {{ $vehicle->region_name }}
-                            </span>
-                        @endif
-
                         <span class="rounded-lg bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700">
                             {{ $vehicle->category_label }}
                         </span>
@@ -251,7 +245,7 @@
                 <div class="space-y-3">
                     @foreach ($inspections as $ins)
                         @php $isOutTrip = $ins->inspection_type === 'check_out'; @endphp
-                        <div class="rounded-2xl border p-4 transition
+                        <div x-data="{ showDetails: false }" class="rounded-2xl border p-4 transition
                             {{ $ins->severity === 'critical_grounded' ? 'border-rose-200 bg-rose-50/30' : ($ins->severity === 'minor' ? 'border-amber-200 bg-amber-50/20' : 'border-slate-200/80 bg-white hover:border-slate-300') }}">
                             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                 {{-- Left Info --}}
@@ -314,6 +308,91 @@
                                     @endif
                                 </div>
                             @endif
+
+                            {{-- Expandable Checklist Results & Photos --}}
+                            @php
+                                $chkResults = is_array($ins->checklist_results) ? $ins->checklist_results : json_decode($ins->checklist_results, true);
+                                $totalPhotos = 0;
+                                if (!empty($chkResults)) {
+                                    foreach ($chkResults as $r) {
+                                        if (!empty($r['photos'])) {
+                                            $totalPhotos += count($r['photos']);
+                                        }
+                                    }
+                                }
+                                if (!empty($ins->defect_photos)) {
+                                    $totalPhotos += count($ins->defect_photos);
+                                }
+                            @endphp
+
+                            <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
+                                <button type="button" @click="showDetails = !showDetails"
+                                    class="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-500 hover:text-indigo-600 transition">
+                                    <i class="bi bi-list-check text-indigo-500"></i>
+                                    <span x-text="showDetails ? 'Tutup Rincian Checklist' : 'Lihat Rincian Checklist & Foto'"></span>
+                                    @if ($totalPhotos > 0)
+                                        <span class="rounded-full bg-indigo-50 text-indigo-700 px-1.5 py-0.2 text-[10px] font-bold border border-indigo-200">
+                                            <i class="bi bi-camera"></i> {{ $totalPhotos }}
+                                        </span>
+                                    @endif
+                                </button>
+
+                                <span class="text-[10px] text-slate-400 font-mono">
+                                    P2H ID #{{ $ins->id }}
+                                </span>
+                            </div>
+
+                            <div x-show="showDetails" x-cloak class="mt-3 pt-3 border-t border-dashed border-slate-200 space-y-3">
+                                @if (!empty($chkResults))
+                                    <div class="grid gap-2 sm:grid-cols-2">
+                                        @foreach ($chkResults as $itemKey => $item)
+                                            @php
+                                                $statusOk = ($item['status'] ?? 'ok') === 'ok';
+                                                $pointPhotos = $item['photos'] ?? [];
+                                            @endphp
+                                            <div class="rounded-xl border p-2.5 text-xs {{ $statusOk ? 'border-slate-100 bg-slate-50/70' : 'border-rose-200 bg-rose-50/50' }}">
+                                                <div class="flex items-center justify-between gap-1">
+                                                    <span class="font-bold {{ $statusOk ? 'text-slate-800' : 'text-rose-900' }}">
+                                                        {{ $item['label'] ?? ucfirst($itemKey) }}
+                                                    </span>
+                                                    <span class="rounded-md px-1.5 py-0.2 text-[10px] font-bold {{ $statusOk ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800' }}">
+                                                        {{ $statusOk ? 'OK' : 'Ada Isu' }}
+                                                    </span>
+                                                </div>
+
+                                                @if (!empty($item['notes']))
+                                                    <p class="mt-1 text-[11px] text-slate-600">
+                                                        <span class="font-semibold text-slate-500">Remark:</span> {{ $item['notes'] }}
+                                                    </p>
+                                                @endif
+
+                                                @if (!empty($pointPhotos))
+                                                    <div class="mt-2 flex flex-wrap gap-1.5">
+                                                        @foreach ($pointPhotos as $pPath)
+                                                            <a href="{{ asset('storage/' . $pPath) }}" target="_blank" class="group relative block" title="Buka foto ukuran penuh">
+                                                                <img src="{{ asset('storage/' . $pPath) }}" class="h-10 w-10 object-cover rounded-md border border-slate-200 group-hover:opacity-80 transition shadow-2xs">
+                                                            </a>
+                                                        @endforeach
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+
+                                @if (!empty($ins->defect_photos))
+                                    <div class="pt-2 border-t border-slate-100">
+                                        <span class="text-[11px] font-bold text-slate-700 block mb-1">Foto Bukti Kerusakan Tambahan:</span>
+                                        <div class="flex flex-wrap gap-2">
+                                            @foreach ($ins->defect_photos as $dPhoto)
+                                                <a href="{{ asset('storage/' . $dPhoto) }}" target="_blank" class="group relative block" title="Buka foto ukuran penuh">
+                                                    <img src="{{ asset('storage/' . $dPhoto) }}" class="h-12 w-12 object-cover rounded-lg border border-slate-200 group-hover:opacity-80 transition shadow-xs">
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
                         </div>
                     @endforeach
                 </div>
