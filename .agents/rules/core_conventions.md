@@ -13,3 +13,7 @@
   - Tag intentional simplifications with `// ponytail:`.
 - **Modular Skills**:
   - Deep domain runbooks are kept in `.agents/skills/<module>/SKILL.md` (e.g. `fleet-management`, `supplier-evaluation`, `sap-sync-forecast`) to preserve token economy.
+- **Development Invariants**:
+  - **No Production Frontend Builds**: Do NOT run `npm run build` in the development environment; Vite HMR is running actively.
+  - **Targeted Code Styling**: NEVER run `vendor/bin/pint` without specific file arguments. The legacy repository contains hundreds of unformatted files and will time out; always pass specific modified file paths.
+

@@ -147,6 +147,25 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
   - User selection is saved to `localStorage('diss_vehicle_view_mode')` and cleanly mirrored to URL `?view=grid` or `?view=table` using `history.replaceState`.
   - Resizing or device rotation auto-adapts unless the user manually chose a view mode.
 
+### Apple-Inspired Minimalist UI Standard (`resources/views/livewire/vehicles/index.blade.php`)
+- **Clean Typography Header**:
+  - Direct title with an inline muted count pill (e.g., `12 unit`).
+  - Omit verbose multi-line subtitles and redundant category badges above the title.
+  - Action buttons styled as sleek pill buttons (`[Pindai QR]` subtle secondary, `[+ Tambah]` dark primary).
+- **Segmented Status Pill Control**:
+  - Replaces heavy, space-consuming KPI cards with a horizontal Apple-style segmented pill control track (`Semua`, `Di Pool`, `On-Trip`, `Perawatan`).
+  - Active tab uses a crisp white card style with subtle shadow; inactive tabs use muted text.
+  - Features color-coded status dots (Emerald for Pool, Amber for On-Trip, Rose for Maintenance) and count badges.
+- **Compact Notification Strip**:
+  - Compliance expiry warnings (KIR/STNK) are displayed as a single-line notification strip with an alert icon and direct drill-down link (`Lihat Dokumen →`), removing multi-badge tag clutter.
+- **Clickable Card Touch Targets & Condensed Metadata**:
+  - The entire card container is an interactive touch target navigating directly to the Cockpit (`route('vehicles.show', $v)`).
+  - Metadata is condensed into a single clean line: `👤 Driver • Odometer km` with subtle dot indicators for STNK and KIR.
+  - Secondary buttons ("Detail Cockpit", "Servis") are eliminated from the card face.
+  - Only a single primary action button sits at the footer (`[ Check-in (Pulang ke Pool) → ]` or `[ P2H Check-out → ]`).
+- **Data Table Row Navigation**:
+  - Entire table row is clickable directly to Cockpit; the action column only contains the quick P2H action button.
+
 ### Cockpit View (`resources/views/livewire/vehicles/show.blade.php`)
 - **Indonesian TNKB Plate Chassis**: Monospace bold plate badge with metallic bolt styling.
 - **3 Punchy Gauges**: Minimalist KPI summary (Odometer, Status Pajak STNK 1th & 5th, Status KIR).
@@ -175,7 +194,7 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
 All tests and tools run inside the Docker Sail container (`diss-laravel.test-1`):
 
 ```bash
-# Run fleet inspection and compliance test suite (11 tests, 60 assertions)
+# Run fleet inspection and compliance test suite (20 tests, 129 assertions)
 docker exec diss-laravel.test-1 php artisan test --filter=VehicleInspectionAndComplianceTest
 
 # Check document reminders manually
@@ -184,3 +203,7 @@ docker exec diss-laravel.test-1 php artisan fleet:check-reminders
 # Format code with Laravel Pint (ALWAYS target specific files to prevent timeout)
 docker exec diss-laravel.test-1 ./vendor/bin/pint config/fleet.php app/Livewire/Vehicles/Index.php app/Livewire/Vehicles/Show.php app/Livewire/Vehicles/InspectionForm.php
 ```
+
+> [!WARNING]
+> **Vite HMR Active**: NEVER run `npm run build` or production frontend compilation commands in the development environment. Vite HMR is running live and serving assets over LAN/IP.
+
