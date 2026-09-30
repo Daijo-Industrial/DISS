@@ -78,6 +78,37 @@ class Show extends Component
         if (request()->has('tab') && in_array(request('tab'), ['services', 'inspections', 'documents'], true)) {
             $this->tab = request('tab');
         }
+
+        $this->generateQrCode();
+    }
+
+    public function generateQrCode(): ?string
+    {
+        if ($this->qrCodeBase64) {
+            return $this->qrCodeBase64;
+        }
+
+        try {
+            $qrCodeObj = new QrCode(
+                data: (string) $this->vehicle->id,
+                errorCorrectionLevel: ErrorCorrectionLevel::High,
+                size: 260,
+                margin: 8
+            );
+            $writer = new PngWriter;
+            $qrCodeResult = $writer->write($qrCodeObj);
+            $this->qrCodeBase64 = base64_encode($qrCodeResult->getString());
+        } catch (\Throwable $e) {
+            $this->qrCodeBase64 = null;
+        }
+
+        return $this->qrCodeBase64;
+    }
+
+    public function printQrSticker(): void
+    {
+        $qr = $this->generateQrCode();
+        $this->dispatch('print-qr-sticker', qrBase64: $qr);
     }
 
     public function setTab(string $tab): void
@@ -108,20 +139,7 @@ class Show extends Component
 
     public function openQrModal(): void
     {
-        try {
-            $qrCodeObj = new QrCode(
-                data: (string) $this->vehicle->id,
-                errorCorrectionLevel: ErrorCorrectionLevel::High,
-                size: 260,
-                margin: 8
-            );
-            $writer = new PngWriter;
-            $qrCodeResult = $writer->write($qrCodeObj);
-            $this->qrCodeBase64 = base64_encode($qrCodeResult->getString());
-        } catch (\Throwable $e) {
-            $this->qrCodeBase64 = null;
-        }
-
+        $this->generateQrCode();
         $this->showQrModal = true;
     }
 
