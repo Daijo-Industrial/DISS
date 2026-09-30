@@ -39,11 +39,11 @@ class VehicleDocument extends Model
     public static function typeLabels(): array
     {
         return [
-            self::TYPE_KIR => 'Uji Berkala KIR',
-            self::TYPE_STNK_ANNUAL => 'Pajak STNK Tahunan (1 Tahun)',
-            self::TYPE_STNK_FIVE_YEAR => 'STNK 5 Tahunan (Ganti Plat)',
-            self::TYPE_INSURANCE => 'Asuransi Kendaraan',
-            self::TYPE_OTHER => 'Dokumen Lainnya',
+            self::TYPE_KIR => __('fleet.documents.types.kir'),
+            self::TYPE_STNK_ANNUAL => __('fleet.documents.types.stnk_annual'),
+            self::TYPE_STNK_FIVE_YEAR => __('fleet.documents.types.stnk_five_year'),
+            self::TYPE_INSURANCE => __('fleet.documents.types.insurance'),
+            self::TYPE_OTHER => __('fleet.documents.types.other'),
         ];
     }
 
@@ -93,10 +93,10 @@ class VehicleDocument extends Model
         $days = $this->days_remaining;
 
         return match ($this->status) {
-            'expired' => sprintf('Expired (%d hari lalu)', abs($days)),
-            'critical' => sprintf('Mendesak (%d hari lagi)', $days),
-            'warning' => sprintf('Perlu Diperpanjang (%d hari)', $days),
-            default => sprintf('Berlaku (%d hari lagi)', $days),
+            'expired' => __('fleet.documents.statuses.expired', ['days' => abs($days)]),
+            'critical' => __('fleet.documents.statuses.critical', ['days' => $days]),
+            'warning' => __('fleet.documents.statuses.warning', ['days' => $days]),
+            default => __('fleet.documents.statuses.valid', ['days' => $days]),
         };
     }
 

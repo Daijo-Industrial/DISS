@@ -33,17 +33,33 @@ Fancybox.bind('[data-fancybox]', {
   Hash: false,
 });
 
-window.addEventListener('open-lightbox', (event) => {
+if (window.__fancyboxLightboxHandler) {
+  window.removeEventListener('open-lightbox', window.__fancyboxLightboxHandler);
+}
+
+window.__fancyboxLightboxHandler = (event) => {
   if (window.Fancybox && event.detail?.src) {
+    const activeInstance = window.Fancybox.getInstance();
+    if (activeInstance) {
+      const currentSlide = activeInstance.getSlide();
+      if (currentSlide && currentSlide.src === event.detail.src) {
+        return;
+      }
+      window.Fancybox.close();
+    }
+
     window.Fancybox.show([
       {
         src: event.detail.src,
-        caption: (event.detail.title || '') + (event.detail.subtitle ? ` — ${event.detail.subtitle}` : ''),
+        caption:
+          (event.detail.title || '') + (event.detail.subtitle ? ` — ${event.detail.subtitle}` : ''),
         type: 'image',
       },
     ]);
   }
-});
+};
+
+window.addEventListener('open-lightbox', window.__fancyboxLightboxHandler);
 
 document.addEventListener('livewire:navigated', () => {
   window.Fancybox?.unbind('[data-fancybox]');
@@ -62,15 +78,27 @@ window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
 const defaultWsPort = window.location.port
   ? parseInt(window.location.port)
-  : (window.location.protocol === 'https:' ? 443 : 80);
+  : window.location.protocol === 'https:'
+    ? 443
+    : 80;
 
 window.Echo = new Echo({
   broadcaster: 'reverb',
   key: import.meta.env.VITE_REVERB_APP_KEY ?? import.meta.env.VITE_PUSHER_APP_KEY,
-  wsHost: import.meta.env.VITE_REVERB_HOST || import.meta.env.VITE_PUSHER_HOST || window.location.hostname,
-  wsPort: import.meta.env.VITE_REVERB_PORT ? parseInt(import.meta.env.VITE_REVERB_PORT) : defaultWsPort,
-  wssPort: import.meta.env.VITE_REVERB_PORT ? parseInt(import.meta.env.VITE_REVERB_PORT) : defaultWsPort,
-  forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? import.meta.env.VITE_PUSHER_SCHEME ?? window.location.protocol.replace(':', '')) === 'https',
+  wsHost:
+    import.meta.env.VITE_REVERB_HOST ||
+    import.meta.env.VITE_PUSHER_HOST ||
+    window.location.hostname,
+  wsPort: import.meta.env.VITE_REVERB_PORT
+    ? parseInt(import.meta.env.VITE_REVERB_PORT)
+    : defaultWsPort,
+  wssPort: import.meta.env.VITE_REVERB_PORT
+    ? parseInt(import.meta.env.VITE_REVERB_PORT)
+    : defaultWsPort,
+  forceTLS:
+    (import.meta.env.VITE_REVERB_SCHEME ??
+      import.meta.env.VITE_PUSHER_SCHEME ??
+      window.location.protocol.replace(':', '')) === 'https',
   enabledTransports: ['ws', 'wss'],
   disabledStats: true,
 });
@@ -122,4 +150,3 @@ if (window.Echo?.connector?.pusher) {
 }
 
 // Pusher.logToConsole = true;
-

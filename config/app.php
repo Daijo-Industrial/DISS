@@ -1,7 +1,15 @@
 <?php
 
+use App\Domain\Expenses\Providers\ExpensesServiceProvider;
+use App\Providers\AppServiceProvider;
+use App\Providers\AuthServiceProvider;
+use App\Providers\BroadcastServiceProvider;
+use App\Providers\EventServiceProvider;
+use App\Providers\RepositoryServiceProvider;
+use App\Providers\RouteServiceProvider;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\ServiceProvider;
+use Yajra\DataTables\DataTablesServiceProvider;
 
 return [
     /*
@@ -82,7 +90,7 @@ return [
     |
     */
 
-    'locale' => 'en',
+    'locale' => env('APP_LOCALE', 'id'),
 
     /*
     |--------------------------------------------------------------------------
@@ -95,7 +103,29 @@ return [
     |
     */
 
-    'fallback_locale' => 'en',
+    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'id'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Supported Application Locales
+    |--------------------------------------------------------------------------
+    |
+    | Available languages for user selection and language switcher.
+    |
+    */
+
+    'supported_locales' => [
+        'id' => [
+            'name' => 'Bahasa Indonesia',
+            'short' => 'ID',
+            'flag' => '🇮🇩',
+        ],
+        'en' => [
+            'name' => 'English',
+            'short' => 'EN',
+            'flag' => '🇬🇧',
+        ],
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -163,14 +193,14 @@ return [
             /*
              * Application Service Providers...
              */
-            App\Providers\AppServiceProvider::class,
-            App\Providers\AuthServiceProvider::class,
-            App\Providers\BroadcastServiceProvider::class,
-            App\Providers\EventServiceProvider::class,
-            App\Providers\RouteServiceProvider::class,
-            App\Providers\RepositoryServiceProvider::class,
-            Yajra\DataTables\DataTablesServiceProvider::class,
-            App\Domain\Expenses\Providers\ExpensesServiceProvider::class,
+            AppServiceProvider::class,
+            AuthServiceProvider::class,
+            BroadcastServiceProvider::class,
+            EventServiceProvider::class,
+            RouteServiceProvider::class,
+            RepositoryServiceProvider::class,
+            DataTablesServiceProvider::class,
+            ExpensesServiceProvider::class,
         ])
         ->toArray(),
 

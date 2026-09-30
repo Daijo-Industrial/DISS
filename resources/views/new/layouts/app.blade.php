@@ -151,6 +151,8 @@
                         <p class="text-[13px] font-bold text-slate-800 truncate leading-none pt-[1px]">{{ $user->name ?? 'User' }}</p>
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1 leading-none">{{ $user->email ?? '' }}</p>
                     </div>
+                <div class="mb-3">
+                    <x-locale-switcher :mobile="true" />
                 </div>
                 <div class="flex flex-col gap-1">
                     <a href="{{ route('account.security') }}" class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-200/50 transition-colors">
@@ -221,8 +223,9 @@
                     <span class="text-xs font-semibold text-slate-500">Quick search commands...</span>
                     <span class="ml-4 rounded-md bg-white px-2 py-0.5 text-xs font-bold text-slate-400 shadow-sm border border-slate-200">Ctrl K</span>
                 </button>
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-3">
                     @livewire('notifications.bell', key('bell-desktop'))
+                    <x-locale-switcher />
 
                     <div class="relative" x-data="{ userMenuOpen: false }">
                         <button type="button" @click="userMenuOpen = !userMenuOpen"

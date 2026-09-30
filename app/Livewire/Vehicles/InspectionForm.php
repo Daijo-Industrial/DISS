@@ -270,12 +270,7 @@ class InspectionForm extends Component
             $this->vehicle->save();
         });
 
-        if ($this->type === VehicleInspection::TYPE_CHECK_OUT) {
-            session()->flash('success', sprintf('Pemeriksaan Check-out selesai! Armada %s siap beroperasi.', $this->vehicle->plate_number));
-        } else {
-            $kmDelta = $this->parentInspection ? max(0, $this->odometer - $this->parentInspection->odometer) : 0;
-            session()->flash('success', sprintf('Pemeriksaan Check-in selesai! Armada %s kembali ke pool (Jarak tempuh trip: %d km).', $this->vehicle->plate_number, $kmDelta));
-        }
+        session()->flash('success', __('fleet.messages.inspection_saved'));
 
         return redirect()->route('vehicles.show', ['vehicle' => $this->vehicle, 'tab' => 'inspections']);
     }

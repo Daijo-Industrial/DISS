@@ -24,7 +24,7 @@ class Scan extends Component
         $cleanCode = trim($code);
 
         if (empty($cleanCode)) {
-            $this->errorMessage = 'Silakan pindai stiker QR armada atau masukkan nomor polisi.';
+            $this->errorMessage = __('fleet.scanner.not_found_alert');
 
             return;
         }
@@ -50,7 +50,7 @@ class Scan extends Component
             return $this->redirect(route('vehicles.inspect', ['vehicle' => $vehicle->id]), navigate: true);
         }
 
-        $this->errorMessage = "Armada dengan kode/plat '{$cleanCode}' tidak ditemukan dalam sistem DISS.";
+        $this->errorMessage = __('fleet.scanner.not_found_code', ['code' => $cleanCode]);
     }
 
     public function searchManual()

@@ -455,7 +455,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
         Livewire::actingAs($managerUser)
             ->test(VehiclesIndex::class)
             ->assertSet('canManage', true)
-            ->assertSee('Registrasi Armada');
+            ->assertSee(__('fleet.index.add_vehicle'));
 
         // 2. VehicleShow has canManage = true
         Livewire::actingAs($managerUser)
@@ -533,5 +533,55 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $component->assertSeeHtml('$dispatch(\'open-lightbox\'');
         $component->assertSeeHtml('test_headlight.jpg');
         $component->assertSeeHtml('test_defect.jpg');
+    }
+
+    public function test_user_locale_switching_and_persistence()
+    {
+        // 1. Initially user locale is null, default locale is 'id'
+        $this->assertNull($this->user->locale);
+        $this->assertEquals('id', app()->getLocale());
+
+        // 2. Switch to English
+        $response = $this->actingAs($this->user)->get(route('locale.switch', 'en'));
+        $response->assertRedirect();
+        $this->assertEquals('en', session('locale'));
+        $this->assertEquals('en', $this->user->fresh()->locale);
+
+        // 3. Switch back to Indonesian
+        $response = $this->actingAs($this->user)->get(route('locale.switch', 'id'));
+        $response->assertRedirect();
+        $this->assertEquals('id', session('locale'));
+        $this->assertEquals('id', $this->user->fresh()->locale);
+    }
+
+    public function test_vehicle_domain_localization_in_indonesian_and_english()
+    {
+        // Indonesian (Default)
+        app()->setLocale('id');
+        $this->assertEquals('Truk / Mobil Gede', $this->vehicle->category_label);
+        $this->assertEquals('Solar / Diesel', $this->vehicle->fuel_type_label);
+
+        $doc = new VehicleDocument([
+            'document_type' => 'kir',
+            'expired_date' => now()->addDays(10),
+        ]);
+        $this->assertEquals('Uji Berkala KIR', $doc->type_label);
+        $this->assertStringContainsString('Perlu Diperpanjang', $doc->status_label);
+
+        $inspection = new VehicleInspection([
+            'severity' => VehicleInspection::SEVERITY_NONE,
+        ]);
+        $this->assertEquals('Aman (Fit to Drive)', $inspection->severity_label);
+
+        // English (Switched)
+        app()->setLocale('en');
+        $this->assertEquals('Commercial Truck / Heavy', $this->vehicle->category_label);
+        $this->assertEquals('Diesel', $this->vehicle->fuel_type_label);
+        $this->assertEquals('Periodic KIR Inspection', $doc->type_label);
+        $this->assertStringContainsString('Renewal Due', $doc->status_label);
+        $this->assertEquals('Safe (Fit to Drive)', $inspection->severity_label);
+
+        // Reset back to id
+        app()->setLocale('id');
     }
 }
