@@ -43,6 +43,7 @@ Route::middleware('auth')->group(function () {
 
     // Vehicles
     Route::get('/vehicles', VehiclesIndex::class)->name('vehicles.index');
+    Route::get('/vehicles/scan', \App\Livewire\Vehicles\Scan::class)->name('vehicles.scan');
     Route::get('/vehicles/{vehicle}', VehiclesShow::class)->name('vehicles.show');
     Route::get('/vehicle/create', VehiclesForm::class)->name('vehicles.create');
     Route::get('/vehicles/{vehicle}/edit', VehiclesForm::class)->name('vehicles.edit');

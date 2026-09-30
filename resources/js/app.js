@@ -2,6 +2,7 @@ import './layout.js';
 import 'laravel-datatables-vite';
 import TomSelect from 'tom-select';
 import { Fancybox } from '@fancyapps/ui';
+import '@fancyapps/ui/dist/fancybox/fancybox.css';
 import SignaturePad from 'signature_pad';
 import { Chart, registerables } from 'chart.js';
 import '/node_modules/flatpickr/dist/flatpickr.css';
@@ -11,6 +12,7 @@ import monthSelectPlugin from 'flatpickr/dist/plugins/monthSelect/index.js';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 import $ from 'jquery';
+import { Html5Qrcode } from 'html5-qrcode';
 import introJs from 'intro.js';
 
 Chart.register(...registerables);
@@ -24,6 +26,29 @@ window.monthSelectPlugin = monthSelectPlugin;
 window.Pusher = Pusher;
 window.$ = $;
 window.introJs = introJs;
+window.Html5Qrcode = Html5Qrcode;
+
+// Global Fancybox initialization & Livewire integration
+Fancybox.bind('[data-fancybox]', {
+  Hash: false,
+});
+
+window.addEventListener('open-lightbox', (event) => {
+  if (window.Fancybox && event.detail?.src) {
+    window.Fancybox.show([
+      {
+        src: event.detail.src,
+        caption: (event.detail.title || '') + (event.detail.subtitle ? ` — ${event.detail.subtitle}` : ''),
+        type: 'image',
+      },
+    ]);
+  }
+});
+
+document.addEventListener('livewire:navigated', () => {
+  window.Fancybox?.unbind('[data-fancybox]');
+  window.Fancybox?.bind('[data-fancybox]', { Hash: false });
+});
 
 /**
  * We'll load the axios HTTP library which allows us to easily issue requests

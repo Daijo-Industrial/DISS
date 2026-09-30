@@ -9,9 +9,12 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class Form extends Component
 {
+    use WithFileUploads;
+
     public ?Vehicle $vehicle = null;
 
     public string $driver_name = '';
@@ -32,13 +35,23 @@ class Form extends Component
 
     public ?string $vin = null;
 
+    public $photo = null;
+
+    public ?string $current_image_path = null;
+
     public int $odometer = 0;
 
     public string $status = 'active';
 
-    public bool $fullFeature = false;
+    public bool $canManage = false;
 
     public ?string $sold_at = null;
+
+    public function removeImage(): void
+    {
+        $this->photo = null;
+        $this->current_image_path = null;
+    }
 
     public function updatedCategory(string $value): void
     {
@@ -69,7 +82,7 @@ class Form extends Component
             ],
         ];
 
-        if (! $this->fullFeature) {
+        if (! $this->canManage) {
             return $baseRules;
         }
 
@@ -81,6 +94,7 @@ class Form extends Component
             'requires_kir' => ['boolean'],
             'year' => ['nullable', 'integer', 'min:1900', 'max:' . (now()->year + 1)],
             'vin' => ['nullable', 'string', 'max:50'],
+            'photo' => ['nullable', 'image', 'max:5120'],
             'odometer' => ['nullable', 'integer', 'min:0'],
             'status' => ['required', Rule::in(array_column(VehicleStatus::cases(), 'value'))],
             'sold_at' => ['nullable', 'date', 'before_or_equal:today', 'required_if:status,sold'],
@@ -99,15 +113,19 @@ class Form extends Component
     public function mount(?Vehicle $vehicle): void
     {
         $user = auth()->user();
-        $this->fullFeature = $user !== null && (
-            $user->hasRole('super-admin') || ($user->department?->name === 'PERSONALIA')
-        );
+        $this->canManage = $user?->can('fleet.manage') ?? false;
+
+        // If user cannot manage fleet and trying to create a new vehicle, abort 403
+        if (! $this->canManage && ! $vehicle?->exists) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mendaftarkan armada.');
+        }
 
         if ($vehicle?->exists) {
             $this->vehicle = $vehicle;
+            $this->current_image_path = $vehicle->image_path;
 
             // Fill only the fields allowed for this role
-            $fields = $this->fullFeature
+            $fields = $this->canManage
                 ? ['driver_name', 'plate_number', 'brand', 'model', 'category', 'fuel_type', 'requires_kir', 'year', 'vin', 'odometer', 'status', 'sold_at']
                 : ['driver_name', 'plate_number'];
 
@@ -123,6 +141,11 @@ class Form extends Component
 
         $this->validate();
 
+        $imagePath = $this->current_image_path;
+        if ($this->photo) {
+            $imagePath = $this->photo->store('vehicles/photos', 'public');
+        }
+
         $payload = [
             'driver_name' => $this->driver_name,
             'plate_number' => $this->plate_number,
@@ -133,20 +156,21 @@ class Form extends Component
             'requires_kir' => (bool) $this->requires_kir,
             'year' => $this->year ?: null,
             'vin' => $this->vin ?: null,
+            'image_path' => $imagePath,
             'odometer' => (int) ($this->odometer ?: 0),
             'status' => $this->status,
             'sold_at' => $this->status === 'sold' ? $this->sold_at ?? now()->toDateString() : null,
         ];
 
-        $allowedKeys = $this->fullFeature
+        $allowedKeys = $this->canManage
             ? array_keys($payload)
             : ['driver_name', 'plate_number']; // hard guard against mass assignment
 
         // Keep only allowed keys
         $data = array_intersect_key($payload, array_flip($allowedKeys));
 
-        // Enforce safe default status for non-fullfeature creates
-        if (! $this->fullFeature && ! $this->vehicle?->exists) {
+        // Enforce safe default status for non-manager creates
+        if (! $this->canManage && ! $this->vehicle?->exists) {
             $data['status'] = 'active';
         }
 
@@ -160,7 +184,7 @@ class Form extends Component
             }
         });
 
-        if (! $this->fullFeature) {
+        if (! $this->canManage) {
             $this->redirectRoute('vehicles.index', navigate: true);
 
             return;
@@ -171,7 +195,7 @@ class Form extends Component
 
     public function delete(): void
     {
-        if (! $this->fullFeature) {
+        if (! $this->canManage) {
             abort(403);
         }
 
@@ -185,7 +209,8 @@ class Form extends Component
     public function render(): View
     {
         return view('livewire.vehicles.form', [
-            'fullFeature' => $this->fullFeature,
+            'canManage' => $this->canManage,
+            'fullFeature' => $this->canManage,
         ]);
     }
 

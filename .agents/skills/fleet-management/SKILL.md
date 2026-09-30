@@ -83,15 +83,25 @@ All plate formatting, regex patterns, and region mappings are centralized in **`
 
 ---
 
-## 4. Physical QR Code Sticker Standard
+## 4. Physical QR Code Sticker & In-App Camera Scanner Standard
 
+### Physical QR Code Sticker Standard
 Driver scans the physical sticker attached to the vehicle dashboard / steering wheel to open the inspection form:
-
-- **Payload Rule**: The QR code MUST contain **strictly the vehicle UUID** (`(string) $vehicle->id`), not the full URL or metadata.
+- **Payload Rule**: The QR code MUST contain **strictly the vehicle UUID** (`(string) $vehicle->id`), not the full URL or metadata. This ensures physical stickers never break or become stale when server IP or domain changes.
 - **Generation**: Powered by `endroid/qr-code` in `App\Livewire\Vehicles\Show` (`openQrModal()`), output as Base64 SVG or PNG with High Error Correction (`ErrorCorrectionLevel::High`).
 - **Print Optimization (`@media print`)**:
   - Isolated sticker styling that hides the rest of the web page during `window.print()`.
   - Crisp high-contrast border with vehicle plate number, model, and UUID printed underneath for physical verification.
+
+### In-App Camera Scanner (`/vehicles/scan`)
+- **Route**: `Route::get('/vehicles/scan', \App\Livewire\Vehicles\Scan::class)->name('vehicles.scan')`.
+- **Component**: `App\Livewire\Vehicles\Scan` (`resources/views/livewire/vehicles/scan.blade.php`).
+- **Engine**: Powered by `html5-qrcode` bundled into Vite (`window.Html5Qrcode`).
+- **Features**:
+  - Live animated laser HUD reticle with camera switch (back/front) & torch/flashlight control.
+  - Audio (Web Audio API 880Hz chime) and haptic vibration feedback on successful QR detection.
+  - Resolves raw UUID, URL with UUID, or vehicle license plate into `vehicles.inspect`.
+  - Manual fallback search for dirty/damaged physical stickers or blocked camera permissions.
 
 ---
 
@@ -147,9 +157,16 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
 - **Auto-Close Behavior**: Closes on link click (`@click="if ($event.target.closest('a')) sidebarOpen = false"`), backdrop click, or Escape key.
 - **Thumb Ergonomics**: Mobile topbar hamburger button is aligned on the **right** for comfortable one-handed thumb reach on tall screens (iPhone XR).
 
-### Access Control
-- `$fullFeature = $user->hasRole('super-admin') || ($user->department?->name === 'PERSONALIA');`
-- Non-fullFeature users are hard-guarded to only edit operational fields (`driver_name` and `plate_number`).
+### Universal Photo Lightbox (`resources/views/components/universal-lightbox.blade.php`)
+- **Reactive 0ms Alpine.js Modal**: Replaces direct storage URLs (`target="_blank"`) across all vehicle views.
+- **Trigger**: Dispatched anywhere via `@click="$dispatch('open-lightbox', { src: url, title: caption, subtitle: sub })"`.
+- **Coverage**: Hero vehicle profile photos, P2H checklist point photos, P2H defect photos, document attachments (KIR/STNK), and inspection temporary photo previews.
+
+### Access Control & RBAC (`app/Infrastructure/Common/PermissionRegistry.php`)
+- **`fleet.view`**: View fleet lists, vehicle details, scan QR codes, and submit daily P2H inspection logs. Assigned to all operational roles (`staff`, `inspector`, `user`, etc.).
+- **`fleet.manage`**: Register and edit vehicles, update operational status, upload/delete vehicle profile photos, manage legal documents (KIR & STNK), record service events, and print QR stickers.
+- **Default Roles**: `super-admin` (implicit all via Gate), `admin`, `hr`, `hrd`, `hrd-manager`, `operations`, `logistics`, `manager`.
+- Checked in Livewire/Blade via `$canManage = auth()->user()?->can('fleet.manage') ?? false;` or `@can('fleet.manage')`. Legacy `$fullFeature` and hardcoded department checks are completely removed.
 
 ---
 

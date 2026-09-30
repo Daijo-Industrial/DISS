@@ -24,12 +24,13 @@ class Vehicle extends Model
         'requires_kir',
         'year',
         'vin',
+        'image_path',
         'odometer',
         'status',
         'sold_at',
     ];
 
-    protected $appends = ['display_name'];
+    protected $appends = ['display_name', 'image_url'];
 
     protected $casts = [
         'status' => VehicleStatus::class,
@@ -38,6 +39,11 @@ class Vehicle extends Model
         'requires_kir' => 'boolean',
         'sold_at' => 'date',
     ];
+
+    public function getImageUrlAttribute(): ?string
+    {
+        return $this->image_path ? asset('storage/' . $this->image_path) : null;
+    }
 
     public function getIsSoldAttribute(): bool
     {

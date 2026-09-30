@@ -18,7 +18,7 @@
                 class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">
                 Batal
             </a>
-            @if ($fullFeature && $vehicle?->exists)
+            @if ($canManage && $vehicle?->exists)
                 <button type="button" wire:click="delete"
                     wire:confirm="Hapus data armada ini?"
                     class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition">
@@ -34,8 +34,8 @@
         </div>
     </div>
 
-    {{-- Restricted Access Alert (for Non-fullFeature users) --}}
-    @if (! $fullFeature)
+    {{-- Restricted Access Alert (for Non-managers) --}}
+    @if (! $canManage)
         <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800 flex items-center gap-2.5">
             <i class="bi bi-shield-lock text-base"></i>
             <span>Mode Terbatas: Anda hanya dapat memperbarui Plat Nomor dan Driver.</span>
@@ -46,7 +46,7 @@
     <form wire:submit.prevent="save" x-data="{
         driver_name: @entangle('driver_name'),
         plate_number: @entangle('plate_number'),
-        @if ($fullFeature)
+        @if ($canManage)
             brand: @entangle('brand'),
             model: @entangle('model'),
             category: @entangle('category'),
@@ -93,7 +93,7 @@
             }
         },
         selectCategory(cat) {
-            @if ($fullFeature)
+            @if ($canManage)
                 this.category = cat;
                 if (cat === 'commercial_truck') {
                     this.requires_kir = true;
@@ -148,7 +148,7 @@
                 @php use App\Enums\VehicleStatus; @endphp
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">Status Operasional <span class="text-rose-500">*</span></label>
-                    @if ($fullFeature)
+                    @if ($canManage)
                         <div class="grid grid-cols-4 gap-1.5">
                             @foreach (VehicleStatus::cases() as $case)
                                 @php $v = $case->value; @endphp
@@ -171,10 +171,54 @@
                         </div>
                     @endif
                 </div>
+
+                {{-- Foto Profil Armada --}}
+                @if ($canManage)
+                    <div class="sm:col-span-2 pt-3 border-t border-slate-100">
+                        <label class="block text-xs font-semibold text-slate-700 mb-2">Foto Profil Kendaraan (Identifikasi Visual)</label>
+                        <div class="flex items-center gap-4">
+                            <div class="relative shrink-0">
+                                @if ($photo)
+                                    <img src="{{ $photo->temporaryUrl() }}" class="h-20 w-20 rounded-2xl object-cover border border-slate-200 shadow-xs">
+                                @elseif ($current_image_path)
+                                    <img src="{{ asset('storage/' . $current_image_path) }}" class="h-20 w-20 rounded-2xl object-cover border border-slate-200 shadow-xs">
+                                @else
+                                    <div class="h-20 w-20 rounded-2xl bg-slate-100 flex flex-col items-center justify-center text-slate-400 border border-dashed border-slate-300">
+                                        <i class="bi bi-camera text-2xl"></i>
+                                        <span class="text-[9px] mt-0.5 font-medium">Belum ada</span>
+                                    </div>
+                                @endif
+
+                                @if ($photo || $current_image_path)
+                                    <button type="button" wire:click="removeImage" title="Hapus foto"
+                                        class="absolute -top-1.5 -right-1.5 bg-rose-600 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs hover:bg-rose-700 shadow-xs">
+                                        ×
+                                    </button>
+                                @endif
+                            </div>
+
+                            <div class="space-y-1">
+                                <label class="cursor-pointer inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs">
+                                    <i class="bi bi-upload text-indigo-600"></i>
+                                    <span>{{ ($photo || $current_image_path) ? 'Ganti Foto' : 'Unggah Foto Armada' }}</span>
+                                    <input type="file" wire:model="photo" accept="image/*" class="sr-only">
+                                </label>
+                                <div wire:loading wire:target="photo" class="text-xs text-indigo-600 flex items-center gap-1 font-medium">
+                                    <span class="h-3 w-3 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent"></span>
+                                    <span>Mengunggah foto...</span>
+                                </div>
+                                <p class="text-[11px] text-slate-400">Format: JPG, PNG, WEBP maks 5MB. Foto tampak depan / 3/4 kendaraan.</p>
+                                @error('photo')
+                                    <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                @endif
             </div>
         </div>
 
-        @if ($fullFeature)
+        @if ($canManage)
             {{-- Section 2: Kategori & Regulasi --}}
             <div class="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
                 <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Kategori &amp; Regulasi</h2>

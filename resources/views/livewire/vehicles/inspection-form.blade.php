@@ -46,14 +46,22 @@
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             {{-- Vehicle & Inspection Info --}}
             <div class="flex items-start gap-4">
-                <div class="h-14 w-14 rounded-2xl flex items-center justify-center text-2xl shadow-xs shrink-0
-                    {{ $vehicle->category === 'commercial_truck' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700' }}">
-                    @if ($vehicle->category === 'commercial_truck')
-                        <i class="bi bi-truck"></i>
-                    @else
-                        <i class="bi bi-car-front"></i>
-                    @endif
-                </div>
+                @if ($vehicle->image_path)
+                    <button type="button" @click="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $vehicle->image_path) }}', title: 'Foto Profil Armada {{ $vehicle->plate_number }}', subtitle: '{{ trim($vehicle->brand . ' ' . $vehicle->model) }}' })"
+                        class="cursor-pointer shrink-0" title="Perbesar foto">
+                        <img src="{{ asset('storage/' . $vehicle->image_path) }}" alt="{{ $vehicle->plate_number }}"
+                            class="h-14 w-14 rounded-2xl object-cover border border-slate-200 shadow-xs hover:opacity-90 transition">
+                    </button>
+                @else
+                    <div class="h-14 w-14 rounded-2xl flex items-center justify-center text-2xl shadow-xs shrink-0
+                        {{ $vehicle->category === 'commercial_truck' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700' }}">
+                        @if ($vehicle->category === 'commercial_truck')
+                            <i class="bi bi-truck"></i>
+                        @else
+                            <i class="bi bi-car-front"></i>
+                        @endif
+                    </div>
+                @endif
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-xl font-black tracking-tight text-slate-900 font-mono">
@@ -81,7 +89,7 @@
                     </span>
                 </div>
                 <div class="relative h-10 w-10 flex items-center justify-center">
-                    <span class="h-10 w-10 rounded-full border-3 {{ $isAllOk ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-amber-500 bg-amber-50 text-amber-700 animate-pulse' }} flex items-center justify-center text-xs font-black">
+                    <span class="h-10 w-10 rounded-full border-3 {{ $isAllOk ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-amber-500 bg-amber-50 text-amber-700' }} flex items-center justify-center text-xs font-black">
                         {{ $readinessPercent }}%
                     </span>
                 </div>
@@ -262,7 +270,7 @@
                                     @foreach ($point_photos['headlights'] as $idx => $p)
                                         <div class="relative group">
                                             @if (method_exists($p, 'temporaryUrl'))
-                                                <img src="{{ $p->temporaryUrl() }}" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs">
+                                                <img src="{{ $p->temporaryUrl() }}" @click="$dispatch('open-lightbox', { src: '{{ $p->temporaryUrl() }}', title: 'Pratinjau Foto Temuan Checklist' })" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs cursor-pointer hover:opacity-90 transition">
                                             @else
                                                 <div class="h-11 w-11 bg-slate-100 rounded-lg flex items-center justify-center text-[9px] text-slate-500 font-semibold border border-slate-200">#{{ $idx+1 }}</div>
                                             @endif
@@ -329,7 +337,7 @@
                                     @foreach ($point_photos['body'] as $idx => $p)
                                         <div class="relative group">
                                             @if (method_exists($p, 'temporaryUrl'))
-                                                <img src="{{ $p->temporaryUrl() }}" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs">
+                                                <img src="{{ $p->temporaryUrl() }}" @click="$dispatch('open-lightbox', { src: '{{ $p->temporaryUrl() }}', title: 'Pratinjau Foto Temuan Checklist' })" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs cursor-pointer hover:opacity-90 transition">
                                             @else
                                                 <div class="h-11 w-11 bg-slate-100 rounded-lg flex items-center justify-center text-[9px] text-slate-500 font-semibold border border-slate-200">#{{ $idx+1 }}</div>
                                             @endif
@@ -406,7 +414,7 @@
                                     @foreach ($point_photos['brake_lights'] as $idx => $p)
                                         <div class="relative group">
                                             @if (method_exists($p, 'temporaryUrl'))
-                                                <img src="{{ $p->temporaryUrl() }}" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs">
+                                                <img src="{{ $p->temporaryUrl() }}" @click="$dispatch('open-lightbox', { src: '{{ $p->temporaryUrl() }}', title: 'Pratinjau Foto Temuan Checklist' })" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs cursor-pointer hover:opacity-90 transition">
                                             @else
                                                 <div class="h-11 w-11 bg-slate-100 rounded-lg flex items-center justify-center text-[9px] text-slate-500 font-semibold border border-slate-200">#{{ $idx+1 }}</div>
                                             @endif
@@ -473,7 +481,7 @@
                                     @foreach ($point_photos['turn_signals'] as $idx => $p)
                                         <div class="relative group">
                                             @if (method_exists($p, 'temporaryUrl'))
-                                                <img src="{{ $p->temporaryUrl() }}" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs">
+                                                <img src="{{ $p->temporaryUrl() }}" @click="$dispatch('open-lightbox', { src: '{{ $p->temporaryUrl() }}', title: 'Pratinjau Foto Temuan Checklist' })" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs cursor-pointer hover:opacity-90 transition">
                                             @else
                                                 <div class="h-11 w-11 bg-slate-100 rounded-lg flex items-center justify-center text-[9px] text-slate-500 font-semibold border border-slate-200">#{{ $idx+1 }}</div>
                                             @endif
@@ -550,7 +558,7 @@
                                     @foreach ($point_photos['tires'] as $idx => $p)
                                         <div class="relative group">
                                             @if (method_exists($p, 'temporaryUrl'))
-                                                <img src="{{ $p->temporaryUrl() }}" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs">
+                                                <img src="{{ $p->temporaryUrl() }}" @click="$dispatch('open-lightbox', { src: '{{ $p->temporaryUrl() }}', title: 'Pratinjau Foto Temuan Checklist' })" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs cursor-pointer hover:opacity-90 transition">
                                             @else
                                                 <div class="h-11 w-11 bg-slate-100 rounded-lg flex items-center justify-center text-[9px] text-slate-500 font-semibold border border-slate-200">#{{ $idx+1 }}</div>
                                             @endif
@@ -617,7 +625,7 @@
                                     @foreach ($point_photos['battery_fuel'] as $idx => $p)
                                         <div class="relative group">
                                             @if (method_exists($p, 'temporaryUrl'))
-                                                <img src="{{ $p->temporaryUrl() }}" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs">
+                                                <img src="{{ $p->temporaryUrl() }}" @click="$dispatch('open-lightbox', { src: '{{ $p->temporaryUrl() }}', title: 'Pratinjau Foto Temuan Checklist' })" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs cursor-pointer hover:opacity-90 transition">
                                             @else
                                                 <div class="h-11 w-11 bg-slate-100 rounded-lg flex items-center justify-center text-[9px] text-slate-500 font-semibold border border-slate-200">#{{ $idx+1 }}</div>
                                             @endif
@@ -694,7 +702,7 @@
                                     @foreach ($point_photos['interior'] as $idx => $p)
                                         <div class="relative group">
                                             @if (method_exists($p, 'temporaryUrl'))
-                                                <img src="{{ $p->temporaryUrl() }}" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs">
+                                                <img src="{{ $p->temporaryUrl() }}" @click="$dispatch('open-lightbox', { src: '{{ $p->temporaryUrl() }}', title: 'Pratinjau Foto Temuan Checklist' })" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs cursor-pointer hover:opacity-90 transition">
                                             @else
                                                 <div class="h-11 w-11 bg-slate-100 rounded-lg flex items-center justify-center text-[9px] text-slate-500 font-semibold border border-slate-200">#{{ $idx+1 }}</div>
                                             @endif
@@ -778,7 +786,8 @@
                                     @foreach ($photos as $idx => $p)
                                         <div class="relative group">
                                             @if (method_exists($p, 'temporaryUrl'))
-                                                <img src="{{ $p->temporaryUrl() }}" class="h-12 w-12 object-cover rounded-lg border border-slate-200 shadow-xs">
+                                                <img src="{{ $p->temporaryUrl() }}" @click="$dispatch('open-lightbox', { src: '{{ $p->temporaryUrl() }}', title: 'Pratinjau Foto Bukti Kerusakan' })"
+                                                    class="h-12 w-12 object-cover rounded-lg border border-slate-200 shadow-xs cursor-pointer hover:opacity-90 transition">
                                             @else
                                                 <div class="h-12 w-12 bg-slate-100 rounded-lg flex items-center justify-center text-[9px] text-slate-500 font-semibold border border-slate-200">#{{ $idx+1 }}</div>
                                             @endif
@@ -812,4 +821,7 @@
             </button>
         </div>
     </form>
+
+    {{-- Universal Photo Lightbox --}}
+    <x-universal-lightbox />
 </div>

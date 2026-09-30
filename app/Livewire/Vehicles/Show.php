@@ -10,6 +10,7 @@ use Endroid\QrCode\ErrorCorrectionLevel;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -56,6 +57,13 @@ class Show extends Component
 
     public ?string $qrCodeBase64 = null;
 
+    // Vehicle Profile Photo modal & lightbox
+    public bool $showPhotoModal = false;
+
+    public bool $showLightbox = false;
+
+    public $new_photo = null;
+
     public function mount(Vehicle $vehicle)
     {
         $this->vehicle = $vehicle->load([
@@ -64,7 +72,7 @@ class Show extends Component
         ]);
 
         $user = auth()->user();
-        $this->canManage = $user?->hasRole('super-admin') || ($user?->department?->name === 'PERSONALIA');
+        $this->canManage = $user?->can('fleet.manage') ?? false;
 
         // Check if tab is requested via query param
         if (request()->has('tab') && in_array(request('tab'), ['services', 'inspections', 'documents'], true)) {
@@ -120,6 +128,75 @@ class Show extends Component
     public function closeQrModal(): void
     {
         $this->showQrModal = false;
+    }
+
+    public function openPhotoModal(): void
+    {
+        if (! $this->canManage) {
+            abort(403);
+        }
+        $this->resetValidation();
+        $this->new_photo = null;
+        $this->showPhotoModal = true;
+    }
+
+    public function closePhotoModal(): void
+    {
+        $this->showPhotoModal = false;
+        $this->new_photo = null;
+        $this->resetValidation();
+    }
+
+    public function saveVehiclePhoto(): void
+    {
+        if (! $this->canManage) {
+            abort(403);
+        }
+
+        $this->validate([
+            'new_photo' => ['required', 'image', 'max:5120'],
+        ]);
+
+        if ($this->vehicle->image_path && Storage::disk('public')->exists($this->vehicle->image_path)) {
+            Storage::disk('public')->delete($this->vehicle->image_path);
+        }
+
+        $path = $this->new_photo->store('vehicles/photos', 'public');
+        $this->vehicle->update(['image_path' => $path]);
+
+        session()->flash('success', 'Foto profil kendaraan berhasil diperbarui.');
+        $this->showPhotoModal = false;
+        $this->new_photo = null;
+        $this->vehicle->refresh();
+    }
+
+    public function deleteVehiclePhoto(): void
+    {
+        if (! $this->canManage) {
+            abort(403);
+        }
+
+        if ($this->vehicle->image_path && Storage::disk('public')->exists($this->vehicle->image_path)) {
+            Storage::disk('public')->delete($this->vehicle->image_path);
+        }
+
+        $this->vehicle->update(['image_path' => null]);
+
+        session()->flash('success', 'Foto profil kendaraan berhasil dihapus.');
+        $this->showPhotoModal = false;
+        $this->vehicle->refresh();
+    }
+
+    public function openLightbox(): void
+    {
+        if ($this->vehicle->image_path) {
+            $this->showLightbox = true;
+        }
+    }
+
+    public function closeLightbox(): void
+    {
+        $this->showLightbox = false;
     }
 
     public function saveDocument(): void

@@ -140,6 +140,23 @@ class PermissionRegistry
                     'manager' => ['ops.view', 'spk.view'],
                 ],
             ],
+            'Fleet Management' => [
+                'permissions' => [
+                    'fleet.view', 'fleet.manage',
+                ],
+                'roles' => [
+                    'admin' => ['fleet.view', 'fleet.manage'],
+                    'hr' => ['fleet.view', 'fleet.manage'],
+                    'hrd' => ['fleet.view', 'fleet.manage'],
+                    'hrd-manager' => ['fleet.view', 'fleet.manage'],
+                    'operations' => ['fleet.view', 'fleet.manage'],
+                    'logistics' => ['fleet.view', 'fleet.manage'],
+                    'manager' => ['fleet.view', 'fleet.manage'],
+                    'staff' => ['fleet.view'],
+                    'inspector' => ['fleet.view'],
+                    'user' => ['fleet.view'],
+                ],
+            ],
             'Personnel' => [
                 'permissions' => [
                     'personnel.view', 'personnel.manage', 'training.view', 'training.manage', 'document.view', 'document.manage',
