@@ -30,16 +30,16 @@ class Index extends Component
     #[Url(as: 'dir')]
     public string $dir = 'asc';
 
-    public $fullFeature = false;
+    public bool $canManage = false;
 
     public function mount()
     {
-        $this->fullFeature = auth()->user()->hasRole('super-admin') || (auth()->user()->department->name === 'PERSONALIA');
+        $this->canManage = auth()->user()?->can('fleet.manage') ?? false;
     }
 
     public function sortBy(string $field): void
     {
-        $allowed = $this->fullFeature ? ['plate_number', 'driver_name', 'odometer', 'status', 'last_service_date'] : ['plate_number', 'driver_name'];
+        $allowed = $this->canManage ? ['plate_number', 'driver_name', 'odometer', 'status', 'last_service_date'] : ['plate_number', 'driver_name'];
 
         if (! in_array($field, $allowed, true)) {
             return; // ignore disallowed sorts
@@ -71,8 +71,8 @@ class Index extends Component
 
     public function deleteVehicle(string $id): void
     {
-        // Only allow delete for "full feature" users
-        if (! $this->fullFeature) {
+        // Only allow delete for managers with fleet.manage permission
+        if (! $this->canManage) {
             abort(403);
         }
 
@@ -122,7 +122,7 @@ class Index extends Component
     public function render()
     {
         // Ensure sort field is allowed for this role
-        $allowed = $this->fullFeature ? ['plate_number', 'driver_name', 'odometer', 'status', 'last_service_date'] : ['plate_number', 'driver_name'];
+        $allowed = $this->canManage ? ['plate_number', 'driver_name', 'odometer', 'status', 'last_service_date'] : ['plate_number', 'driver_name'];
 
         $sortField = in_array($this->sort, $allowed, true) ? $this->sort : 'plate_number';
         $sortDir = $this->dir === 'desc' ? 'desc' : 'asc';
@@ -131,7 +131,7 @@ class Index extends Component
             ->select('vehicles.*')
             ->with(['activeCheckOut']);
 
-        if ($this->fullFeature) {
+        if ($this->canManage) {
             $query
                 ->selectSub(ServiceRecord::select('service_date')->whereColumn('vehicle_id', 'vehicles.id')->orderByDesc('service_date')->limit(1), 'last_service_date')
                 ->selectSub(ServiceRecord::select('odometer')->whereColumn('vehicle_id', 'vehicles.id')->orderByDesc('service_date')->limit(1), 'last_service_odometer')
@@ -164,7 +164,7 @@ class Index extends Component
             ->when($this->operationalTab === 'maintenance', function ($q) {
                 $q->where('status', 'maintenance');
             })
-            ->when($this->fullFeature && $this->status !== 'all', function ($q) {
+            ->when($this->canManage && $this->status !== 'all', function ($q) {
                 $q->where('status', VehicleStatus::from($this->status));
             })
             ->orderBy($sortField, $sortDir);
@@ -175,7 +175,7 @@ class Index extends Component
         $onTripVehicles = (clone $baseMetricsQuery)->whereHas('activeCheckOut')->count();
         $inPoolVehicles = max(0, $totalVehicles - $onTripVehicles);
 
-        $complianceAlerts = $this->fullFeature
+        $complianceAlerts = $this->canManage
             ? VehicleDocument::with('vehicle')
                 ->whereHas('vehicle', fn ($q) => $q->whereNull('deleted_at')->whereNotIn('status', ['sold', 'retired']))
                 ->where('expired_date', '<=', now()->addDays(30))
@@ -192,7 +192,8 @@ class Index extends Component
 
         return view('livewire.vehicles.index', [
             'vehicles' => $query->paginate($this->perPage),
-            'fullFeature' => $this->fullFeature,
+            'canManage' => $this->canManage,
+            'fullFeature' => $this->canManage,
             'complianceAlerts' => $complianceAlerts,
             'metrics' => $metrics,
         ]);

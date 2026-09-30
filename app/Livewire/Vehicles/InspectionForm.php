@@ -35,6 +35,8 @@ class InspectionForm extends Component
 
     public $photos = [];
 
+    public array $point_photos = [];
+
     public ?string $trip_purpose = null;
 
     public function mount(Vehicle $vehicle, ?string $type = null): void
@@ -110,6 +112,8 @@ class InspectionForm extends Component
             $this->odometer = (int) $vehicle->odometer;
             $this->fuel_percentage = 100;
         }
+
+        $this->point_photos = array_fill_keys(array_keys($this->checklist), []);
     }
 
     public function switchType(string $newType): void
@@ -165,6 +169,22 @@ class InspectionForm extends Component
         }
     }
 
+    public function removePointPhoto(string $pointKey, int $index): void
+    {
+        if (isset($this->point_photos[$pointKey][$index])) {
+            unset($this->point_photos[$pointKey][$index]);
+            $this->point_photos[$pointKey] = array_values($this->point_photos[$pointKey]);
+        }
+    }
+
+    public function removePhoto(int $index): void
+    {
+        if (isset($this->photos[$index])) {
+            unset($this->photos[$index]);
+            $this->photos = array_values($this->photos);
+        }
+    }
+
     protected function rules(): array
     {
         $minKm = $this->type === VehicleInspection::TYPE_CHECK_IN && $this->parentInspection
@@ -177,8 +197,10 @@ class InspectionForm extends Component
             'fuel_percentage' => ['required', 'integer', 'min:0', 'max:100'],
             'trip_purpose' => ['nullable', 'string', 'max:500'],
             'severity' => ['required', 'string', 'in:none,minor,critical_grounded'],
-            'defect_notes' => [$this->severity !== VehicleInspection::SEVERITY_NONE ? 'required' : 'nullable', 'string', 'max:1000'],
+            'defect_notes' => ['nullable', 'string', 'max:1000'],
             'photos.*' => ['nullable', 'image', 'max:5120'], // Max 5MB per image
+            'point_photos.*.*' => ['nullable', 'image', 'max:5120'],
+            'checklist.*.notes' => ['nullable', 'string', 'max:500'],
         ];
     }
 
@@ -188,7 +210,6 @@ class InspectionForm extends Component
             'driver_name.required' => 'Nama pengemudi / driver wajib diisi.',
             'odometer.required' => 'Nilai KM Odometer wajib diisi.',
             'odometer.min' => 'KM Odometer tidak boleh lebih kecil dari KM sebelumnya (:min km).',
-            'defect_notes.required' => 'Catatan kerusakan wajib diisi jika ada temuan masalah pada kendaraan.',
         ];
     }
 
@@ -199,8 +220,22 @@ class InspectionForm extends Component
         $photoPaths = [];
         if (! empty($this->photos)) {
             foreach ($this->photos as $photo) {
-                $photoPaths[] = $photo->store('vehicle-inspections/' . date('Y/m'), 'public');
+                if ($photo) {
+                    $photoPaths[] = $photo->store('vehicle-inspections/' . date('Y/m'), 'public');
+                }
             }
+        }
+
+        foreach ($this->checklist as $key => $item) {
+            $pointPhotoPaths = [];
+            if (! empty($this->point_photos[$key])) {
+                foreach ($this->point_photos[$key] as $photo) {
+                    if ($photo) {
+                        $pointPhotoPaths[] = $photo->store('vehicle-inspections/' . date('Y/m'), 'public');
+                    }
+                }
+            }
+            $this->checklist[$key]['photos'] = $pointPhotoPaths;
         }
 
         DB::transaction(function () use ($photoPaths) {
@@ -242,7 +277,7 @@ class InspectionForm extends Component
             session()->flash('success', sprintf('Pemeriksaan Check-in selesai! Armada %s kembali ke pool (Jarak tempuh trip: %d km).', $this->vehicle->plate_number, $kmDelta));
         }
 
-        return redirect()->route('vehicles.show', $this->vehicle);
+        return redirect()->route('vehicles.show', ['vehicle' => $this->vehicle, 'tab' => 'inspections']);
     }
 
     public function render()

@@ -7,13 +7,18 @@ use App\Infrastructure\Persistence\Eloquent\Models\Vehicle;
 use App\Livewire\Vehicles\Form as VehicleForm;
 use App\Livewire\Vehicles\Index as VehiclesIndex;
 use App\Livewire\Vehicles\InspectionForm;
+use App\Livewire\Vehicles\Scan as VehicleScan;
 use App\Livewire\Vehicles\Show as VehicleShow;
 use App\Models\User;
 use App\Models\VehicleDocument;
+use App\Models\VehicleInspection;
 use App\Notifications\VehicleDocumentExpiryNotification;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -99,7 +104,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->set('trip_purpose', 'Kirim komponen ke pabrik Cikarang')
             ->set('severity', 'none')
             ->call('save')
-            ->assertRedirect(route('vehicles.show', $this->vehicle));
+            ->assertRedirect(route('vehicles.show', ['vehicle' => $this->vehicle, 'tab' => 'inspections']));
 
         $this->vehicle->refresh();
         $this->assertEquals(50100, $this->vehicle->odometer);
@@ -115,7 +120,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->set('fuel_percentage', 75)
             ->set('severity', 'none')
             ->call('save')
-            ->assertRedirect(route('vehicles.show', $this->vehicle));
+            ->assertRedirect(route('vehicles.show', ['vehicle' => $this->vehicle, 'tab' => 'inspections']));
 
         $this->vehicle->refresh();
         $this->assertEquals(50250, $this->vehicle->odometer);
@@ -139,10 +144,51 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->set('severity', 'critical_grounded')
             ->set('defect_notes', 'Lampu rem mati total, kabel putus')
             ->call('save')
-            ->assertRedirect(route('vehicles.show', $this->vehicle));
+            ->assertRedirect(route('vehicles.show', ['vehicle' => $this->vehicle, 'tab' => 'inspections']));
 
         $this->vehicle->refresh();
         $this->assertEquals(VehicleStatus::MAINTENANCE, $this->vehicle->status);
+    }
+
+    public function test_p2h_inspection_supports_photos_per_point_and_optional_defect_notes()
+    {
+        Storage::fake('public');
+
+        $photo1 = UploadedFile::fake()->image('headlight_crack.jpg');
+        $photo2 = UploadedFile::fake()->image('headlight_close.jpg');
+        $photoTire = UploadedFile::fake()->image('tire_tread.jpg');
+
+        Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
+            ->set('driver_name', 'Ahmad Supir')
+            ->set('odometer', 50400)
+            ->set('fuel_percentage', 90)
+            ->set('checklist.headlights.status', 'issue')
+            ->set('checklist.headlights.notes', 'Mika lampu depan retak halus')
+            ->set('point_photos.headlights', [$photo1, $photo2])
+            ->set('checklist.tires.notes', 'Tekanan angin 35 psi')
+            ->set('point_photos.tires', [$photoTire])
+            ->set('severity', 'minor')
+            ->set('defect_notes', null) // Uraian temuan is optional even when severity is minor
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('vehicles.show', ['vehicle' => $this->vehicle, 'tab' => 'inspections']));
+
+        $inspection = $this->vehicle->inspections()->latest()->first();
+        $this->assertNotNull($inspection);
+        $this->assertEquals('minor', $inspection->severity);
+        $this->assertNull($inspection->defect_notes);
+
+        $checklistResults = $inspection->checklist_results;
+        $this->assertEquals('issue', $checklistResults['headlights']['status']);
+        $this->assertEquals('Mika lampu depan retak halus', $checklistResults['headlights']['notes']);
+        $this->assertCount(2, $checklistResults['headlights']['photos']);
+        $this->assertEquals('Tekanan angin 35 psi', $checklistResults['tires']['notes']);
+        $this->assertCount(1, $checklistResults['tires']['photos']);
+
+        // Check storage has stored the files
+        Storage::disk('public')->assertExists($checklistResults['headlights']['photos'][0]);
+        Storage::disk('public')->assertExists($checklistResults['headlights']['photos'][1]);
+        Storage::disk('public')->assertExists($checklistResults['tires']['photos'][0]);
     }
 
     public function test_check_reminders_command_notifies_recipients()
@@ -302,5 +348,190 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $component->call('setOperationalTab', 'maintenance')
             ->assertSet('operationalTab', 'maintenance')
             ->assertDontSee($this->vehicle->plate_number);
+    }
+
+    public function test_vehicle_profile_photo_upload_in_form_and_cockpit_management()
+    {
+        Storage::fake('public');
+        Role::firstOrCreate(['name' => 'super-admin']);
+        $this->user->assignRole('super-admin');
+
+        // 1. Upload photo via Vehicle Form
+        $profilePhoto = UploadedFile::fake()->image('innova_front.jpg');
+
+        Livewire::test(VehicleForm::class)
+            ->set('plate_number', 'B 7777 FTO')
+            ->set('driver_name', 'Joko')
+            ->set('brand', 'Toyota')
+            ->set('model', 'Innova Zenix')
+            ->set('category', 'passenger')
+            ->set('fuel_type', 'petrol')
+            ->set('status', 'active')
+            ->set('photo', $profilePhoto)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $newVehicle = Vehicle::where('plate_number', 'B 7777 FTO')->first();
+        $this->assertNotNull($newVehicle);
+        $this->assertNotNull($newVehicle->image_path);
+        $this->assertNotNull($newVehicle->image_url);
+        Storage::disk('public')->assertExists($newVehicle->image_path);
+
+        // 2. Change / Upload photo via Vehicle Show Cockpit
+        $newCockpitPhoto = UploadedFile::fake()->image('innova_new.jpg');
+
+        Livewire::test(VehicleShow::class, ['vehicle' => $newVehicle])
+            ->call('openPhotoModal')
+            ->assertSet('showPhotoModal', true)
+            ->set('new_photo', $newCockpitPhoto)
+            ->call('saveVehiclePhoto')
+            ->assertHasNoErrors()
+            ->assertSet('showPhotoModal', false);
+
+        $newVehicle->refresh();
+        Storage::disk('public')->assertExists($newVehicle->image_path);
+
+        // 3. Test lightbox toggle
+        Livewire::test(VehicleShow::class, ['vehicle' => $newVehicle])
+            ->call('openLightbox')
+            ->assertSet('showLightbox', true)
+            ->call('closeLightbox')
+            ->assertSet('showLightbox', false);
+
+        // 4. Delete photo via Vehicle Show Cockpit
+        Livewire::test(VehicleShow::class, ['vehicle' => $newVehicle])
+            ->call('deleteVehiclePhoto')
+            ->assertHasNoErrors();
+
+        $newVehicle->refresh();
+        $this->assertNull($newVehicle->image_path);
+        $this->assertNull($newVehicle->image_url);
+    }
+
+    public function test_vehicle_qr_scanner_page_and_resolution()
+    {
+        // 1. HTTP GET route to scanner page requires authentication
+        $response = $this->actingAs($this->user)->get(route('vehicles.scan'));
+        $response->assertStatus(200);
+        $response->assertSee('Pindai QR Stiker Armada');
+
+        // 2. Resolve raw UUID string
+        Livewire::actingAs($this->user)
+            ->test(VehicleScan::class)
+            ->call('resolve', (string) $this->vehicle->id)
+            ->assertRedirect(route('vehicles.inspect', ['vehicle' => $this->vehicle->id]));
+
+        // 3. Resolve QR containing URL with UUID
+        $urlWithUuid = 'https://diss.daijo.co.id/vehicles/' . $this->vehicle->id . '/inspect';
+        Livewire::actingAs($this->user)
+            ->test(VehicleScan::class)
+            ->call('resolve', $urlWithUuid)
+            ->assertRedirect(route('vehicles.inspect', ['vehicle' => $this->vehicle->id]));
+    }
+
+    public function test_vehicle_qr_scanner_manual_search_and_invalid_codes()
+    {
+        // 1. Resolve by plate number
+        Livewire::actingAs($this->user)
+            ->test(VehicleScan::class)
+            ->set('manualInput', 'b9999diss')
+            ->call('searchManual')
+            ->assertRedirect(route('vehicles.inspect', ['vehicle' => $this->vehicle->id]));
+
+        // 2. Non-existent vehicle returns error message
+        Livewire::actingAs($this->user)
+            ->test(VehicleScan::class)
+            ->call('resolve', '00000000-0000-0000-0000-000000000000')
+            ->assertSet('errorMessage', "Armada dengan kode/plat '00000000-0000-0000-0000-000000000000' tidak ditemukan dalam sistem DISS.");
+    }
+
+    public function test_user_with_fleet_manage_permission_has_full_management_access()
+    {
+        Permission::firstOrCreate(['name' => 'fleet.manage', 'guard_name' => 'web']);
+        $managerUser = User::factory()->create();
+        $managerUser->givePermissionTo('fleet.manage');
+
+        // 1. VehiclesIndex has canManage = true
+        Livewire::actingAs($managerUser)
+            ->test(VehiclesIndex::class)
+            ->assertSet('canManage', true)
+            ->assertSee('Registrasi Armada');
+
+        // 2. VehicleShow has canManage = true
+        Livewire::actingAs($managerUser)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle])
+            ->assertSet('canManage', true);
+
+        // 3. VehicleForm can create new vehicle
+        Livewire::actingAs($managerUser)
+            ->test(VehicleForm::class)
+            ->assertSet('canManage', true)
+            ->set('plate_number', 'B 5555 MGR')
+            ->set('category', 'passenger')
+            ->set('fuel_type', 'petrol')
+            ->set('status', 'active')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('vehicles', ['plate_number' => 'B 5555 MGR']);
+    }
+
+    public function test_user_without_fleet_manage_permission_cannot_create_or_delete_vehicle()
+    {
+        Permission::firstOrCreate(['name' => 'fleet.view', 'guard_name' => 'web']);
+        $viewerUser = User::factory()->create();
+        $viewerUser->givePermissionTo('fleet.view');
+
+        // 1. Cannot delete vehicle
+        Livewire::actingAs($viewerUser)
+            ->test(VehiclesIndex::class)
+            ->assertSet('canManage', false)
+            ->assertDontSee('Registrasi Armada')
+            ->call('deleteVehicle', $this->vehicle->id)
+            ->assertStatus(403);
+
+        // 2. Cannot access vehicle create form
+        Livewire::actingAs($viewerUser)
+            ->test(VehicleForm::class)
+            ->assertStatus(403);
+
+        // 3. VehicleShow has canManage = false
+        Livewire::actingAs($viewerUser)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle])
+            ->assertSet('canManage', false);
+    }
+
+    public function test_p2h_photos_and_documents_render_with_lightbox_triggers()
+    {
+        Role::firstOrCreate(['name' => 'super-admin']);
+        $this->user->assignRole('super-admin');
+
+        // Create an inspection with checklist photos and defect photos
+        VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'inspection_type' => 'check_out',
+            'driver_name' => 'Budi',
+            'odometer' => 50100,
+            'fuel_percentage' => 80,
+            'checklist_results' => [
+                'headlights' => [
+                    'title' => 'Lampu Depan',
+                    'status' => 'good',
+                    'notes' => 'Kondisi jernih',
+                    'photos' => ['vehicles/inspections/points/test_headlight.jpg'],
+                ],
+            ],
+            'defect_photos' => ['vehicles/inspections/defects/test_defect.jpg'],
+            'severity' => 'none',
+            'inspector_id' => $this->user->id,
+        ]);
+
+        $component = Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'inspections']);
+
+        // Assert Lightbox dispatch event is present in the rendered HTML
+        $component->assertSeeHtml('$dispatch(\'open-lightbox\'');
+        $component->assertSeeHtml('test_headlight.jpg');
+        $component->assertSeeHtml('test_defect.jpg');
     }
 }

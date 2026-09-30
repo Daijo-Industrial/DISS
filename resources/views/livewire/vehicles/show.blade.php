@@ -35,12 +35,33 @@
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
             {{-- Vehicle Identity & License Plate Chassis --}}
             <div class="flex items-start gap-4">
-                <div class="h-16 w-16 rounded-2xl flex items-center justify-center text-3xl shadow-xs shrink-0
-                    {{ $vehicle->category === 'commercial_truck' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700' }}">
-                    @if ($vehicle->category === 'commercial_truck')
-                        <i class="bi bi-truck"></i>
+                {{-- Vehicle Profile Photo / Visual Avatar --}}
+                <div class="relative shrink-0 group">
+                    @if ($vehicle->image_path)
+                        <button type="button" @click.prevent="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $vehicle->image_path) }}', title: 'Foto Profil Armada {{ $vehicle->plate_number }}', subtitle: '{{ trim($vehicle->brand . ' ' . $vehicle->model) }}' })" title="Klik untuk memperbesar foto armada"
+                            class="relative h-20 w-20 sm:h-24 sm:w-24 rounded-3xl overflow-hidden border-2 border-slate-200/80 shadow-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 block">
+                            <img src="{{ asset('storage/' . $vehicle->image_path) }}" alt="{{ $vehicle->plate_number }}"
+                                class="h-full w-full object-cover group-hover:scale-105 transition duration-300">
+                            <span class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-base transition">
+                                <i class="bi bi-zoom-in"></i>
+                            </span>
+                        </button>
                     @else
-                        <i class="bi bi-car-front"></i>
+                        <div class="h-20 w-20 sm:h-24 sm:w-24 rounded-3xl flex items-center justify-center text-3xl sm:text-4xl shadow-xs shrink-0
+                            {{ $vehicle->category === 'commercial_truck' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700' }}">
+                            @if ($vehicle->category === 'commercial_truck')
+                                <i class="bi bi-truck"></i>
+                            @else
+                                <i class="bi bi-car-front"></i>
+                            @endif
+                        </div>
+                    @endif
+
+                    @if ($canManage)
+                        <button type="button" wire:click="openPhotoModal" title="{{ $vehicle->image_path ? 'Ubah / Hapus Foto' : 'Unggah Foto Profil' }}"
+                            class="absolute -bottom-1.5 -right-1.5 h-7 w-7 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-indigo-600 hover:border-indigo-300 shadow-xs flex items-center justify-center text-xs transition active:scale-95">
+                            <i class="bi bi-camera"></i>
+                        </button>
                     @endif
                 </div>
 
@@ -52,12 +73,6 @@
                                 {{ $vehicle->plate_number }}
                             </span>
                         </div>
-
-                        @if ($vehicle->region_name)
-                            <span class="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                                {{ $vehicle->region_name }}
-                            </span>
-                        @endif
 
                         <span class="rounded-lg bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700">
                             {{ $vehicle->category_label }}
@@ -90,7 +105,7 @@
                     {{-- P2H Primary Action (Context Aware) --}}
                     @if ($isOut)
                         <a href="{{ route('vehicles.inspect', ['vehicle' => $vehicle, 'type' => 'check_in']) }}"
-                            class="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-amber-600 transition active:scale-95 animate-pulse">
+                            class="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-amber-600 transition active:scale-95">
                             <i class="bi bi-box-arrow-in-down text-sm"></i>
                             <span>Check-in Kepulangan</span>
                         </a>
@@ -175,7 +190,7 @@
                     <span class="h-2.5 w-2.5 rounded-full bg-rose-500 shrink-0"></span>
                     <span class="text-sm font-bold text-rose-700">{{ $hasExpired }} Dokumen Expired</span>
                 @elseif ($hasWarning > 0)
-                    <span class="h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
+                    <span class="h-2.5 w-2.5 rounded-full bg-amber-500 shrink-0"></span>
                     <span class="text-sm font-bold text-amber-700">{{ $hasWarning }} Segera Berakhir</span>
                 @else
                     <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 shrink-0"></span>
@@ -251,7 +266,7 @@
                 <div class="space-y-3">
                     @foreach ($inspections as $ins)
                         @php $isOutTrip = $ins->inspection_type === 'check_out'; @endphp
-                        <div class="rounded-2xl border p-4 transition
+                        <div x-data="{ showDetails: false }" class="rounded-2xl border p-4 transition
                             {{ $ins->severity === 'critical_grounded' ? 'border-rose-200 bg-rose-50/30' : ($ins->severity === 'minor' ? 'border-amber-200 bg-amber-50/20' : 'border-slate-200/80 bg-white hover:border-slate-300') }}">
                             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                 {{-- Left Info --}}
@@ -314,6 +329,93 @@
                                     @endif
                                 </div>
                             @endif
+
+                            {{-- Expandable Checklist Results & Photos --}}
+                            @php
+                                $chkResults = is_array($ins->checklist_results) ? $ins->checklist_results : json_decode($ins->checklist_results, true);
+                                $totalPhotos = 0;
+                                if (!empty($chkResults)) {
+                                    foreach ($chkResults as $r) {
+                                        if (!empty($r['photos'])) {
+                                            $totalPhotos += count($r['photos']);
+                                        }
+                                    }
+                                }
+                                if (!empty($ins->defect_photos)) {
+                                    $totalPhotos += count($ins->defect_photos);
+                                }
+                            @endphp
+
+                            <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs">
+                                <button type="button" @click="showDetails = !showDetails"
+                                    class="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-500 hover:text-indigo-600 transition">
+                                    <i class="bi bi-list-check text-indigo-500"></i>
+                                    <span x-text="showDetails ? 'Tutup Rincian Checklist' : 'Lihat Rincian Checklist & Foto'"></span>
+                                    @if ($totalPhotos > 0)
+                                        <span class="rounded-full bg-indigo-50 text-indigo-700 px-1.5 py-0.2 text-[10px] font-bold border border-indigo-200">
+                                            <i class="bi bi-camera"></i> {{ $totalPhotos }}
+                                        </span>
+                                    @endif
+                                </button>
+
+                                <span class="text-[10px] text-slate-400 font-mono">
+                                    P2H ID #{{ $ins->id }}
+                                </span>
+                            </div>
+
+                            <div x-show="showDetails" x-cloak class="mt-3 pt-3 border-t border-dashed border-slate-200 space-y-3">
+                                @if (!empty($chkResults))
+                                    <div class="grid gap-2 sm:grid-cols-2">
+                                        @foreach ($chkResults as $itemKey => $item)
+                                            @php
+                                                $statusOk = ($item['status'] ?? 'ok') === 'ok';
+                                                $pointPhotos = $item['photos'] ?? [];
+                                            @endphp
+                                            <div class="rounded-xl border p-2.5 text-xs {{ $statusOk ? 'border-slate-100 bg-slate-50/70' : 'border-rose-200 bg-rose-50/50' }}">
+                                                <div class="flex items-center justify-between gap-1">
+                                                    <span class="font-bold {{ $statusOk ? 'text-slate-800' : 'text-rose-900' }}">
+                                                        {{ $item['label'] ?? ucfirst($itemKey) }}
+                                                    </span>
+                                                    <span class="rounded-md px-1.5 py-0.2 text-[10px] font-bold {{ $statusOk ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800' }}">
+                                                        {{ $statusOk ? 'OK' : 'Ada Isu' }}
+                                                    </span>
+                                                </div>
+
+                                                @if (!empty($item['notes']))
+                                                    <p class="mt-1 text-[11px] text-slate-600">
+                                                        <span class="font-semibold text-slate-500">Remark:</span> {{ $item['notes'] }}
+                                                    </p>
+                                                @endif
+
+                                                @if (!empty($pointPhotos))
+                                                    <div class="mt-2 flex flex-wrap gap-1.5">
+                                                        @foreach ($pointPhotos as $pPath)
+                                                            <button type="button" @click.prevent="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $pPath) }}', title: 'Foto Temuan P2H: {{ addslashes($item['title'] ?? 'Poin Checklist') }}', subtitle: '{{ $vehicle->plate_number }} • {{ $ins->created_at->format('d M Y H:i') }}' })"
+                                                                class="group relative block cursor-pointer" title="Perbesar foto">
+                                                                <img src="{{ asset('storage/' . $pPath) }}" class="h-10 w-10 object-cover rounded-md border border-slate-200 group-hover:opacity-80 group-hover:ring-2 group-hover:ring-indigo-500 transition shadow-2xs">
+                                                            </button>
+                                                        @endforeach
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+
+                                @if (!empty($ins->defect_photos))
+                                    <div class="pt-2 border-t border-slate-100">
+                                        <span class="text-[11px] font-bold text-slate-700 block mb-1">Foto Bukti Kerusakan Tambahan:</span>
+                                        <div class="flex flex-wrap gap-2">
+                                            @foreach ($ins->defect_photos as $dPhoto)
+                                                <button type="button" @click.prevent="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $dPhoto) }}', title: 'Foto Bukti Kerusakan Utama P2H', subtitle: '{{ $vehicle->plate_number }} • {{ $ins->created_at->format('d M Y H:i') }}' })"
+                                                    class="group relative block cursor-pointer" title="Perbesar foto">
+                                                    <img src="{{ asset('storage/' . $dPhoto) }}" class="h-12 w-12 object-cover rounded-lg border border-slate-200 group-hover:opacity-80 group-hover:ring-2 group-hover:ring-indigo-500 transition shadow-xs">
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
                         </div>
                     @endforeach
                 </div>
@@ -471,10 +573,18 @@
                                         </td>
                                         <td class="px-4 py-3">
                                             @if ($doc->attachment_path)
-                                                <a href="{{ asset('storage/' . $doc->attachment_path) }}" target="_blank"
-                                                    class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-medium hover:underline">
-                                                    <i class="bi bi-file-earmark-arrow-down mr-1"></i> Unduh
-                                                </a>
+                                                @php $isImageDoc = (bool) preg_match('/\.(jpg|jpeg|png|webp)$/i', $doc->attachment_path); @endphp
+                                                @if ($isImageDoc)
+                                                    <button type="button" @click.prevent="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $doc->attachment_path) }}', title: 'Lampiran Dokumen: {{ $doc->document_type_label }}', subtitle: '{{ $vehicle->plate_number }} • No: {{ $doc->document_number ?: '-' }}' })"
+                                                        class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-medium hover:underline cursor-pointer">
+                                                        <i class="bi bi-eye mr-1"></i> Pratinjau
+                                                    </button>
+                                                @else
+                                                    <a href="{{ asset('storage/' . $doc->attachment_path) }}" target="_blank"
+                                                        class="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-medium hover:underline">
+                                                        <i class="bi bi-file-earmark-arrow-down mr-1"></i> Unduh File
+                                                    </a>
+                                                @endif
                                             @else
                                                 <span class="text-slate-400">—</span>
                                             @endif
@@ -729,6 +839,79 @@
                             class="rounded-xl bg-indigo-600 px-5 py-2 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-60">
                             Simpan Dokumen
                         </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
+    {{-- UNIVERSAL LIGHTBOX MODULE --}}
+    <x-universal-lightbox :vehicle="$vehicle" />
+
+    {{-- MODAL UBAH / UNGGAH FOTO PROFIL ARMADA --}}
+    @if ($showPhotoModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
+            <div class="relative w-full max-w-md rounded-3xl bg-white shadow-2xl border border-slate-200 p-6 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="bi bi-camera text-indigo-600 text-lg"></i>
+                        <h3 class="text-sm font-bold text-slate-900">Foto Profil Armada</h3>
+                    </div>
+                    <button type="button" wire:click="closePhotoModal" class="text-slate-400 hover:text-slate-600">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+
+                <form wire:submit.prevent="saveVehiclePhoto" class="space-y-4">
+                    {{-- Current or New Preview --}}
+                    <div class="flex flex-col items-center justify-center text-center p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                        @if ($new_photo)
+                            <img src="{{ $new_photo->temporaryUrl() }}" class="h-32 w-32 object-cover rounded-2xl border border-slate-200 shadow-xs mb-2">
+                            <span class="text-xs font-semibold text-indigo-700">Foto Baru Dipilih</span>
+                        @elseif ($vehicle->image_path)
+                            <img src="{{ asset('storage/' . $vehicle->image_path) }}" class="h-32 w-32 object-cover rounded-2xl border border-slate-200 shadow-xs mb-2">
+                            <span class="text-xs text-slate-500 font-medium">Foto Saat Ini</span>
+                        @else
+                            <div class="h-24 w-24 rounded-2xl bg-slate-100 flex flex-col items-center justify-center text-slate-400 border border-dashed border-slate-300 mb-2">
+                                <i class="bi bi-camera text-3xl"></i>
+                            </div>
+                            <span class="text-xs text-slate-400">Belum ada foto yang diunggah</span>
+                        @endif
+                    </div>
+
+                    {{-- Upload input --}}
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Pilih Berkas Foto Baru</label>
+                        <input type="file" wire:model="new_photo" accept="image/*"
+                            class="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                        <div wire:loading wire:target="new_photo" class="text-xs text-indigo-600 font-medium mt-1">
+                            <i class="bi bi-arrow-repeat animate-spin mr-1"></i> Sedang mengunggah...
+                        </div>
+                        @error('new_photo')
+                            <p class="mt-1 text-[11px] text-rose-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="flex items-center justify-between gap-2 pt-3 border-t border-slate-100">
+                        <div>
+                            @if ($vehicle->image_path)
+                                <button type="button" wire:click="deleteVehiclePhoto" wire:confirm="Hapus foto profil kendaraan ini dan kembali ke icon default?"
+                                    class="text-xs font-bold text-rose-600 hover:text-rose-800">
+                                    <i class="bi bi-trash mr-1"></i> Hapus Foto
+                                </button>
+                            @endif
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <button type="button" wire:click="closePhotoModal"
+                                class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                                Batal
+                            </button>
+                            <button type="submit" wire:loading.attr="disabled"
+                                class="rounded-xl bg-indigo-600 px-5 py-2 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-60">
+                                Simpan Foto
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>

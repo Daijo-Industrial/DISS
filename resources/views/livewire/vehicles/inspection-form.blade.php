@@ -46,14 +46,22 @@
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             {{-- Vehicle & Inspection Info --}}
             <div class="flex items-start gap-4">
-                <div class="h-14 w-14 rounded-2xl flex items-center justify-center text-2xl shadow-xs shrink-0
-                    {{ $vehicle->category === 'commercial_truck' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700' }}">
-                    @if ($vehicle->category === 'commercial_truck')
-                        <i class="bi bi-truck"></i>
-                    @else
-                        <i class="bi bi-car-front"></i>
-                    @endif
-                </div>
+                @if ($vehicle->image_path)
+                    <button type="button" @click="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $vehicle->image_path) }}', title: 'Foto Profil Armada {{ $vehicle->plate_number }}', subtitle: '{{ trim($vehicle->brand . ' ' . $vehicle->model) }}' })"
+                        class="cursor-pointer shrink-0" title="Perbesar foto">
+                        <img src="{{ asset('storage/' . $vehicle->image_path) }}" alt="{{ $vehicle->plate_number }}"
+                            class="h-14 w-14 rounded-2xl object-cover border border-slate-200 shadow-xs hover:opacity-90 transition">
+                    </button>
+                @else
+                    <div class="h-14 w-14 rounded-2xl flex items-center justify-center text-2xl shadow-xs shrink-0
+                        {{ $vehicle->category === 'commercial_truck' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700' }}">
+                        @if ($vehicle->category === 'commercial_truck')
+                            <i class="bi bi-truck"></i>
+                        @else
+                            <i class="bi bi-car-front"></i>
+                        @endif
+                    </div>
+                @endif
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-xl font-black tracking-tight text-slate-900 font-mono">
@@ -81,7 +89,7 @@
                     </span>
                 </div>
                 <div class="relative h-10 w-10 flex items-center justify-center">
-                    <span class="h-10 w-10 rounded-full border-3 {{ $isAllOk ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-amber-500 bg-amber-50 text-amber-700 animate-pulse' }} flex items-center justify-center text-xs font-black">
+                    <span class="h-10 w-10 rounded-full border-3 {{ $isAllOk ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-amber-500 bg-amber-50 text-amber-700' }} flex items-center justify-center text-xs font-black">
                         {{ $readinessPercent }}%
                     </span>
                 </div>
@@ -221,7 +229,7 @@
                                     <p class="text-[11px] text-slate-400">Lampu dekat &amp; jauh menyala normal</p>
                                 </div>
                             </div>
-                            <div class="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200">
+                            <div class="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200 shrink-0">
                                 <button type="button" wire:click="setChecklistStatus('headlights', 'ok')"
                                     class="px-2.5 py-1 rounded-md text-xs font-bold transition {{ $hlOk ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
                                     OK
@@ -232,12 +240,49 @@
                                 </button>
                             </div>
                         </div>
-                        @if (!$hlOk)
-                            <div class="mt-2 pt-2 border-t border-rose-100">
-                                <input type="text" wire:model.defer="checklist.headlights.notes" placeholder="Rincian kerusakan (misal: headlamp kiri redup/mati)..."
-                                    class="w-full rounded-lg border border-rose-200 bg-rose-50/50 px-2.5 py-1 text-xs text-rose-950 focus:outline-none">
+
+                        {{-- Remark & Multiple Photos --}}
+                        <div class="mt-2.5 pt-2 border-t {{ $hlOk ? 'border-slate-100' : 'border-rose-100' }} space-y-2">
+                            <input type="text" wire:model.defer="checklist.headlights.notes"
+                                placeholder="{{ $hlOk ? 'Catatan / remark kondisi (opsional)...' : 'Rincian kerusakan (misal: headlamp kiri redup/mati)...' }}"
+                                class="w-full rounded-lg border {{ $hlOk ? 'border-slate-200 bg-slate-50/50 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500' : 'border-rose-200 bg-rose-50/50 text-rose-950 placeholder:text-rose-400 focus:bg-white focus:border-rose-500' }} px-2.5 py-1 text-xs focus:outline-none transition">
+
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <label class="cursor-pointer inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-600 shadow-xs transition">
+                                    <i class="bi bi-camera text-indigo-600"></i>
+                                    <span>Lampirkan Foto</span>
+                                    <input type="file" wire:model="point_photos.headlights" multiple accept="image/*" class="sr-only">
+                                </label>
+
+                                <div wire:loading wire:target="point_photos.headlights" class="text-[11px] text-indigo-600 font-medium">
+                                    <i class="bi bi-arrow-repeat animate-spin mr-1"></i> Mengunggah...
+                                </div>
+
+                                @if (!empty($point_photos['headlights']))
+                                    <span class="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
+                                        {{ count($point_photos['headlights']) }} foto dipilih
+                                    </span>
+                                @endif
                             </div>
-                        @endif
+
+                            @if (!empty($point_photos['headlights']))
+                                <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                                    @foreach ($point_photos['headlights'] as $idx => $p)
+                                        <div class="relative group">
+                                            @if (method_exists($p, 'temporaryUrl'))
+                                                <img src="{{ $p->temporaryUrl() }}" @click="$dispatch('open-lightbox', { src: '{{ $p->temporaryUrl() }}', title: 'Pratinjau Foto Temuan Checklist' })" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs cursor-pointer hover:opacity-90 transition">
+                                            @else
+                                                <div class="h-11 w-11 bg-slate-100 rounded-lg flex items-center justify-center text-[9px] text-slate-500 font-semibold border border-slate-200">#{{ $idx+1 }}</div>
+                                            @endif
+                                            <button type="button" wire:click="removePointPhoto('headlights', {{ $idx }})" title="Hapus foto"
+                                                class="absolute -top-1.5 -right-1.5 bg-rose-600 text-white rounded-full h-4 w-4 flex items-center justify-center text-[10px] hover:bg-rose-700 shadow-xs">
+                                                ×
+                                            </button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
                     </div>
 
                     {{-- Item: Body --}}
@@ -251,7 +296,7 @@
                                     <p class="text-[11px] text-slate-400">Bebas dari baret baru, penyok, kebersihan luar</p>
                                 </div>
                             </div>
-                            <div class="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200">
+                            <div class="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200 shrink-0">
                                 <button type="button" wire:click="setChecklistStatus('body', 'ok')"
                                     class="px-2.5 py-1 rounded-md text-xs font-bold transition {{ $bOk ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
                                     OK
@@ -262,12 +307,49 @@
                                 </button>
                             </div>
                         </div>
-                        @if (!$bOk)
-                            <div class="mt-2 pt-2 border-t border-rose-100">
-                                <input type="text" wire:model.defer="checklist.body.notes" placeholder="Rincian kerusakan bodi luar..."
-                                    class="w-full rounded-lg border border-rose-200 bg-rose-50/50 px-2.5 py-1 text-xs text-rose-950 focus:outline-none">
+
+                        {{-- Remark & Multiple Photos --}}
+                        <div class="mt-2.5 pt-2 border-t {{ $bOk ? 'border-slate-100' : 'border-rose-100' }} space-y-2">
+                            <input type="text" wire:model.defer="checklist.body.notes"
+                                placeholder="{{ $bOk ? 'Catatan / remark bodi (opsional)...' : 'Rincian kerusakan bodi luar...' }}"
+                                class="w-full rounded-lg border {{ $bOk ? 'border-slate-200 bg-slate-50/50 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500' : 'border-rose-200 bg-rose-50/50 text-rose-950 placeholder:text-rose-400 focus:bg-white focus:border-rose-500' }} px-2.5 py-1 text-xs focus:outline-none transition">
+
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <label class="cursor-pointer inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-600 shadow-xs transition">
+                                    <i class="bi bi-camera text-indigo-600"></i>
+                                    <span>Lampirkan Foto</span>
+                                    <input type="file" wire:model="point_photos.body" multiple accept="image/*" class="sr-only">
+                                </label>
+
+                                <div wire:loading wire:target="point_photos.body" class="text-[11px] text-indigo-600 font-medium">
+                                    <i class="bi bi-arrow-repeat animate-spin mr-1"></i> Mengunggah...
+                                </div>
+
+                                @if (!empty($point_photos['body']))
+                                    <span class="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
+                                        {{ count($point_photos['body']) }} foto dipilih
+                                    </span>
+                                @endif
                             </div>
-                        @endif
+
+                            @if (!empty($point_photos['body']))
+                                <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                                    @foreach ($point_photos['body'] as $idx => $p)
+                                        <div class="relative group">
+                                            @if (method_exists($p, 'temporaryUrl'))
+                                                <img src="{{ $p->temporaryUrl() }}" @click="$dispatch('open-lightbox', { src: '{{ $p->temporaryUrl() }}', title: 'Pratinjau Foto Temuan Checklist' })" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs cursor-pointer hover:opacity-90 transition">
+                                            @else
+                                                <div class="h-11 w-11 bg-slate-100 rounded-lg flex items-center justify-center text-[9px] text-slate-500 font-semibold border border-slate-200">#{{ $idx+1 }}</div>
+                                            @endif
+                                            <button type="button" wire:click="removePointPhoto('body', {{ $idx }})" title="Hapus foto"
+                                                class="absolute -top-1.5 -right-1.5 bg-rose-600 text-white rounded-full h-4 w-4 flex items-center justify-center text-[10px] hover:bg-rose-700 shadow-xs">
+                                                ×
+                                            </button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
                     </div>
                 </div>
 
@@ -291,7 +373,7 @@
                                     <p class="text-[11px] text-slate-400">Menyala terang saat pedal rem diinjak</p>
                                 </div>
                             </div>
-                            <div class="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200">
+                            <div class="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200 shrink-0">
                                 <button type="button" wire:click="setChecklistStatus('brake_lights', 'ok')"
                                     class="px-2.5 py-1 rounded-md text-xs font-bold transition {{ $blOk ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
                                     OK
@@ -302,12 +384,49 @@
                                 </button>
                             </div>
                         </div>
-                        @if (!$blOk)
-                            <div class="mt-2 pt-2 border-t border-rose-100">
-                                <input type="text" wire:model.defer="checklist.brake_lights.notes" placeholder="Rincian kendala lampu rem..."
-                                    class="w-full rounded-lg border border-rose-200 bg-rose-50/50 px-2.5 py-1 text-xs text-rose-950 focus:outline-none">
+
+                        {{-- Remark & Multiple Photos --}}
+                        <div class="mt-2.5 pt-2 border-t {{ $blOk ? 'border-slate-100' : 'border-rose-100' }} space-y-2">
+                            <input type="text" wire:model.defer="checklist.brake_lights.notes"
+                                placeholder="{{ $blOk ? 'Catatan / remark lampu rem (opsional)...' : 'Rincian kendala lampu rem...' }}"
+                                class="w-full rounded-lg border {{ $blOk ? 'border-slate-200 bg-slate-50/50 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500' : 'border-rose-200 bg-rose-50/50 text-rose-950 placeholder:text-rose-400 focus:bg-white focus:border-rose-500' }} px-2.5 py-1 text-xs focus:outline-none transition">
+
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <label class="cursor-pointer inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-600 shadow-xs transition">
+                                    <i class="bi bi-camera text-indigo-600"></i>
+                                    <span>Lampirkan Foto</span>
+                                    <input type="file" wire:model="point_photos.brake_lights" multiple accept="image/*" class="sr-only">
+                                </label>
+
+                                <div wire:loading wire:target="point_photos.brake_lights" class="text-[11px] text-indigo-600 font-medium">
+                                    <i class="bi bi-arrow-repeat animate-spin mr-1"></i> Mengunggah...
+                                </div>
+
+                                @if (!empty($point_photos['brake_lights']))
+                                    <span class="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
+                                        {{ count($point_photos['brake_lights']) }} foto dipilih
+                                    </span>
+                                @endif
                             </div>
-                        @endif
+
+                            @if (!empty($point_photos['brake_lights']))
+                                <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                                    @foreach ($point_photos['brake_lights'] as $idx => $p)
+                                        <div class="relative group">
+                                            @if (method_exists($p, 'temporaryUrl'))
+                                                <img src="{{ $p->temporaryUrl() }}" @click="$dispatch('open-lightbox', { src: '{{ $p->temporaryUrl() }}', title: 'Pratinjau Foto Temuan Checklist' })" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs cursor-pointer hover:opacity-90 transition">
+                                            @else
+                                                <div class="h-11 w-11 bg-slate-100 rounded-lg flex items-center justify-center text-[9px] text-slate-500 font-semibold border border-slate-200">#{{ $idx+1 }}</div>
+                                            @endif
+                                            <button type="button" wire:click="removePointPhoto('brake_lights', {{ $idx }})" title="Hapus foto"
+                                                class="absolute -top-1.5 -right-1.5 bg-rose-600 text-white rounded-full h-4 w-4 flex items-center justify-center text-[10px] hover:bg-rose-700 shadow-xs">
+                                                ×
+                                            </button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
                     </div>
 
                     {{-- Item: Turn Signals --}}
@@ -321,7 +440,7 @@
                                     <p class="text-[11px] text-slate-400">Sein kiri, sein kanan, dan lampu hazard menyala</p>
                                 </div>
                             </div>
-                            <div class="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200">
+                            <div class="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200 shrink-0">
                                 <button type="button" wire:click="setChecklistStatus('turn_signals', 'ok')"
                                     class="px-2.5 py-1 rounded-md text-xs font-bold transition {{ $tsOk ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
                                     OK
@@ -332,12 +451,49 @@
                                 </button>
                             </div>
                         </div>
-                        @if (!$tsOk)
-                            <div class="mt-2 pt-2 border-t border-rose-100">
-                                <input type="text" wire:model.defer="checklist.turn_signals.notes" placeholder="Rincian lampu sein yang mati..."
-                                    class="w-full rounded-lg border border-rose-200 bg-rose-50/50 px-2.5 py-1 text-xs text-rose-950 focus:outline-none">
+
+                        {{-- Remark & Multiple Photos --}}
+                        <div class="mt-2.5 pt-2 border-t {{ $tsOk ? 'border-slate-100' : 'border-rose-100' }} space-y-2">
+                            <input type="text" wire:model.defer="checklist.turn_signals.notes"
+                                placeholder="{{ $tsOk ? 'Catatan / remark sein & hazard (opsional)...' : 'Rincian lampu sein yang mati...' }}"
+                                class="w-full rounded-lg border {{ $tsOk ? 'border-slate-200 bg-slate-50/50 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500' : 'border-rose-200 bg-rose-50/50 text-rose-950 placeholder:text-rose-400 focus:bg-white focus:border-rose-500' }} px-2.5 py-1 text-xs focus:outline-none transition">
+
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <label class="cursor-pointer inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-600 shadow-xs transition">
+                                    <i class="bi bi-camera text-indigo-600"></i>
+                                    <span>Lampirkan Foto</span>
+                                    <input type="file" wire:model="point_photos.turn_signals" multiple accept="image/*" class="sr-only">
+                                </label>
+
+                                <div wire:loading wire:target="point_photos.turn_signals" class="text-[11px] text-indigo-600 font-medium">
+                                    <i class="bi bi-arrow-repeat animate-spin mr-1"></i> Mengunggah...
+                                </div>
+
+                                @if (!empty($point_photos['turn_signals']))
+                                    <span class="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
+                                        {{ count($point_photos['turn_signals']) }} foto dipilih
+                                    </span>
+                                @endif
                             </div>
-                        @endif
+
+                            @if (!empty($point_photos['turn_signals']))
+                                <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                                    @foreach ($point_photos['turn_signals'] as $idx => $p)
+                                        <div class="relative group">
+                                            @if (method_exists($p, 'temporaryUrl'))
+                                                <img src="{{ $p->temporaryUrl() }}" @click="$dispatch('open-lightbox', { src: '{{ $p->temporaryUrl() }}', title: 'Pratinjau Foto Temuan Checklist' })" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs cursor-pointer hover:opacity-90 transition">
+                                            @else
+                                                <div class="h-11 w-11 bg-slate-100 rounded-lg flex items-center justify-center text-[9px] text-slate-500 font-semibold border border-slate-200">#{{ $idx+1 }}</div>
+                                            @endif
+                                            <button type="button" wire:click="removePointPhoto('turn_signals', {{ $idx }})" title="Hapus foto"
+                                                class="absolute -top-1.5 -right-1.5 bg-rose-600 text-white rounded-full h-4 w-4 flex items-center justify-center text-[10px] hover:bg-rose-700 shadow-xs">
+                                                ×
+                                            </button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
                     </div>
                 </div>
 
@@ -361,7 +517,7 @@
                                     <p class="text-[11px] text-slate-400">Tekanan angin cukup, tidak gundul, ban serep ada</p>
                                 </div>
                             </div>
-                            <div class="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200">
+                            <div class="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200 shrink-0">
                                 <button type="button" wire:click="setChecklistStatus('tires', 'ok')"
                                     class="px-2.5 py-1 rounded-md text-xs font-bold transition {{ $tOk ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
                                     OK
@@ -372,12 +528,49 @@
                                 </button>
                             </div>
                         </div>
-                        @if (!$tOk)
-                            <div class="mt-2 pt-2 border-t border-rose-100">
-                                <input type="text" wire:model.defer="checklist.tires.notes" placeholder="Rincian kondisi ban (misal: ban depan kanan bocor halus)..."
-                                    class="w-full rounded-lg border border-rose-200 bg-rose-50/50 px-2.5 py-1 text-xs text-rose-950 focus:outline-none">
+
+                        {{-- Remark & Multiple Photos --}}
+                        <div class="mt-2.5 pt-2 border-t {{ $tOk ? 'border-slate-100' : 'border-rose-100' }} space-y-2">
+                            <input type="text" wire:model.defer="checklist.tires.notes"
+                                placeholder="{{ $tOk ? 'Catatan / remark ban (opsional)...' : 'Rincian kondisi ban (misal: ban depan kanan bocor halus)...' }}"
+                                class="w-full rounded-lg border {{ $tOk ? 'border-slate-200 bg-slate-50/50 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500' : 'border-rose-200 bg-rose-50/50 text-rose-950 placeholder:text-rose-400 focus:bg-white focus:border-rose-500' }} px-2.5 py-1 text-xs focus:outline-none transition">
+
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <label class="cursor-pointer inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-600 shadow-xs transition">
+                                    <i class="bi bi-camera text-indigo-600"></i>
+                                    <span>Lampirkan Foto</span>
+                                    <input type="file" wire:model="point_photos.tires" multiple accept="image/*" class="sr-only">
+                                </label>
+
+                                <div wire:loading wire:target="point_photos.tires" class="text-[11px] text-indigo-600 font-medium">
+                                    <i class="bi bi-arrow-repeat animate-spin mr-1"></i> Mengunggah...
+                                </div>
+
+                                @if (!empty($point_photos['tires']))
+                                    <span class="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
+                                        {{ count($point_photos['tires']) }} foto dipilih
+                                    </span>
+                                @endif
                             </div>
-                        @endif
+
+                            @if (!empty($point_photos['tires']))
+                                <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                                    @foreach ($point_photos['tires'] as $idx => $p)
+                                        <div class="relative group">
+                                            @if (method_exists($p, 'temporaryUrl'))
+                                                <img src="{{ $p->temporaryUrl() }}" @click="$dispatch('open-lightbox', { src: '{{ $p->temporaryUrl() }}', title: 'Pratinjau Foto Temuan Checklist' })" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs cursor-pointer hover:opacity-90 transition">
+                                            @else
+                                                <div class="h-11 w-11 bg-slate-100 rounded-lg flex items-center justify-center text-[9px] text-slate-500 font-semibold border border-slate-200">#{{ $idx+1 }}</div>
+                                            @endif
+                                            <button type="button" wire:click="removePointPhoto('tires', {{ $idx }})" title="Hapus foto"
+                                                class="absolute -top-1.5 -right-1.5 bg-rose-600 text-white rounded-full h-4 w-4 flex items-center justify-center text-[10px] hover:bg-rose-700 shadow-xs">
+                                                ×
+                                            </button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
                     </div>
 
                     {{-- Item: Battery / Fuel --}}
@@ -391,7 +584,7 @@
                                     <p class="text-[11px] text-slate-400">Starter lancar, indikator aki normal, bensin cukup</p>
                                 </div>
                             </div>
-                            <div class="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200">
+                            <div class="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200 shrink-0">
                                 <button type="button" wire:click="setChecklistStatus('battery_fuel', 'ok')"
                                     class="px-2.5 py-1 rounded-md text-xs font-bold transition {{ $bfOk ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
                                     OK
@@ -402,12 +595,49 @@
                                 </button>
                             </div>
                         </div>
-                        @if (!$bfOk)
-                            <div class="mt-2 pt-2 border-t border-rose-100">
-                                <input type="text" wire:model.defer="checklist.battery_fuel.notes" placeholder="Rincian masalah aki / kelistrikan..."
-                                    class="w-full rounded-lg border border-rose-200 bg-rose-50/50 px-2.5 py-1 text-xs text-rose-950 focus:outline-none">
+
+                        {{-- Remark & Multiple Photos --}}
+                        <div class="mt-2.5 pt-2 border-t {{ $bfOk ? 'border-slate-100' : 'border-rose-100' }} space-y-2">
+                            <input type="text" wire:model.defer="checklist.battery_fuel.notes"
+                                placeholder="{{ $bfOk ? 'Catatan / remark aki & bensin (opsional)...' : 'Rincian masalah aki / kelistrikan...' }}"
+                                class="w-full rounded-lg border {{ $bfOk ? 'border-slate-200 bg-slate-50/50 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500' : 'border-rose-200 bg-rose-50/50 text-rose-950 placeholder:text-rose-400 focus:bg-white focus:border-rose-500' }} px-2.5 py-1 text-xs focus:outline-none transition">
+
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <label class="cursor-pointer inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-600 shadow-xs transition">
+                                    <i class="bi bi-camera text-indigo-600"></i>
+                                    <span>Lampirkan Foto</span>
+                                    <input type="file" wire:model="point_photos.battery_fuel" multiple accept="image/*" class="sr-only">
+                                </label>
+
+                                <div wire:loading wire:target="point_photos.battery_fuel" class="text-[11px] text-indigo-600 font-medium">
+                                    <i class="bi bi-arrow-repeat animate-spin mr-1"></i> Mengunggah...
+                                </div>
+
+                                @if (!empty($point_photos['battery_fuel']))
+                                    <span class="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
+                                        {{ count($point_photos['battery_fuel']) }} foto dipilih
+                                    </span>
+                                @endif
                             </div>
-                        @endif
+
+                            @if (!empty($point_photos['battery_fuel']))
+                                <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                                    @foreach ($point_photos['battery_fuel'] as $idx => $p)
+                                        <div class="relative group">
+                                            @if (method_exists($p, 'temporaryUrl'))
+                                                <img src="{{ $p->temporaryUrl() }}" @click="$dispatch('open-lightbox', { src: '{{ $p->temporaryUrl() }}', title: 'Pratinjau Foto Temuan Checklist' })" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs cursor-pointer hover:opacity-90 transition">
+                                            @else
+                                                <div class="h-11 w-11 bg-slate-100 rounded-lg flex items-center justify-center text-[9px] text-slate-500 font-semibold border border-slate-200">#{{ $idx+1 }}</div>
+                                            @endif
+                                            <button type="button" wire:click="removePointPhoto('battery_fuel', {{ $idx }})" title="Hapus foto"
+                                                class="absolute -top-1.5 -right-1.5 bg-rose-600 text-white rounded-full h-4 w-4 flex items-center justify-center text-[10px] hover:bg-rose-700 shadow-xs">
+                                                ×
+                                            </button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
                     </div>
                 </div>
 
@@ -431,7 +661,7 @@
                                     <p class="text-[11px] text-slate-400">Kabin bersih, dongkrak, segitiga pengaman, APAR, P3K</p>
                                 </div>
                             </div>
-                            <div class="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200">
+                            <div class="inline-flex rounded-lg p-0.5 bg-slate-100 border border-slate-200 shrink-0">
                                 <button type="button" wire:click="setChecklistStatus('interior', 'ok')"
                                     class="px-2.5 py-1 rounded-md text-xs font-bold transition {{ $inOk ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
                                     OK
@@ -442,12 +672,49 @@
                                 </button>
                             </div>
                         </div>
-                        @if (!$inOk)
-                            <div class="mt-2 pt-2 border-t border-rose-100">
-                                <input type="text" wire:model.defer="checklist.interior.notes" placeholder="Rincian kelengkapan kabin yang kurang..."
-                                    class="w-full rounded-lg border border-rose-200 bg-rose-50/50 px-2.5 py-1 text-xs text-rose-950 focus:outline-none">
+
+                        {{-- Remark & Multiple Photos --}}
+                        <div class="mt-2.5 pt-2 border-t {{ $inOk ? 'border-slate-100' : 'border-rose-100' }} space-y-2">
+                            <input type="text" wire:model.defer="checklist.interior.notes"
+                                placeholder="{{ $inOk ? 'Catatan / remark kabin (opsional)...' : 'Rincian kelengkapan kabin yang kurang...' }}"
+                                class="w-full rounded-lg border {{ $inOk ? 'border-slate-200 bg-slate-50/50 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500' : 'border-rose-200 bg-rose-50/50 text-rose-950 placeholder:text-rose-400 focus:bg-white focus:border-rose-500' }} px-2.5 py-1 text-xs focus:outline-none transition">
+
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <label class="cursor-pointer inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-600 shadow-xs transition">
+                                    <i class="bi bi-camera text-indigo-600"></i>
+                                    <span>Lampirkan Foto</span>
+                                    <input type="file" wire:model="point_photos.interior" multiple accept="image/*" class="sr-only">
+                                </label>
+
+                                <div wire:loading wire:target="point_photos.interior" class="text-[11px] text-indigo-600 font-medium">
+                                    <i class="bi bi-arrow-repeat animate-spin mr-1"></i> Mengunggah...
+                                </div>
+
+                                @if (!empty($point_photos['interior']))
+                                    <span class="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
+                                        {{ count($point_photos['interior']) }} foto dipilih
+                                    </span>
+                                @endif
                             </div>
-                        @endif
+
+                            @if (!empty($point_photos['interior']))
+                                <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                                    @foreach ($point_photos['interior'] as $idx => $p)
+                                        <div class="relative group">
+                                            @if (method_exists($p, 'temporaryUrl'))
+                                                <img src="{{ $p->temporaryUrl() }}" @click="$dispatch('open-lightbox', { src: '{{ $p->temporaryUrl() }}', title: 'Pratinjau Foto Temuan Checklist' })" class="h-11 w-11 object-cover rounded-lg border border-slate-200 shadow-xs cursor-pointer hover:opacity-90 transition">
+                                            @else
+                                                <div class="h-11 w-11 bg-slate-100 rounded-lg flex items-center justify-center text-[9px] text-slate-500 font-semibold border border-slate-200">#{{ $idx+1 }}</div>
+                                            @endif
+                                            <button type="button" wire:click="removePointPhoto('interior', {{ $idx }})" title="Hapus foto"
+                                                class="absolute -top-1.5 -right-1.5 bg-rose-600 text-white rounded-full h-4 w-4 flex items-center justify-center text-[10px] hover:bg-rose-700 shadow-xs">
+                                                ×
+                                            </button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
                     </div>
                 </div>
             </div>
@@ -495,9 +762,9 @@
                 <div class="grid gap-3 sm:grid-cols-2">
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">
-                            Uraian Lengkap Temuan / Kerusakan <span class="text-rose-500">*</span>
+                            Uraian Lengkap Temuan / Kerusakan <span class="text-slate-400 font-normal">(Opsional)</span>
                         </label>
-                        <textarea wire:model.defer="defect_notes" rows="3" placeholder="Tuliskan komponen spesifik yang rusak..."
+                        <textarea wire:model.defer="defect_notes" rows="3" placeholder="Tuliskan rangkuman temuan atau rekomendasi perbaikan (opsional jika sudah dicatat pada rincian poin di atas)..."
                             class="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none"></textarea>
                         @error('defect_notes')
                             <p class="mt-1 text-[11px] text-rose-600">{{ $message }}</p>
@@ -506,13 +773,32 @@
 
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">
-                            Foto Bukti Kerusakan (Maks 5 Foto)
+                            Foto Bukti Kerusakan Tambahan (Opsional)
                         </label>
                         <div class="rounded-xl border-2 border-dashed border-slate-300 bg-white p-4 text-center">
                             <input type="file" wire:model="photos" multiple accept="image/*" class="text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700">
                             <div wire:loading wire:target="photos" class="text-[11px] text-indigo-600 mt-2 font-medium">
                                 <i class="bi bi-arrow-repeat animate-spin mr-1"></i> Sedang mengunggah foto...
                             </div>
+
+                            @if (!empty($photos))
+                                <div class="mt-3 flex flex-wrap gap-2 justify-center">
+                                    @foreach ($photos as $idx => $p)
+                                        <div class="relative group">
+                                            @if (method_exists($p, 'temporaryUrl'))
+                                                <img src="{{ $p->temporaryUrl() }}" @click="$dispatch('open-lightbox', { src: '{{ $p->temporaryUrl() }}', title: 'Pratinjau Foto Bukti Kerusakan' })"
+                                                    class="h-12 w-12 object-cover rounded-lg border border-slate-200 shadow-xs cursor-pointer hover:opacity-90 transition">
+                                            @else
+                                                <div class="h-12 w-12 bg-slate-100 rounded-lg flex items-center justify-center text-[9px] text-slate-500 font-semibold border border-slate-200">#{{ $idx+1 }}</div>
+                                            @endif
+                                            <button type="button" wire:click="removePhoto({{ $idx }})" title="Hapus foto"
+                                                class="absolute -top-1.5 -right-1.5 bg-rose-600 text-white rounded-full h-4 w-4 flex items-center justify-center text-[10px] hover:bg-rose-700 shadow-xs">
+                                                ×
+                                            </button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -535,4 +821,7 @@
             </button>
         </div>
     </form>
+
+    {{-- Universal Photo Lightbox --}}
+    <x-universal-lightbox />
 </div>

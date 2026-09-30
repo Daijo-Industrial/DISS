@@ -49,11 +49,18 @@
         </div>
 
         <div class="flex items-center gap-2 self-start sm:self-auto">
-            <a href="{{ route('vehicles.create') }}"
-                class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 transition active:scale-[0.98]">
-                <i class="bi bi-plus-lg mr-1.5 text-sm"></i>
-                Registrasi Armada
+            <a href="{{ route('vehicles.scan') }}" wire:navigate
+                class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-3.5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-slate-800 transition active:scale-[0.98]">
+                <i class="bi bi-qr-code-scan mr-1.5 text-sm text-cyan-400"></i>
+                <span>Scan QR P2H</span>
             </a>
+            @if ($canManage)
+                <a href="{{ route('vehicles.create') }}"
+                    class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-indigo-700 transition active:scale-[0.98]">
+                    <i class="bi bi-plus-lg mr-1.5 text-sm"></i>
+                    Registrasi Armada
+                </a>
+            @endif
         </div>
     </div>
 
@@ -127,7 +134,7 @@
     </div>
 
     {{-- Compliance Expiry Alert Banner --}}
-    @if ($fullFeature && $complianceAlerts->isNotEmpty())
+    @if ($canManage && $complianceAlerts->isNotEmpty())
         <div class="rounded-2xl border border-amber-300 bg-gradient-to-r from-amber-50 via-orange-50/50 to-amber-50 p-3.5 sm:p-4 shadow-xs">
             <div class="flex items-start gap-3">
                 <div class="h-8 w-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
@@ -177,7 +184,7 @@
 
         <button type="button" wire:click="setOperationalTab('on_trip')"
             class="rounded-xl px-3.5 py-2 text-xs font-bold transition whitespace-nowrap {{ $operationalTab === 'on_trip' ? 'bg-white text-amber-700 shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
-            <span class="inline-block h-2 w-2 rounded-full bg-amber-500 mr-1.5 animate-pulse"></span>
+            <span class="inline-block h-2 w-2 rounded-full bg-amber-500 mr-1.5"></span>
             Sedang di Jalan
             <span class="ml-1 rounded-full px-1.5 py-0.2 text-[10px] {{ $operationalTab === 'on_trip' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600' }}">{{ $metrics['on_trip'] }}</span>
         </button>
@@ -268,13 +275,21 @@
                     <div>
                         <div class="flex items-start justify-between gap-2">
                             <div class="flex items-center gap-2.5">
-                                <span class="h-11 w-11 rounded-xl flex items-center justify-center text-xl shrink-0 {{ $v->category === 'commercial_truck' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700' }}">
-                                    @if ($v->category === 'commercial_truck')
-                                        <i class="bi bi-truck"></i>
-                                    @else
-                                        <i class="bi bi-car-front"></i>
-                                    @endif
-                                </span>
+                                @if ($v->image_path)
+                                    <button type="button" @click.stop="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $v->image_path) }}', title: 'Foto Profil {{ $v->plate_number }}', subtitle: '{{ trim($v->brand . ' ' . $v->model) }}' })"
+                                        title="Perbesar foto" class="group/img cursor-pointer shrink-0">
+                                        <img src="{{ asset('storage/' . $v->image_path) }}" alt="{{ $v->plate_number }}"
+                                            class="h-11 w-11 rounded-xl object-cover border border-slate-200/90 shadow-2xs group-hover/img:scale-105 transition">
+                                    </button>
+                                @else
+                                    <span class="h-11 w-11 rounded-xl flex items-center justify-center text-xl shrink-0 {{ $v->category === 'commercial_truck' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700' }}">
+                                        @if ($v->category === 'commercial_truck')
+                                            <i class="bi bi-truck"></i>
+                                        @else
+                                            <i class="bi bi-car-front"></i>
+                                        @endif
+                                    </span>
+                                @endif
                                 <div>
                                     <div class="inline-block rounded-lg bg-slate-950 px-2.5 py-0.5 text-white">
                                         <span class="font-mono text-xs sm:text-sm font-black tracking-wider text-slate-50">
@@ -289,7 +304,7 @@
 
                             {{-- Operational Status Badge --}}
                             @if ($isOut)
-                                <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-200 animate-pulse shrink-0">
+                                <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-200 shrink-0">
                                     <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
                                     On-Trip
                                 </span>
@@ -423,8 +438,27 @@
                             @endphp
                             <tr wire:key="veh-table-{{ $v->id }}" class="hover:bg-slate-50/70 transition">
                                 <td class="px-4 py-3.5">
-                                    <div class="font-mono font-bold text-slate-900">{{ $v->plate_number }}</div>
-                                    <div class="text-[11px] text-slate-500">{{ trim($v->brand . ' ' . $v->model) }}</div>
+                                    <div class="flex items-center gap-3">
+                                        @if ($v->image_path)
+                                            <button type="button" @click.stop="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $v->image_path) }}', title: 'Foto Profil {{ $v->plate_number }}', subtitle: '{{ trim($v->brand . ' ' . $v->model) }}' })"
+                                                title="Perbesar foto" class="group/img cursor-pointer shrink-0">
+                                                <img src="{{ asset('storage/' . $v->image_path) }}" alt="{{ $v->plate_number }}"
+                                                    class="h-9 w-9 rounded-xl object-cover border border-slate-200/90 shadow-2xs group-hover/img:scale-105 transition">
+                                            </button>
+                                        @else
+                                            <span class="h-9 w-9 rounded-xl flex items-center justify-center text-base shrink-0 {{ $v->category === 'commercial_truck' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700' }}">
+                                                @if ($v->category === 'commercial_truck')
+                                                    <i class="bi bi-truck"></i>
+                                                @else
+                                                    <i class="bi bi-car-front"></i>
+                                                @endif
+                                            </span>
+                                        @endif
+                                        <div>
+                                            <div class="font-mono font-bold text-slate-900">{{ $v->plate_number }}</div>
+                                            <div class="text-[11px] text-slate-500">{{ trim($v->brand . ' ' . $v->model) }}</div>
+                                        </div>
+                                    </div>
                                 </td>
                                 <td class="px-4 py-3.5 whitespace-nowrap">
                                     <span class="inline-flex items-center rounded-lg bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
@@ -439,7 +473,7 @@
                                 </td>
                                 <td class="px-4 py-3.5 whitespace-nowrap">
                                     @if ($isOut)
-                                        <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-200 animate-pulse">
+                                        <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-200">
                                             On-Trip
                                         </span>
                                     @else
@@ -494,4 +528,7 @@
     <div class="pt-2">
         {{ $vehicles->links() }}
     </div>
+
+    {{-- Universal Photo Lightbox --}}
+    <x-universal-lightbox />
 </div>
