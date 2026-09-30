@@ -104,6 +104,11 @@ class Index extends Component
         $this->resetPage();
     }
 
+    public function updatingOperationalTab()
+    {
+        $this->resetPage();
+    }
+
     public function setOperationalTab(string $tab): void
     {
         if (in_array($tab, ['all', 'in_pool', 'on_trip', 'maintenance'], true)) {
@@ -173,7 +178,8 @@ class Index extends Component
         $baseMetricsQuery = Vehicle::query()->whereNull('deleted_at')->whereNotIn('status', ['sold', 'retired']);
         $totalVehicles = (clone $baseMetricsQuery)->count();
         $onTripVehicles = (clone $baseMetricsQuery)->whereHas('activeCheckOut')->count();
-        $inPoolVehicles = max(0, $totalVehicles - $onTripVehicles);
+        $maintenanceVehicles = (clone $baseMetricsQuery)->where('status', 'maintenance')->count();
+        $inPoolVehicles = max(0, $totalVehicles - $onTripVehicles - $maintenanceVehicles);
 
         $complianceAlerts = $this->canManage
             ? VehicleDocument::with('vehicle')
@@ -187,6 +193,7 @@ class Index extends Component
             'total' => $totalVehicles,
             'on_trip' => $onTripVehicles,
             'in_pool' => $inPoolVehicles,
+            'maintenance' => $maintenanceVehicles,
             'alerts' => $complianceAlerts->count(),
         ];
 
