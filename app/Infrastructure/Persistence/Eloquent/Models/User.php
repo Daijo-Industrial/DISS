@@ -39,6 +39,7 @@ class User extends Authenticatable
         'password',
         'employee_id',
         'email_notification_mode',
+        'locale',
         'notification_preferences',
     ];
 

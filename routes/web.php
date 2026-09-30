@@ -2,8 +2,12 @@
 
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\JobProgressController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\NavPinController;
+use App\Livewire\Approval\ApprovalsPage;
 use App\Livewire\Auth\ChangePasswordPage;
+use App\Livewire\Auth\NotificationSettingsPage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -27,9 +31,9 @@ Auth::routes();
 // Core Application Routes
 Route::middleware('auth')->group(function () {
     Route::get('/home', [HomeController::class, 'index'])->name('home');
-    Route::get('/approvals', \App\Livewire\Approval\ApprovalsPage::class)->name('approvals');
+    Route::get('/approvals', ApprovalsPage::class)->name('approvals');
     Route::get('/account/security', ChangePasswordPage::class)->name('account.security');
-    Route::get('/account/notifications', \App\Livewire\Auth\NotificationSettingsPage::class)->name('account.notifications');
+    Route::get('/account/notifications', NotificationSettingsPage::class)->name('account.notifications');
 
     // Quick Access Pin/Unpin API
     Route::prefix('nav')->name('nav.')->group(function () {
@@ -38,11 +42,14 @@ Route::middleware('auth')->group(function () {
     });
 
     // Job Progress for async operations
-    Route::get('/job-progress/{id}', [\App\Http\Controllers\JobProgressController::class, 'show'])->name('job-progress.show');
+    Route::get('/job-progress/{id}', [JobProgressController::class, 'show'])->name('job-progress.show');
 });
 
 Route::post('file/upload', [FileController::class, 'upload'])->name('file.upload');
 Route::delete('files/{id}', [FileController::class, 'destroy'])->name('file.destroy');
+
+// Language & Locale Switcher
+Route::match(['get', 'post'], '/locale/{lang}', [LocaleController::class, 'switch'])->name('locale.switch');
 
 /*
 |--------------------------------------------------------------------------

@@ -106,18 +106,19 @@ class Vehicle extends Model
     public function getCategoryLabelAttribute(): string
     {
         return match ($this->category) {
-            'commercial_truck' => 'Truk / Mobil Gede',
-            'pickup' => 'Pick-up / Bak',
-            default => 'Mobil Penumpang / Kecil',
+            'commercial_truck' => __('fleet.categories.commercial_truck'),
+            'pickup' => __('fleet.categories.pickup'),
+            'other' => __('fleet.categories.other'),
+            default => __('fleet.categories.passenger'),
         };
     }
 
     public function getFuelTypeLabelAttribute(): string
     {
         return match ($this->fuel_type) {
-            'diesel' => 'Solar / Diesel',
-            'ev' => 'Listrik (EV)',
-            default => 'Bensin',
+            'diesel' => __('fleet.fuel_types.diesel'),
+            'ev' => __('fleet.fuel_types.ev'),
+            default => __('fleet.fuel_types.petrol'),
         };
     }
 

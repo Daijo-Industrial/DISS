@@ -4,32 +4,32 @@
     <div class="flex items-center justify-between gap-4 pb-3 border-b border-slate-200">
         <div>
             <nav class="text-xs text-slate-400 mb-1">
-                <a href="{{ route('vehicles.index') }}" class="hover:text-slate-700">Armada</a>
+                <a href="{{ route('vehicles.index') }}" class="hover:text-slate-700">{{ __('fleet.common.fleet') }}</a>
                 <span class="mx-1">/</span>
-                <span class="text-slate-600 font-medium">{{ $vehicle?->exists ? 'Edit' : 'Tambah Baru' }}</span>
+                <span class="text-slate-600 font-medium">{{ $vehicle?->exists ? __('fleet.common.edit') : __('fleet.index.add_vehicle') }}</span>
             </nav>
             <h1 class="text-lg font-bold text-slate-900">
-                {{ $vehicle?->exists ? 'Edit Armada: ' . $vehicle->plate_number : 'Registrasi Armada Baru' }}
+                {{ $vehicle?->exists ? __('fleet.form.edit_title') . ': ' . $vehicle->plate_number : __('fleet.form.create_title') }}
             </h1>
         </div>
 
         <div class="flex items-center gap-2">
             <a href="{{ route('vehicles.index') }}"
                 class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">
-                Batal
+                {{ __('fleet.common.cancel') }}
             </a>
             @if ($canManage && $vehicle?->exists)
                 <button type="button" wire:click="delete"
                     wire:confirm="Hapus data armada ini?"
                     class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition">
-                    Hapus
+                    {{ __('fleet.common.delete') }}
                 </button>
             @endif
             <button type="button" wire:click="save" wire:loading.attr="disabled"
                 class="rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 shadow-sm transition flex items-center gap-1.5">
                 <span wire:loading wire:target="save" class="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
                 <i class="bi bi-check2 text-sm" wire:loading.remove wire:target="save"></i>
-                <span>Simpan</span>
+                <span>{{ __('fleet.common.save') }}</span>
             </button>
         </div>
     </div>

@@ -38,13 +38,13 @@
         <div>
             <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-semibold ring-1 ring-inset ring-indigo-200/60 mb-1">
                 <i class="bi bi-shield-check"></i>
-                <span>Operations &amp; Fleet Management</span>
+                <span>{{ __('fleet.common.fleet_management') }}</span>
             </div>
             <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-                Fleet Command Center
+                {{ __('fleet.index.title') }}
             </h1>
             <p class="text-xs text-slate-500 mt-0.5">
-                Monitoring armada real-time, kesiapan pemeriksaan harian (P2H), dan legalitas dokumen.
+                {{ __('fleet.index.subtitle') }}
             </p>
         </div>
 
@@ -52,13 +52,13 @@
             <a href="{{ route('vehicles.scan') }}" wire:navigate
                 class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-3.5 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-slate-800 transition active:scale-[0.98]">
                 <i class="bi bi-qr-code-scan mr-1.5 text-sm text-cyan-400"></i>
-                <span>Scan QR P2H</span>
+                <span>{{ __('fleet.index.scan_qr') }}</span>
             </a>
             @if ($canManage)
                 <a href="{{ route('vehicles.create') }}"
                     class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-indigo-700 transition active:scale-[0.98]">
                     <i class="bi bi-plus-lg mr-1.5 text-sm"></i>
-                    Registrasi Armada
+                    {{ __('fleet.index.add_vehicle') }}
                 </a>
             @endif
         </div>
@@ -70,7 +70,7 @@
         <div wire:click="setOperationalTab('all')"
             class="cursor-pointer rounded-2xl border bg-white p-3.5 sm:p-4 shadow-xs hover:border-indigo-300 transition {{ $operationalTab === 'all' ? 'border-indigo-500 ring-2 ring-indigo-100' : 'border-slate-200/80' }}">
             <div class="flex items-center justify-between">
-                <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total Armada</span>
+                <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{{ __('fleet.index.metrics_total') }}</span>
                 <span class="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
                     <i class="bi bi-truck text-sm sm:text-base"></i>
                 </span>
@@ -85,7 +85,7 @@
         <div wire:click="setOperationalTab('on_trip')"
             class="cursor-pointer rounded-2xl border p-3.5 sm:p-4 shadow-xs hover:border-amber-400 transition {{ $operationalTab === 'on_trip' ? 'border-amber-500 ring-2 ring-amber-200 bg-amber-50/50' : 'border-amber-200/80 bg-gradient-to-br from-white to-amber-50/30' }}">
             <div class="flex items-center justify-between">
-                <span class="text-[11px] font-semibold text-amber-900 uppercase tracking-wider">Di Jalan (On-Trip)</span>
+                <span class="text-[11px] font-semibold text-amber-900 uppercase tracking-wider">{{ __('fleet.index.metrics_on_trip') }}</span>
                 <span class="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
                     <i class="bi bi-signpost-2 text-sm sm:text-base"></i>
                 </span>
@@ -103,14 +103,14 @@
         <div wire:click="setOperationalTab('in_pool')"
             class="cursor-pointer rounded-2xl border p-3.5 sm:p-4 shadow-xs hover:border-emerald-400 transition {{ $operationalTab === 'in_pool' ? 'border-emerald-500 ring-2 ring-emerald-200 bg-emerald-50/50' : 'border-emerald-200/80 bg-gradient-to-br from-white to-emerald-50/30' }}">
             <div class="flex items-center justify-between">
-                <span class="text-[11px] font-semibold text-emerald-900 uppercase tracking-wider">Standby di Pool</span>
+                <span class="text-[11px] font-semibold text-emerald-900 uppercase tracking-wider">{{ __('fleet.index.metrics_in_pool') }}</span>
                 <span class="h-8 w-8 sm:h-9 sm:w-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
                     <i class="bi bi-house-check text-sm sm:text-base"></i>
                 </span>
             </div>
             <div class="mt-2 flex items-baseline gap-1.5">
                 <span class="text-xl sm:text-2xl font-extrabold text-emerald-700">{{ $metrics['in_pool'] }}</span>
-                <span class="text-[11px] text-emerald-600 font-medium">siap jalan</span>
+                <span class="text-[11px] text-emerald-600 font-medium">ready</span>
             </div>
         </div>
 
@@ -118,7 +118,7 @@
         <div class="rounded-2xl border p-3.5 sm:p-4 shadow-xs transition {{ $metrics['alerts'] > 0 ? 'border-rose-300 bg-rose-50/40' : 'border-slate-200 bg-white' }}">
             <div class="flex items-center justify-between">
                 <span class="text-[11px] font-semibold {{ $metrics['alerts'] > 0 ? 'text-rose-900' : 'text-slate-500' }} uppercase tracking-wider">
-                    Alert Dokumen
+                    {{ __('fleet.tabs.documents') }}
                 </span>
                 <span class="h-8 w-8 sm:h-9 sm:w-9 rounded-xl {{ $metrics['alerts'] > 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-500' }} flex items-center justify-center">
                     <i class="bi bi-shield-exclamation text-sm sm:text-base"></i>
@@ -127,7 +127,7 @@
             <div class="mt-2 flex items-baseline gap-1.5">
                 <span class="text-xl sm:text-2xl font-extrabold {{ $metrics['alerts'] > 0 ? 'text-rose-700' : 'text-slate-700' }}">{{ $metrics['alerts'] }}</span>
                 <span class="text-[11px] {{ $metrics['alerts'] > 0 ? 'text-rose-600 font-semibold' : 'text-slate-400' }}">
-                    {{ $metrics['alerts'] > 0 ? 'jatuh tempo' : 'aman' }}
+                    {{ $metrics['alerts'] > 0 ? 'alerts' : 'safe' }}
                 </span>
             </div>
         </div>
@@ -146,7 +146,7 @@
                             Peringatan KIR &amp; Pajak STNK
                         </h3>
                         <span class="text-[10px] font-bold text-amber-800 bg-amber-200/70 px-2 py-0.5 rounded-full">
-                            {{ $complianceAlerts->count() }} Mendesak
+                            {{ $complianceAlerts->count() }} Alert
                         </span>
                     </div>
                     <div class="mt-2 flex flex-wrap gap-2">
@@ -171,28 +171,28 @@
     <div class="flex items-center gap-1.5 overflow-x-auto p-1 bg-slate-100 rounded-2xl border border-slate-200/80">
         <button type="button" wire:click="setOperationalTab('all')"
             class="rounded-xl px-3.5 py-2 text-xs font-bold transition whitespace-nowrap {{ $operationalTab === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
-            Semua Armada
+            {{ __('fleet.operational_statuses.all') }}
             <span class="ml-1 rounded-full px-1.5 py-0.2 text-[10px] {{ $operationalTab === 'all' ? 'bg-slate-100 text-slate-700' : 'bg-slate-200 text-slate-600' }}">{{ $metrics['total'] }}</span>
         </button>
 
         <button type="button" wire:click="setOperationalTab('in_pool')"
             class="rounded-xl px-3.5 py-2 text-xs font-bold transition whitespace-nowrap {{ $operationalTab === 'in_pool' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
             <span class="inline-block h-2 w-2 rounded-full bg-emerald-500 mr-1.5"></span>
-            Standby di Pool
+            {{ __('fleet.operational_statuses.in_pool') }}
             <span class="ml-1 rounded-full px-1.5 py-0.2 text-[10px] {{ $operationalTab === 'in_pool' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600' }}">{{ $metrics['in_pool'] }}</span>
         </button>
 
         <button type="button" wire:click="setOperationalTab('on_trip')"
             class="rounded-xl px-3.5 py-2 text-xs font-bold transition whitespace-nowrap {{ $operationalTab === 'on_trip' ? 'bg-white text-amber-700 shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
             <span class="inline-block h-2 w-2 rounded-full bg-amber-500 mr-1.5"></span>
-            Sedang di Jalan
+            {{ __('fleet.operational_statuses.on_trip') }}
             <span class="ml-1 rounded-full px-1.5 py-0.2 text-[10px] {{ $operationalTab === 'on_trip' ? 'bg-amber-100 text-amber-800' : 'bg-slate-200 text-slate-600' }}">{{ $metrics['on_trip'] }}</span>
         </button>
 
         <button type="button" wire:click="setOperationalTab('maintenance')"
             class="rounded-xl px-3.5 py-2 text-xs font-bold transition whitespace-nowrap {{ $operationalTab === 'maintenance' ? 'bg-white text-rose-700 shadow-xs' : 'text-slate-500 hover:text-slate-800' }}">
             <i class="bi bi-wrench mr-1"></i>
-            Dalam Perawatan
+            {{ __('fleet.operational_statuses.maintenance') }}
         </button>
     </div>
 
@@ -202,7 +202,7 @@
         <div class="flex items-center gap-2 flex-1">
             <div class="relative w-full">
                 <i class="bi bi-search absolute left-3 top-3 text-slate-400 text-xs"></i>
-                <input type="text" placeholder="Cari plat nomor, merk, nama driver..."
+                <input type="text" placeholder="{{ __('fleet.index.search_placeholder') }}"
                     wire:model.live.debounce.300ms="q"
                     class="w-full rounded-xl border border-slate-200 bg-slate-50/70 py-2 sm:py-1.5 pl-8 pr-8 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition">
                 @if ($q !== '')

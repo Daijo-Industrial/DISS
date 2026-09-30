@@ -177,10 +177,10 @@ class Form extends Component
         DB::transaction(function () use ($data) {
             if ($this->vehicle?->exists) {
                 $this->vehicle->update($data);
-                session()->flash('success', 'Vehicle updated.');
+                session()->flash('success', __('fleet.messages.vehicle_updated'));
             } else {
                 $this->vehicle = Vehicle::create($data);
-                session()->flash('success', 'Vehicle created.');
+                session()->flash('success', __('fleet.messages.vehicle_created'));
             }
         });
 
@@ -201,7 +201,7 @@ class Form extends Component
 
         if ($this->vehicle?->exists) {
             $this->vehicle->delete();
-            session()->flash('success', 'Vehicle deleted.');
+            session()->flash('success', __('fleet.messages.vehicle_deleted'));
             $this->redirectRoute('vehicles.index', navigate: true);
         }
     }

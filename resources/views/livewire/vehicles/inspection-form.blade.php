@@ -5,7 +5,7 @@
             <ol class="flex items-center gap-1.5">
                 <li>
                     <a href="{{ route('vehicles.index') }}" class="hover:text-slate-800 hover:underline">
-                        Armada
+                        {{ __('fleet.common.fleet') }}
                     </a>
                 </li>
                 <li class="text-slate-300">/</li>
@@ -16,7 +16,7 @@
                 </li>
                 <li class="text-slate-300">/</li>
                 <li class="font-bold text-slate-800">
-                    {{ $type === 'check_in' ? 'Check-in (Kembali)' : 'P2H Check-out (Pra-Jalan)' }}
+                    {{ $type === 'check_in' ? __('fleet.inspection.type_checkin') : __('fleet.inspection.type_checkout') }}
                 </li>
             </ol>
         </nav>
@@ -83,9 +83,9 @@
             {{-- Readiness Indicator Gauge --}}
             <div class="flex items-center gap-3 bg-slate-50 border border-slate-200/70 rounded-2xl px-4 py-2.5">
                 <div class="text-right">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Kesiapan Armada</span>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">{{ __('fleet.inspection.readiness_label') }}</span>
                     <span class="text-sm font-extrabold {{ $isAllOk ? 'text-emerald-700' : 'text-amber-700' }}">
-                        {{ $okCount }} / {{ $totalItems }} Poin Siap
+                        {{ __('fleet.inspection.points_ready', ['ready' => $okCount, 'total' => $totalItems]) }}
                     </span>
                 </div>
                 <div class="relative h-10 w-10 flex items-center justify-center">
@@ -102,13 +102,13 @@
                 <div class="flex items-center gap-2">
                     <i class="bi bi-clock-history text-amber-600 text-sm"></i>
                     <span>
-                        Check-out keberangkatan: <strong>{{ $parentInspection->created_at->isoFormat('DD MMM YYYY, HH:mm') }}</strong>
-                        oleh Driver <strong>{{ $parentInspection->driver_name }}</strong> (KM Awal: <strong>{{ number_format($parentInspection->odometer) }} km</strong>)
+                        {{ __('fleet.inspection.type_checkout') }}: <strong>{{ $parentInspection->created_at->isoFormat('DD MMM YYYY, HH:mm') }}</strong>
+                        oleh Driver <strong>{{ $parentInspection->driver_name }}</strong> (KM: <strong>{{ number_format($parentInspection->odometer) }} km</strong>)
                     </span>
                 </div>
                 @if ($odometer > $parentInspection->odometer)
                     <span class="rounded-lg bg-amber-200/80 px-2 py-0.5 font-bold text-amber-950 text-[11px]">
-                        Jarak Tempuh Trip: +{{ number_format($odometer - $parentInspection->odometer) }} km
+                        {{ __('fleet.inspection.trip_distance') }}: +{{ number_format($odometer - $parentInspection->odometer) }} km
                     </span>
                 @endif
             </div>
@@ -121,18 +121,18 @@
         <div class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm space-y-4">
             <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
                 <i class="bi bi-person-badge text-indigo-600 text-sm"></i>
-                1. Data Pengemudi, Odometer &amp; Bahan Bakar
+                1. {{ __('fleet.inspection.driver_name') }}, {{ __('fleet.common.odometer') }} &amp; {{ __('fleet.common.fuel') }}
             </h2>
 
             <div class="grid gap-4 sm:grid-cols-3">
                 {{-- Driver Name --}}
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">
-                        Nama Pengemudi / Driver <span class="text-rose-500">*</span>
+                        {{ __('fleet.inspection.driver_name') }} <span class="text-rose-500">*</span>
                     </label>
                     <div class="flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 transition">
                         <i class="bi bi-person text-slate-400 mr-2 text-base"></i>
-                        <input type="text" wire:model.defer="driver_name" placeholder="Nama lengkap driver"
+                        <input type="text" wire:model.defer="driver_name" placeholder="{{ __('fleet.inspection.driver_name') }}"
                             class="w-full border-0 p-0 text-xs font-medium text-slate-900 focus:outline-none">
                     </div>
                     @error('driver_name')
@@ -143,7 +143,7 @@
                 {{-- Odometer Input --}}
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">
-                        KM Odometer <span class="text-rose-500">*</span>
+                        {{ $type === 'check_in' ? __('fleet.inspection.return_odometer') : __('fleet.inspection.start_odometer') }} <span class="text-rose-500">*</span>
                     </label>
                     <div class="flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 transition">
                         <i class="bi bi-speedometer2 text-slate-400 mr-2 text-base"></i>
@@ -159,7 +159,7 @@
                 {{-- Fuel Level Quick Picker --}}
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">
-                        Level BBM / Baterai: <strong class="text-indigo-600 font-mono">{{ $fuel_percentage }}%</strong>
+                        {{ __('fleet.inspection.fuel_level') }}: <strong class="text-indigo-600 font-mono">{{ $fuel_percentage }}%</strong>
                     </label>
                     <div class="grid grid-cols-4 gap-1.5">
                         @foreach ([25 => '1/4', 50 => '1/2', 75 => '3/4', 100 => 'Full'] as $val => $lbl)
@@ -176,9 +176,9 @@
             {{-- Trip Purpose / Notes --}}
             <div>
                 <label class="block text-xs font-semibold text-slate-700 mb-1">
-                    {{ $type === 'check_in' ? 'Catatan Perjalanan Pulang (Opsional)' : 'Tujuan Perjalanan / Keperluan Dinas' }}
+                    {{ __('fleet.inspection.trip_purpose') }}
                 </label>
-                <input type="text" wire:model.defer="trip_purpose" placeholder="Contoh: Pengiriman part plastik ke Daijo Cikarang..."
+                <input type="text" wire:model.defer="trip_purpose" placeholder="{{ __('fleet.inspection.trip_purpose_placeholder') }}"
                     class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition">
             </div>
         </div>
@@ -189,7 +189,7 @@
                 <div>
                     <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
                         <i class="bi bi-shield-check text-indigo-600 text-sm"></i>
-                        2. Titik Pemeriksaan Visual Kendaraan (P2H)
+                        2. {{ __('fleet.inspection.checklist_heading') }}
                     </h2>
                     <p class="text-xs text-slate-500 mt-0.5">
                         Tap tombol <strong class="text-emerald-700">OK</strong> jika normal atau <strong class="text-rose-700">Ada Isu</strong> jika ditemukan cacat/kerusakan.
@@ -751,7 +751,7 @@
                                 <i class="bi bi-slash-circle text-base"></i>
                             </span>
                             <div>
-                                <h4 class="text-xs font-bold text-rose-950">Kritis / Grounded (Dilarang Jalan!)</h4>
+                                <h4 class="text-xs font-bold text-rose-950">{{ __('fleet.inspection.severity_critical') }}</h4>
                                 <p class="text-[11px] text-rose-700 mt-0.5">Membahayakan keselamatan. Status armada otomatis diubah menjadi <strong>Maintenance</strong>.</p>
                             </div>
                         </div>
@@ -762,9 +762,9 @@
                 <div class="grid gap-3 sm:grid-cols-2">
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">
-                            Uraian Lengkap Temuan / Kerusakan <span class="text-slate-400 font-normal">(Opsional)</span>
+                            {{ __('fleet.inspection.defect_report') }} <span class="text-slate-400 font-normal">({{ __('fleet.common.na') }})</span>
                         </label>
-                        <textarea wire:model.defer="defect_notes" rows="3" placeholder="Tuliskan rangkuman temuan atau rekomendasi perbaikan (opsional jika sudah dicatat pada rincian poin di atas)..."
+                        <textarea wire:model.defer="defect_notes" rows="3" placeholder="{{ __('fleet.inspection.defect_notes_placeholder') }}"
                             class="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none"></textarea>
                         @error('defect_notes')
                             <p class="mt-1 text-[11px] text-rose-600">{{ $message }}</p>
@@ -773,12 +773,12 @@
 
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">
-                            Foto Bukti Kerusakan Tambahan (Opsional)
+                            {{ __('fleet.inspection.defect_photos') }}
                         </label>
                         <div class="rounded-xl border-2 border-dashed border-slate-300 bg-white p-4 text-center">
                             <input type="file" wire:model="photos" multiple accept="image/*" class="text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700">
                             <div wire:loading wire:target="photos" class="text-[11px] text-indigo-600 mt-2 font-medium">
-                                <i class="bi bi-arrow-repeat animate-spin mr-1"></i> Sedang mengunggah foto...
+                                <i class="bi bi-arrow-repeat animate-spin mr-1"></i> {{ __('fleet.common.loading') }}
                             </div>
 
                             @if (!empty($photos))
@@ -786,12 +786,12 @@
                                     @foreach ($photos as $idx => $p)
                                         <div class="relative group">
                                             @if (method_exists($p, 'temporaryUrl'))
-                                                <img src="{{ $p->temporaryUrl() }}" @click="$dispatch('open-lightbox', { src: '{{ $p->temporaryUrl() }}', title: 'Pratinjau Foto Bukti Kerusakan' })"
+                                                <img src="{{ $p->temporaryUrl() }}" @click="$dispatch('open-lightbox', { src: '{{ $p->temporaryUrl() }}', title: 'Preview' })"
                                                     class="h-12 w-12 object-cover rounded-lg border border-slate-200 shadow-xs cursor-pointer hover:opacity-90 transition">
                                             @else
                                                 <div class="h-12 w-12 bg-slate-100 rounded-lg flex items-center justify-center text-[9px] text-slate-500 font-semibold border border-slate-200">#{{ $idx+1 }}</div>
                                             @endif
-                                            <button type="button" wire:click="removePhoto({{ $idx }})" title="Hapus foto"
+                                            <button type="button" wire:click="removePhoto({{ $idx }})" title="{{ __('fleet.common.delete') }}"
                                                 class="absolute -top-1.5 -right-1.5 bg-rose-600 text-white rounded-full h-4 w-4 flex items-center justify-center text-[10px] hover:bg-rose-700 shadow-xs">
                                                 ×
                                             </button>
@@ -809,7 +809,7 @@
         <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
             <a href="{{ route('vehicles.show', $vehicle) }}"
                 class="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition">
-                <i class="bi bi-arrow-left mr-1.5"></i> Batal
+                <i class="bi bi-arrow-left mr-1.5"></i> {{ __('fleet.common.cancel') }}
             </a>
 
             <button type="submit" wire:loading.attr="disabled"
@@ -817,7 +817,7 @@
                 {{ $type === 'check_in' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700' }} disabled:opacity-60">
                 <span wire:loading class="mr-2 inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
                 <i class="bi {{ $type === 'check_in' ? 'bi-check2-circle' : 'bi-send-check' }} mr-1.5" wire:loading.remove></i>
-                <span>{{ $type === 'check_in' ? 'Simpan & Catat Kepulangan' : 'Simpan & Buka Izin Jalan (Check-out)' }}</span>
+                <span>{{ $type === 'check_in' ? __('fleet.inspection.submit_checkin') : __('fleet.inspection.submit_checkout') }}</span>
             </button>
         </div>
     </form>

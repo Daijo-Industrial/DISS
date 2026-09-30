@@ -46,33 +46,33 @@ class VehicleInspection extends Model
     {
         return [
             'body' => [
-                'label' => 'Bodi Eksterior',
-                'description' => 'Kondisi fisik luar (kebersihan, baret, penyok)',
+                'label' => __('fleet.inspection.points.body.label'),
+                'description' => __('fleet.inspection.points.body.description'),
                 'icon' => 'car-front',
             ],
             'tires' => [
-                'label' => 'Kondisi Ban',
-                'description' => 'Tekanan angin, keausan tapak ban, ban serep',
+                'label' => __('fleet.inspection.points.tires.label'),
+                'description' => __('fleet.inspection.points.tires.description'),
                 'icon' => 'circle',
             ],
             'interior' => [
-                'label' => 'Isi Dalam Mobil',
-                'description' => 'Kebersihan kabin, dongkrak, segitiga pengaman, toolkit, APAR',
+                'label' => __('fleet.inspection.points.interior.label'),
+                'description' => __('fleet.inspection.points.interior.description'),
                 'icon' => 'box-seam',
             ],
             'headlights' => [
-                'label' => 'Lampu Depan',
-                'description' => 'Lampu dekat, lampu jauh (high beam)',
+                'label' => __('fleet.inspection.points.headlights.label'),
+                'description' => __('fleet.inspection.points.headlights.description'),
                 'icon' => 'brightness-high',
             ],
             'brake_lights' => [
-                'label' => 'Lampu Rem',
-                'description' => 'Lampu rem belakang berfungsi normal saat pedal diinjak',
+                'label' => __('fleet.inspection.points.brake_lights.label'),
+                'description' => __('fleet.inspection.points.brake_lights.description'),
                 'icon' => 'shield-exclamation',
             ],
             'turn_signals' => [
-                'label' => 'Lampu Sein & Hazard',
-                'description' => 'Indikator sein kiri, kanan, dan lampu hazard menyala',
+                'label' => __('fleet.inspection.points.turn_signals.label'),
+                'description' => __('fleet.inspection.points.turn_signals.description'),
                 'icon' => 'arrow-left-right',
             ],
         ];
@@ -110,9 +110,9 @@ class VehicleInspection extends Model
     public function getSeverityLabelAttribute(): string
     {
         return match ($this->severity) {
-            self::SEVERITY_MINOR => 'Minor Issue (Boleh Jalan)',
-            self::SEVERITY_CRITICAL => 'Kritis / Grounded (Tidak Boleh Jalan)',
-            default => 'Aman (Fit to Drive)',
+            self::SEVERITY_MINOR => __('fleet.inspection.severity_minor'),
+            self::SEVERITY_CRITICAL => __('fleet.inspection.severity_critical'),
+            default => __('fleet.inspection.severity_none'),
         };
     }
 

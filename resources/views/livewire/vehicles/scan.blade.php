@@ -148,22 +148,22 @@
         <a href="{{ route('vehicles.index') }}" wire:navigate
             class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-2xs hover:bg-slate-50 transition">
             <i class="bi bi-arrow-left"></i>
-            <span>Daftar Armada</span>
+            <span>{{ __('fleet.scanner.back_to_index') }}</span>
         </a>
 
         <div class="text-right">
             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60">
                 <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span>P2H Scanner</span>
+                <span>{{ __('fleet.scanner.badge') }}</span>
             </span>
         </div>
     </div>
 
     {{-- Header Card --}}
     <div class="text-center space-y-1">
-        <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Pindai QR Stiker Armada</h1>
+        <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">{{ __('fleet.scanner.title') }}</h1>
         <p class="text-xs sm:text-sm text-slate-500">
-            Arahkan kamera ke stiker QR fisik di dashboard atau kaca kendaraan untuk langsung membuka form inspeksi P2H.
+            {{ __('fleet.scanner.subtitle') }}
         </p>
     </div>
 
@@ -263,8 +263,8 @@
                     <i class="bi bi-search"></i>
                 </div>
                 <div>
-                    <h3 class="text-xs font-bold text-slate-900">Pencarian Manual Nomor Polisi</h3>
-                    <p class="text-[11px] text-slate-500">Gunakan jika stiker kotor, rusak, atau kamera tidak aktif</p>
+                    <h3 class="text-xs font-bold text-slate-900">{{ __('fleet.scanner.manual_heading') }}</h3>
+                    <p class="text-[11px] text-slate-500">{{ __('fleet.scanner.manual_desc') }}</p>
                 </div>
             </div>
             <button type="button" class="text-slate-400 hover:text-slate-600">
@@ -278,13 +278,13 @@
                     <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
                         <i class="bi bi-card-text"></i>
                     </div>
-                    <input type="text" wire:model="manualInput" placeholder="Contoh: B 1234 XYZ atau UUID..."
+                    <input type="text" wire:model="manualInput" placeholder="{{ __('fleet.scanner.manual_placeholder') }}"
                         class="w-full rounded-xl border border-slate-300 py-2 pl-9 pr-3 text-xs uppercase font-mono text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
                 </div>
                 <button type="submit"
                     class="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-indigo-700 transition active:scale-95 flex items-center gap-1.5">
                     <i class="bi bi-arrow-right"></i>
-                    <span>Buka P2H</span>
+                    <span>{{ __('fleet.scanner.manual_submit') }}</span>
                 </button>
             </form>
 

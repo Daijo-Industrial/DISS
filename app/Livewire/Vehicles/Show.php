@@ -23,7 +23,7 @@ class Show extends Component
     public Vehicle $vehicle;
 
     #[Url]
-    public string $tab = 'services'; // 'services', 'inspections', 'documents'
+    public string $tab = 'inspections'; // 'services', 'inspections', 'documents'
 
     // Service filters
     public string $year = 'all';
@@ -164,7 +164,7 @@ class Show extends Component
         $path = $this->new_photo->store('vehicles/photos', 'public');
         $this->vehicle->update(['image_path' => $path]);
 
-        session()->flash('success', 'Foto profil kendaraan berhasil diperbarui.');
+        session()->flash('success', __('fleet.messages.photo_updated'));
         $this->showPhotoModal = false;
         $this->new_photo = null;
         $this->vehicle->refresh();
@@ -182,7 +182,7 @@ class Show extends Component
 
         $this->vehicle->update(['image_path' => null]);
 
-        session()->flash('success', 'Foto profil kendaraan berhasil dihapus.');
+        session()->flash('success', __('fleet.messages.photo_deleted'));
         $this->showPhotoModal = false;
         $this->vehicle->refresh();
     }
@@ -230,7 +230,7 @@ class Show extends Component
             'created_by' => auth()->id(),
         ]);
 
-        session()->flash('success', 'Dokumen legalitas berhasil disimpan.');
+        session()->flash('success', __('fleet.messages.document_saved'));
         $this->showDocModal = false;
         $this->vehicle->refresh();
     }
@@ -244,7 +244,7 @@ class Show extends Component
         $doc = VehicleDocument::where('vehicle_id', $this->vehicle->id)->findOrFail($id);
         $doc->delete();
 
-        session()->flash('success', 'Dokumen berhasil dihapus.');
+        session()->flash('success', __('fleet.messages.document_deleted'));
         $this->vehicle->refresh();
     }
 
