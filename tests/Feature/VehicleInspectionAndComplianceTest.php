@@ -438,11 +438,48 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->call('searchManual')
             ->assertRedirect(route('vehicles.inspect', ['vehicle' => $this->vehicle->id]));
 
-        // 2. Non-existent vehicle returns error message
+        // 2. Resolve by vehicle details (model, brand, driver name, partial plate)
+        Livewire::actingAs($this->user)
+            ->test(VehicleScan::class)
+            ->set('manualInput', 'Dutro')
+            ->call('searchManual')
+            ->assertRedirect(route('vehicles.inspect', ['vehicle' => $this->vehicle->id]));
+
+        Livewire::actingAs($this->user)
+            ->test(VehicleScan::class)
+            ->set('manualInput', '9999')
+            ->call('searchManual')
+            ->assertRedirect(route('vehicles.inspect', ['vehicle' => $this->vehicle->id]));
+
+        // 3. Search by UUID in manual search is explicitly disallowed
+        Livewire::actingAs($this->user)
+            ->test(VehicleScan::class)
+            ->set('manualInput', (string) $this->vehicle->id)
+            ->call('searchManual')
+            ->assertSet('errorMessage', __('fleet.scanner.uuid_not_allowed'))
+            ->assertNoRedirect();
+
+        // 4. Non-existent vehicle returns error message and dispatches scan-failed
         Livewire::actingAs($this->user)
             ->test(VehicleScan::class)
             ->call('resolve', '00000000-0000-0000-0000-000000000000')
-            ->assertSet('errorMessage', "Armada dengan kode/plat '00000000-0000-0000-0000-000000000000' tidak ditemukan dalam sistem DISS.");
+            ->assertSet('errorMessage', "Armada dengan kode/plat '00000000-0000-0000-0000-000000000000' tidak ditemukan dalam sistem DISS.")
+            ->assertDispatched('scan-failed');
+
+        // 5. Empty input returns generic error and dispatches scan-failed
+        Livewire::actingAs($this->user)
+            ->test(VehicleScan::class)
+            ->call('resolve', '')
+            ->assertSet('errorMessage', __('fleet.scanner.not_found_alert'))
+            ->assertDispatched('scan-failed');
+
+        // 6. Camera QR scan resolve() does NOT fallback to plate number or vehicle details
+        Livewire::actingAs($this->user)
+            ->test(VehicleScan::class)
+            ->call('resolve', $this->vehicle->plate_number)
+            ->assertSet('errorMessage', "Armada dengan kode/plat '{$this->vehicle->plate_number}' tidak ditemukan dalam sistem DISS.")
+            ->assertDispatched('scan-failed')
+            ->assertNoRedirect();
     }
 
     public function test_user_with_fleet_manage_permission_has_full_management_access()
