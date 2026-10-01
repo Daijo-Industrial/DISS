@@ -13,6 +13,14 @@ class Scan extends Component
 
     public ?string $errorMessage = null;
 
+    public function mount(): void
+    {
+        $user = auth()->user();
+        if (! ($user?->can('fleet.inspect') || $user?->can('fleet.manage') || $user?->can('fleet.view'))) {
+            abort(403);
+        }
+    }
+
     /**
      * Resolve scanned QR code (camera payload).
      * ONLY matches based on UUID (raw UUID or URL containing UUID).
@@ -71,7 +79,7 @@ class Scan extends Component
         // 1. Exact plate match (with or without spaces)
         $vehicle = Vehicle::whereNotIn('status', ['sold', 'retired'])
             ->where(function ($q) use ($normalizedSearch, $searchTerm) {
-                if (!empty($normalizedSearch)) {
+                if (! empty($normalizedSearch)) {
                     $q->whereRaw("REPLACE(UPPER(plate_number), ' ', '') = ?", [$normalizedSearch]);
                 }
                 $q->orWhere('plate_number', $searchTerm);
@@ -84,7 +92,7 @@ class Scan extends Component
         // 2. Partial match on plate number or vehicle details (brand, model, driver_name)
         $matches = Vehicle::whereNotIn('status', ['sold', 'retired'])
             ->where(function ($q) use ($searchTerm, $normalizedSearch) {
-                if (!empty($normalizedSearch)) {
+                if (! empty($normalizedSearch)) {
                     $q->whereRaw("REPLACE(UPPER(plate_number), ' ', '') LIKE ?", ['%' . $normalizedSearch . '%']);
                 }
                 $q->orWhere('plate_number', 'like', '%' . $searchTerm . '%')
@@ -126,13 +134,13 @@ class Scan extends Component
             ->whereNotIn('status', ['sold', 'retired'])
             ->orderBy('plate_number');
 
-        if (!empty($searchTerm)) {
+        if (! empty($searchTerm)) {
             // If user typed a UUID, return no results as UUID searching is disabled
             if (preg_match('/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/', $searchTerm)) {
                 $query->whereRaw('1 = 0');
             } else {
                 $query->where(function ($q) use ($searchTerm, $normalizedSearch) {
-                    if (!empty($normalizedSearch)) {
+                    if (! empty($normalizedSearch)) {
                         $q->whereRaw("REPLACE(UPPER(plate_number), ' ', '') LIKE ?", ['%' . $normalizedSearch . '%']);
                     }
                     $q->orWhere('plate_number', 'like', '%' . $searchTerm . '%')
@@ -147,7 +155,7 @@ class Scan extends Component
 
         return view('livewire.vehicles.scan', [
             'recentVehicles' => $vehicles,
-            'isSearching' => !empty($searchTerm),
+            'isSearching' => ! empty($searchTerm),
         ]);
     }
 }

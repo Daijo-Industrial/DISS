@@ -363,6 +363,7 @@ return [
         'qr_detected_desc' => 'Membuka formulir inspeksi P2H...',
         'scan_error_title' => 'Gagal Memproses QR',
         'rescan_btn' => 'Coba Pindai Ulang',
+        'scan_next' => 'Scan Armada Lagi',
         'active_fleet_label' => 'Armada Operasional Aktif',
         'torch_title' => 'Lampu Senter',
         'camera_switch_title' => 'Ganti Kamera',

@@ -45,11 +45,13 @@
         </div>
 
         <div class="flex items-center gap-2">
-            <a href="{{ route('vehicles.scan') }}" wire:navigate
-                class="inline-flex items-center justify-center rounded-xl bg-white border border-slate-200/80 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition active:scale-[0.98] shadow-2xs">
-                <i class="bi bi-qr-code-scan mr-1.5 text-xs text-slate-600"></i>
-                <span>{{ __('fleet.index.scan_qr') }}</span>
-            </a>
+            @if ($canInspect)
+                <a href="{{ route('vehicles.scan') }}" wire:navigate
+                    class="inline-flex items-center justify-center rounded-xl {{ ! $canManage ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-white border border-slate-200/80 text-slate-700 hover:bg-slate-50' }} px-3.5 py-2 text-xs font-semibold transition active:scale-[0.98] shadow-2xs">
+                    <i class="bi bi-qr-code-scan mr-1.5 text-xs {{ ! $canManage ? 'text-white' : 'text-slate-600' }}"></i>
+                    <span>{{ __('fleet.index.scan_qr') }}</span>
+                </a>
+            @endif
             @if ($canManage)
                 <a href="{{ route('vehicles.create') }}"
                     class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-slate-800 transition active:scale-[0.98] shadow-2xs">
@@ -59,6 +61,23 @@
             @endif
         </div>
     </div>
+
+    {{-- Flash Notifications & Standby Re-Scan CTA --}}
+    @if (session()->has('success'))
+        <div class="rounded-2xl bg-emerald-50 border border-emerald-200/80 p-3 sm:p-4 text-xs sm:text-sm text-emerald-800 flex items-center justify-between gap-3 shadow-2xs">
+            <div class="flex items-center gap-2">
+                <i class="bi bi-check-circle-fill text-emerald-600 text-base"></i>
+                <span class="font-medium">{{ session('success') }}</span>
+            </div>
+            @if ($canInspect)
+                <a href="{{ route('vehicles.scan') }}" wire:navigate
+                    class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition shadow-2xs">
+                    <i class="bi bi-qr-code-scan"></i>
+                    <span>{{ __('fleet.scanner.scan_next') }}</span>
+                </a>
+            @endif
+        </div>
+    @endif
 
     {{-- Apple Segmented Operational Status Pills (Replacing heavy KPI cards) --}}
     <div class="overflow-x-auto pb-1 sm:pb-0 -mx-3 px-3 sm:mx-0 sm:px-0">

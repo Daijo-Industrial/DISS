@@ -167,11 +167,11 @@
 
             {{-- Row 2: Secondary Quick Actions Grid --}}
             @php
-                $secondaryCount = (!$vehicle->is_sold ? 1 : 0) + ($canManage ? 1 : 0);
+                $secondaryCount = (!$vehicle->is_sold && $canManage ? 1 : 0) + ($canManage ? 1 : 0);
             @endphp
             @if ($secondaryCount > 0)
                 <div class="grid {{ $secondaryCount === 2 ? 'grid-cols-2' : 'grid-cols-1' }} gap-2 min-w-0">
-                    @if (!$vehicle->is_sold)
+                    @if (!$vehicle->is_sold && $canManage)
                         <a href="{{ route('services.create', $vehicle) }}"
                             class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white border border-slate-200/80 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs truncate min-w-0">
                             <i class="bi bi-wrench text-xs text-slate-500 shrink-0"></i>
@@ -220,11 +220,13 @@
         </div>
 
         {{-- Document Compliance Shortcut --}}
-        <div class="pt-2 border-t border-slate-100 cursor-pointer hover:bg-slate-50/80 -mx-1 px-1 py-1 rounded-xl transition"
-            wire:click="setTab('documents')">
+        <div class="pt-2 border-t border-slate-100 {{ $canViewDocuments ? 'cursor-pointer hover:bg-slate-50/80 -mx-1 px-1 py-1 rounded-xl transition' : '' }}"
+            @if ($canViewDocuments) wire:click="setTab('documents')" @endif>
             <div class="flex items-center justify-between">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ __('fleet.show.doc_compliance_title') }}</span>
-                <span class="text-[10px] text-slate-400">{{ __('fleet.show.doc_compliance_open') }}</span>
+                @if ($canViewDocuments)
+                    <span class="text-[10px] text-slate-400">{{ __('fleet.show.doc_compliance_open') }}</span>
+                @endif
             </div>
             <div class="mt-1 flex items-center gap-2">
                 @if ($hasExpired > 0)

@@ -35,6 +35,12 @@ class Show extends Component
 
     public bool $canManage = false;
 
+    public bool $canInspect = false;
+
+    public bool $canViewDocuments = false;
+
+    public bool $canViewCosts = false;
+
     // Inspection filters
     public string $inspectionType = 'all';
 
@@ -95,19 +101,35 @@ class Show extends Component
 
     public $new_photo = null;
 
-    public function mount(Vehicle $vehicle)
+    public function mount(Vehicle $vehicle): void
     {
+        $user = auth()->user();
+        if (! ($user?->can('fleet.view') || $user?->can('fleet.manage') || $user?->can('fleet.inspect'))) {
+            abort(403);
+        }
+
         $this->vehicle = $vehicle->load([
             'latestService' => fn ($q) => $q->with('items'),
             'activeCheckOut',
         ]);
 
-        $user = auth()->user();
         $this->canManage = $user?->can('fleet.manage') ?? false;
+        $this->canInspect = $this->canManage || ($user?->can('fleet.inspect') ?? false);
+        $this->canViewDocuments = $this->canManage || ($user?->can('fleet.documents') ?? false);
+        $this->canViewCosts = $this->canManage || ($user?->can('fleet.view-costs') ?? false);
+
+        if ($this->tab === 'documents' && ! $this->canViewDocuments) {
+            $this->tab = 'inspections';
+        }
 
         // Check if tab is requested via query param
         if (request()->has('tab') && in_array(request('tab'), ['services', 'inspections', 'documents'], true)) {
-            $this->tab = request('tab');
+            $requestedTab = request('tab');
+            if ($requestedTab === 'documents' && ! $this->canViewDocuments) {
+                $this->tab = 'inspections';
+            } else {
+                $this->tab = $requestedTab;
+            }
         }
 
         $this->generateQrCode();
@@ -144,6 +166,12 @@ class Show extends Component
 
     public function setTab(string $tab): void
     {
+        if ($tab === 'documents' && ! $this->canViewDocuments) {
+            $this->tab = 'inspections';
+
+            return;
+        }
+
         if (in_array($tab, ['services', 'inspections', 'documents'], true)) {
             $this->tab = $tab;
             $this->resetPage();
@@ -152,6 +180,10 @@ class Show extends Component
 
     public function openDocModal(?string $type = null): void
     {
+        if (! $this->canManage) {
+            abort(403);
+        }
+
         $this->resetValidation();
         $this->doc_type = $type ?: VehicleDocument::TYPE_STNK;
         $this->doc_number = '';

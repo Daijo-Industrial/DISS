@@ -43,6 +43,11 @@ class InspectionForm extends Component
 
     public function mount(Vehicle $vehicle, ?string $type = null): void
     {
+        $user = auth()->user();
+        if (! ($user?->can('fleet.inspect') || $user?->can('fleet.manage'))) {
+            abort(403);
+        }
+
         $this->vehicle = $vehicle;
         if ($type && in_array($type, [VehicleInspection::TYPE_CHECK_OUT, VehicleInspection::TYPE_CHECK_IN], true)) {
             $this->type = $type;
@@ -396,7 +401,7 @@ class InspectionForm extends Component
 
         session()->flash('success', __('fleet.messages.inspection_saved'));
 
-        return redirect()->route('vehicles.show', ['vehicle' => $this->vehicle, 'tab' => 'inspections']);
+        return redirect()->route('vehicles.index');
     }
 
     public function render()

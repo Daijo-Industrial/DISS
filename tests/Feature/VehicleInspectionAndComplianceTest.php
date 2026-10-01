@@ -9,6 +9,7 @@ use App\Livewire\Vehicles\Index as VehiclesIndex;
 use App\Livewire\Vehicles\InspectionForm;
 use App\Livewire\Vehicles\Scan as VehicleScan;
 use App\Livewire\Vehicles\Show as VehicleShow;
+use App\Models\ServiceRecord;
 use App\Models\User;
 use App\Models\VehicleDocument;
 use App\Models\VehicleInspection;
@@ -35,6 +36,12 @@ class VehicleInspectionAndComplianceTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
+        Permission::firstOrCreate(['name' => 'fleet.manage', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'fleet.view', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'fleet.inspect', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'fleet.documents', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'fleet.view-costs', 'guard_name' => 'web']);
+        $this->user->givePermissionTo(['fleet.manage', 'fleet.view', 'fleet.inspect', 'fleet.documents', 'fleet.view-costs']);
         $this->actingAs($this->user);
 
         $this->vehicle = Vehicle::create([
@@ -104,7 +111,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->set('trip_purpose', 'Kirim komponen ke pabrik Cikarang')
             ->set('severity', 'none')
             ->call('save')
-            ->assertRedirect(route('vehicles.show', ['vehicle' => $this->vehicle, 'tab' => 'inspections']));
+            ->assertRedirect(route('vehicles.index'));
 
         $this->vehicle->refresh();
         $this->assertEquals(50100, $this->vehicle->odometer);
@@ -120,7 +127,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->set('fuel_percentage', 75)
             ->set('severity', 'none')
             ->call('save')
-            ->assertRedirect(route('vehicles.show', ['vehicle' => $this->vehicle, 'tab' => 'inspections']));
+            ->assertRedirect(route('vehicles.index'));
 
         $this->vehicle->refresh();
         $this->assertEquals(50250, $this->vehicle->odometer);
@@ -144,7 +151,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->set('severity', 'critical_grounded')
             ->set('defect_notes', 'Lampu rem mati total, kabel putus')
             ->call('save')
-            ->assertRedirect(route('vehicles.show', ['vehicle' => $this->vehicle, 'tab' => 'inspections']));
+            ->assertRedirect(route('vehicles.index'));
 
         $this->vehicle->refresh();
         $this->assertEquals(VehicleStatus::MAINTENANCE, $this->vehicle->status);
@@ -171,7 +178,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->set('defect_notes', null) // Uraian temuan is optional even when severity is minor
             ->call('save')
             ->assertHasNoErrors()
-            ->assertRedirect(route('vehicles.show', ['vehicle' => $this->vehicle, 'tab' => 'inspections']));
+            ->assertRedirect(route('vehicles.index'));
 
         $inspection = $this->vehicle->inspections()->latest()->first();
         $this->assertNotNull($inspection);
@@ -689,6 +696,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
         ]);
 
         $viewerUser = User::factory()->create();
+        $viewerUser->givePermissionTo('fleet.view');
         Livewire::actingAs($viewerUser)
             ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents'])
             ->call('deleteDocument', $newDoc->id)
@@ -802,5 +810,100 @@ class VehicleInspectionAndComplianceTest extends TestCase
 
         $this->assertDatabaseMissing('vehicle_documents', ['vehicle_id' => $this->vehicle->id, 'document_type' => VehicleDocument::TYPE_STNK_FIVE_YEAR]);
         Storage::disk('public')->assertMissing($fiveYearDoc->attachment_path);
+    }
+
+    public function test_inspector_role_can_access_scanner_and_submit_p2h(): void
+    {
+        $inspector = User::factory()->create();
+        $inspector->givePermissionTo(['fleet.view', 'fleet.inspect']);
+
+        // 1. Can access scanner
+        Livewire::actingAs($inspector)
+            ->test(VehicleScan::class)
+            ->assertOk()
+            ->call('resolve', (string) $this->vehicle->id)
+            ->assertRedirect(route('vehicles.inspect', ['vehicle' => $this->vehicle->id]));
+
+        // 2. Can submit P2H inspection and gets redirected to vehicles.index
+        Livewire::actingAs($inspector)
+            ->test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
+            ->set('driver_name', 'Inspector Budi')
+            ->set('odometer', 50600)
+            ->set('fuel_percentage', 95)
+            ->set('severity', 'none')
+            ->call('save')
+            ->assertRedirect(route('vehicles.index'));
+
+        // 3. Vehicles index shows scan button with standby CTA for inspector
+        Livewire::actingAs($inspector)
+            ->test(VehiclesIndex::class)
+            ->assertSet('canInspect', true)
+            ->assertSet('canManage', false)
+            ->assertSee(__('fleet.index.scan_qr'));
+    }
+
+    public function test_inspector_cannot_access_sensitive_documents_or_service_costs(): void
+    {
+        $inspector = User::factory()->create();
+        $inspector->givePermissionTo(['fleet.view', 'fleet.inspect']);
+
+        // Create a legal document and a service record with cost
+        VehicleDocument::create([
+            'vehicle_id' => $this->vehicle->id,
+            'document_type' => VehicleDocument::TYPE_STNK_ANNUAL,
+            'document_number' => 'SECRET-STNK-999',
+            'expired_date' => now()->addYear(),
+        ]);
+
+        ServiceRecord::create([
+            'vehicle_id' => $this->vehicle->id,
+            'service_date' => now()->subDays(5),
+            'workshop' => 'Bengkel Resmi Hino',
+            'odometer' => 49500,
+            'total_cost' => 2500000,
+        ]);
+
+        // 1. VehicleShow defaults ?tab=documents back to inspections for inspector
+        $component = Livewire::actingAs($inspector)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents'])
+            ->assertSet('canViewDocuments', false)
+            ->assertSet('canViewCosts', false)
+            ->assertSet('tab', 'inspections')
+            ->assertDontSee('SECRET-STNK-999');
+
+        // 2. Calling setTab('documents') also falls back to inspections
+        $component->call('setTab', 'documents')
+            ->assertSet('tab', 'inspections')
+            ->assertDontSee('SECRET-STNK-999');
+
+        // 3. Viewing services tab hides financial figures
+        $component->call('setTab', 'services')
+            ->assertSet('tab', 'services')
+            ->assertSee('Bengkel Resmi Hino')
+            ->assertDontSee('Rp 2.500.000');
+    }
+
+    public function test_manager_retains_full_visibility_and_management_access(): void
+    {
+        $manager = User::factory()->create();
+        $manager->givePermissionTo(['fleet.manage']);
+
+        // Create a service record with cost
+        ServiceRecord::create([
+            'vehicle_id' => $this->vehicle->id,
+            'service_date' => now()->subDays(2),
+            'workshop' => 'Bengkel Authorized',
+            'odometer' => 49800,
+            'total_cost' => 1750000,
+        ]);
+
+        Livewire::actingAs($manager)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'services'])
+            ->assertSet('canManage', true)
+            ->assertSet('canViewDocuments', true)
+            ->assertSet('canViewCosts', true)
+            ->assertSee('Rp 1.750.000')
+            ->assertSee(__('fleet.show.btn_add_service'))
+            ->assertSee(__('fleet.show.btn_edit_vehicle'));
     }
 }

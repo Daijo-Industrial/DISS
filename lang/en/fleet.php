@@ -363,6 +363,7 @@ return [
         'qr_detected_desc' => 'Opening P2H inspection form...',
         'scan_error_title' => 'Failed to Process QR',
         'rescan_btn' => 'Try Scanning Again',
+        'scan_next' => 'Scan Another Vehicle',
         'active_fleet_label' => 'Active Operational Fleet',
         'torch_title' => 'Flashlight',
         'camera_switch_title' => 'Switch Camera',
