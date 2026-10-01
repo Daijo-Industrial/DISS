@@ -157,6 +157,7 @@ return [
         'stnk_five_year_label' => 'Plate & Registration (5-Year)',
         'mandatory_commercial' => 'Commercial Mandate',
         'optional_passenger' => 'Optional',
+        'optional_passenger_desc' => 'Passenger vehicles are not required to undergo periodic KIR inspections.',
         'annual_badge' => 'Annual',
         'five_year_badge' => '5 Years',
         'no_doc_kir' => 'No KIR record registered.',

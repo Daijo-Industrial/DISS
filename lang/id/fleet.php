@@ -157,6 +157,7 @@ return [
         'stnk_five_year_label' => 'Plat & STNK (5 Thn)',
         'mandatory_commercial' => 'Wajib Niaga',
         'optional_passenger' => 'Opsional',
+        'optional_passenger_desc' => 'Armada penumpang tidak diwajibkan uji berkala KIR.',
         'annual_badge' => 'Tahunan',
         'five_year_badge' => '5 Tahun',
         'no_doc_kir' => 'Belum ada data dokumen KIR.',
