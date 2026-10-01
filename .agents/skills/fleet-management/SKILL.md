@@ -192,11 +192,17 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
 - **Trigger**: Dispatched anywhere via `@click="$dispatch('open-lightbox', { src: url, title: caption, subtitle: sub })"`.
 - **Coverage**: Hero vehicle profile photos, P2H checklist point photos, P2H defect photos, document attachments (KIR/STNK), and inspection temporary photo previews.
 
-### Access Control & RBAC (`app/Infrastructure/Common/PermissionRegistry.php`)
-- **`fleet.view`**: View fleet lists, vehicle details, scan QR codes, and submit daily P2H inspection logs. Assigned to all operational roles (`staff`, `inspector`, `user`, etc.).
-- **`fleet.manage`**: Register and edit vehicles, update operational status, upload/delete vehicle profile photos, manage legal documents (KIR & STNK), record service events, and print QR stickers.
-- **Default Roles**: `super-admin` (implicit all via Gate), `admin`, `hr`, `hrd`, `hrd-manager`, `operations`, `logistics`, `manager`.
-- Checked in Livewire/Blade via `$canManage = auth()->user()?->can('fleet.manage') ?? false;` or `@can('fleet.manage')`. Legacy `$fullFeature` and hardcoded department checks are completely removed.
+### Access Control & Granular RBAC (`app/Infrastructure/Common/PermissionRegistry.php`)
+- **`fleet.view`**: View fleet lists and basic vehicle identity/cockpit overview.
+- **`fleet.inspect`**: Access camera scanner (`/vehicles/scan`) and submit P2H daily inspection logs (Check-out & Check-in). Post-submission redirects to `vehicles.index` with a standby re-scan CTA.
+- **`fleet.documents`**: View Legal Documents tab (`show-tab-documents`), STNK & KIR records, and download/preview attachments in Lightbox. (Hidden from basic inspectors).
+- **`fleet.view-costs`**: View financial figures (Rupiah line-item costs, YTD cost, lifetime cost in `show-tab-services`). (Hidden from basic inspectors).
+- **`fleet.manage`**: Full administrative access: register/edit/delete vehicles, upload profile photos, manage legal documents, record workshop services, and print QR stickers.
+- **Role Assignments**:
+  - Full Access: `admin`, `hr`, `hrd`, `hrd-manager`, `operations`, `logistics`, `manager` have all fleet permissions.
+  - Operational/Field Staff: `inspector`, `fleet-inspector`, `driver`, `staff` have `['fleet.view', 'fleet.inspect']`.
+- **Inspector Mobile/Tablet Navigation (`NavigationService.php`)**:
+  - For users with `fleet.inspect` who lack `fleet.manage`, the sidebar menu item dynamically directs to `route('vehicles.scan')` labeled as *"P2H Armada"*, providing instant 1-tap scanner access.
 
 ---
 
@@ -205,14 +211,14 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
 All tests and tools run inside the Docker Sail container (`diss-laravel.test-1`):
 
 ```bash
-# Run fleet inspection and compliance test suite (22 tests, 196 assertions)
+# Run fleet inspection and compliance test suite (25 tests, 219 assertions)
 docker exec diss-laravel.test-1 php artisan test --filter=VehicleInspectionAndComplianceTest
 
 # Check document reminders manually
 docker exec diss-laravel.test-1 php artisan fleet:check-reminders
 
 # Format code with Laravel Pint (ALWAYS target specific files to prevent timeout)
-docker exec diss-laravel.test-1 ./vendor/bin/pint app/Livewire/Vehicles/Show.php app/Models/VehicleDocument.php tests/Feature/VehicleInspectionAndComplianceTest.php
+docker exec diss-laravel.test-1 ./vendor/bin/pint app/Infrastructure/Common/PermissionRegistry.php app/Services/NavigationService.php app/Livewire/Vehicles/Index.php app/Livewire/Vehicles/Scan.php app/Livewire/Vehicles/InspectionForm.php app/Livewire/Vehicles/Show.php tests/Feature/VehicleInspectionAndComplianceTest.php
 ```
 
 > [!WARNING]
