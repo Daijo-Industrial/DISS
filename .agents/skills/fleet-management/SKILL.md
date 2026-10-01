@@ -38,10 +38,15 @@ The fleet module integrates directly with the existing `Vehicle` system rather t
    - `vehicle_inspections.vehicle_id`: UUID (`char(36)`).
 
 3. **`vehicle_documents`** (Legalitas KIR, STNK, Asuransi)
-   - Columns: `vehicle_id` (foreign UUID), `document_type`, `document_number`, `expired_date`, `document_file_path`, `notes`.
-   - Types: `kir`, `stnk_annual` (1 tahun), `stnk_five_year` (5 tahun), `insurance`.
+   - Columns: `vehicle_id` (foreign UUID), `document_type`, `document_number`, `expired_date`, `last_renewed_date`, `attachment_path`, `notes`.
+   - Types: `kir`, `stnk` (unified UI alias), `stnk_annual` (pajak 1 tahun), `stnk_five_year` (plat & STNK 5 tahun), `insurance`, `other`.
    - Model: `App\Models\VehicleDocument`.
-   - Statuses: `expired` (sisa $\le 0$ hari), `warning` ($\le 30$ hari), `valid` ($> 30$ hari).
+   - Statuses: `expired` (sisa $\le 0$ hari), `critical` ($\le 7$ hari), `warning` ($\le 30$ hari), `valid` ($> 30$ hari).
+   - **Unified STNK Architecture**:
+     - SAMSAT issues a single physical STNK document with two sheets: Lembar Pajak Tahunan (PKB/SWDKLLJ) and Lembar STNK/Plat Kaleng (5 Tahunan).
+     - The UI presents a consolidated **"STNK & Pajak Kendaraan"** card with dual-date tracking and a single file upload modal.
+     - Backend atomically saves both `stnk_annual` and `stnk_five_year` records within a `DB::transaction()`, sharing the same `document_number` and `attachment_path` without schema migrations.
+     - `deleteStnk()` cleans up both records and storage file; `deleteDocument()` checks sibling references before unlinking shared attachments.
 
 4. **`vehicle_inspections`** (Inspeksi Harian P2H - Pemeliharaan Pemeriksaan Harian)
    - Columns: `vehicle_id` (foreign UUID), `parent_inspection_id`, `inspection_type` (`check_out` | `check_in`), `driver_name`, `odometer`, `fuel_percentage`, `trip_distance`, `checklist_results` (`json`), `severity` (`none` | `minor` | `critical_grounded`), `defect_notes`, `defect_photo_path`, `inspected_by_user_id`.
@@ -166,10 +171,16 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
 - **Data Table Row Navigation**:
   - Entire table row is clickable directly to Cockpit; the action column only contains the quick P2H action button.
 
-### Cockpit View (`resources/views/livewire/vehicles/show.blade.php`)
+### Cockpit & Legal Documents View (`resources/views/livewire/vehicles/show.blade.php`)
 - **Indonesian TNKB Plate Chassis**: Monospace bold plate badge with metallic bolt styling.
-- **3 Punchy Gauges**: Minimalist KPI summary (Odometer, Status Pajak STNK 1th & 5th, Status KIR).
-- **Unified Action Buttons**: Direct modal triggers for QR code printing, service records, and editing.
+- **Glance & Health Shortcuts**: Quick links to latest service record and document compliance status overview.
+- **Unified 2-Card Legal Documents Tab (`show-tab-documents.blade.php`)**:
+  - **Card 1: KIR (Uji Berkala)**: Automatic commercial/passenger mandate display.
+  - **Card 2: STNK & Pajak Kendaraan**: Consolidates Annual Tax (PKB 1-Yr) and 5-Year Plate Renewal into a single card with dual-date rows, document number, unified Lightbox preview, and single renewal trigger.
+  - **Other Documents (`Dokumen Lainnya`)**: Collapsible section for vehicle insurance/policies, BPKB, etc.
+  - **Document Archive (`Arsip Dokumen`)**: Complete historical renewal audit trail table.
+- **Unified Modal (`show-modals.blade.php`)**:
+  - Dynamically switches to dual expiration date pickers (`stnk_annual_expired_date` & `stnk_five_year_expired_date`) when `stnk` is selected, pre-populating existing dates and sharing a single file attachment.
 
 ### Layout Navigation Drawer (`resources/views/new/layouts/app.blade.php`)
 - **Breakpoint**: Drawer active on `< 1024px` (`lg:hidden`), providing full-width screen real estate for tablets in portrait mode.
@@ -194,14 +205,14 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
 All tests and tools run inside the Docker Sail container (`diss-laravel.test-1`):
 
 ```bash
-# Run fleet inspection and compliance test suite (20 tests, 129 assertions)
+# Run fleet inspection and compliance test suite (22 tests, 196 assertions)
 docker exec diss-laravel.test-1 php artisan test --filter=VehicleInspectionAndComplianceTest
 
 # Check document reminders manually
 docker exec diss-laravel.test-1 php artisan fleet:check-reminders
 
 # Format code with Laravel Pint (ALWAYS target specific files to prevent timeout)
-docker exec diss-laravel.test-1 ./vendor/bin/pint config/fleet.php app/Livewire/Vehicles/Index.php app/Livewire/Vehicles/Show.php app/Livewire/Vehicles/InspectionForm.php
+docker exec diss-laravel.test-1 ./vendor/bin/pint app/Livewire/Vehicles/Show.php app/Models/VehicleDocument.php tests/Feature/VehicleInspectionAndComplianceTest.php
 ```
 
 > [!WARNING]

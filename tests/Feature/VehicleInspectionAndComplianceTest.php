@@ -621,4 +621,186 @@ class VehicleInspectionAndComplianceTest extends TestCase
         // Reset back to id
         app()->setLocale('id');
     }
+
+    public function test_vehicle_legal_documents_lifecycle_lightbox_and_storage_cleanup()
+    {
+        Storage::fake('public');
+        Permission::firstOrCreate(['name' => 'fleet.manage', 'guard_name' => 'web']);
+        $this->user->givePermissionTo('fleet.manage');
+
+        // 1. Invalid mime type is rejected
+        $invalidFile = UploadedFile::fake()->create('script.sh', 50, 'application/x-sh');
+        Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents'])
+            ->call('openDocModal', VehicleDocument::TYPE_KIR)
+            ->set('doc_type', VehicleDocument::TYPE_KIR)
+            ->set('doc_number', 'KIR-TEST-001')
+            ->set('expired_date', now()->addMonths(6)->toDateString())
+            ->set('attachment', $invalidFile)
+            ->call('saveDocument')
+            ->assertHasErrors(['attachment' => 'mimes']);
+
+        // 2. Valid image upload succeeds and stores file
+        $validImage = UploadedFile::fake()->image('kir_scan.jpg');
+        Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents'])
+            ->call('openDocModal', VehicleDocument::TYPE_KIR)
+            ->set('doc_type', VehicleDocument::TYPE_KIR)
+            ->set('doc_number', 'KIR-TEST-001')
+            ->set('expired_date', now()->addMonths(6)->toDateString())
+            ->set('attachment', $validImage)
+            ->call('saveDocument')
+            ->assertHasNoErrors()
+            ->assertSet('showDocModal', false);
+
+        $savedDoc = VehicleDocument::where('vehicle_id', $this->vehicle->id)
+            ->where('document_number', 'KIR-TEST-001')
+            ->first();
+
+        $this->assertNotNull($savedDoc);
+        $this->assertNotNull($savedDoc->attachment_path);
+        Storage::disk('public')->assertExists($savedDoc->attachment_path);
+        $this->assertTrue($savedDoc->is_image_attachment);
+        $this->assertEquals('Uji Berkala KIR', $savedDoc->document_type_label);
+        $this->assertNotEmpty($savedDoc->attachment_url);
+
+        // 3. Tab view renders lightbox trigger and document details
+        $component = Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents']);
+        $component->assertSeeHtml('$dispatch(\'open-lightbox\'');
+        $component->assertSee('KIR-TEST-001');
+
+        // 4. Delete document unlinks physical file from storage disk
+        $attachmentPath = $savedDoc->attachment_path;
+        Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents'])
+            ->call('deleteDocument', $savedDoc->id)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseMissing('vehicle_documents', ['id' => $savedDoc->id]);
+        Storage::disk('public')->assertMissing($attachmentPath);
+
+        // 5. User without fleet.manage permission cannot delete document
+        $newDoc = VehicleDocument::create([
+            'vehicle_id' => $this->vehicle->id,
+            'document_type' => VehicleDocument::TYPE_OTHER,
+            'document_number' => 'DOC-READONLY',
+            'expired_date' => now()->addYear(),
+        ]);
+
+        $viewerUser = User::factory()->create();
+        Livewire::actingAs($viewerUser)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents'])
+            ->call('deleteDocument', $newDoc->id)
+            ->assertStatus(403);
+    }
+
+    public function test_vehicle_unified_stnk_creation_and_synchronization()
+    {
+        Storage::fake('public');
+        Permission::firstOrCreate(['name' => 'fleet.manage', 'guard_name' => 'web']);
+        $this->user->givePermissionTo('fleet.manage');
+
+        $annualDate = now()->addYear()->toDateString();
+        $fiveYearDate = now()->addYears(5)->toDateString();
+
+        // 1. Initial registration: no existing STNK, is_initial_stnk is true, last_renewed_date is null
+        $initComponent = Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents'])
+            ->call('openDocModal', VehicleDocument::TYPE_STNK)
+            ->assertSet('is_initial_stnk', true)
+            ->assertSet('renew_five_year', true)
+            ->assertSet('last_renewed_date', null);
+
+        // Validation fails if dates are empty
+        $initComponent->set('doc_number', 'STNK-001/JK/2026')
+            ->set('stnk_annual_expired_date', '')
+            ->set('stnk_five_year_expired_date', '')
+            ->call('saveDocument')
+            ->assertHasErrors(['stnk_annual_expired_date', 'stnk_five_year_expired_date']);
+
+        // 2. Successful initial creation saves both stnk_annual and stnk_five_year with null last_renewed_date
+        $stnkScan = UploadedFile::fake()->image('stnk_scan.jpg');
+
+        $initComponent->set('doc_number', 'STNK-001/JK/2026')
+            ->set('stnk_annual_expired_date', $annualDate)
+            ->set('stnk_five_year_expired_date', $fiveYearDate)
+            ->set('attachment', $stnkScan)
+            ->call('saveDocument')
+            ->assertHasNoErrors()
+            ->assertSet('showDocModal', false);
+
+        $annualDoc = VehicleDocument::where('vehicle_id', $this->vehicle->id)
+            ->where('document_type', VehicleDocument::TYPE_STNK_ANNUAL)
+            ->first();
+
+        $fiveYearDoc = VehicleDocument::where('vehicle_id', $this->vehicle->id)
+            ->where('document_type', VehicleDocument::TYPE_STNK_FIVE_YEAR)
+            ->first();
+
+        $this->assertNotNull($annualDoc);
+        $this->assertNotNull($fiveYearDoc);
+        $this->assertNull($annualDoc->last_renewed_date);
+        $this->assertNull($fiveYearDoc->last_renewed_date);
+        $this->assertEquals($annualDate, $annualDoc->expired_date->toDateString());
+        $this->assertEquals($fiveYearDate, $fiveYearDoc->expired_date->toDateString());
+        Storage::disk('public')->assertExists($annualDoc->attachment_path);
+
+        // 3. Document Tab renders unified STNK card with both dates
+        $tabComponent = Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents']);
+        $tabComponent->assertSee('STNK-001/JK/2026');
+        $tabComponent->assertSee(__('fleet.show.stnk_card_title'));
+        $tabComponent->assertSee(__('fleet.show.stnk_annual_label'));
+        $tabComponent->assertSee(__('fleet.show.stnk_five_year_label'));
+
+        // 4. Subsequent Routine Renewal: is_initial_stnk is false, last_renewed_date defaults to today
+        $renewalPaymentDate = now()->subDays(2)->toDateString();
+        $expectedNextAnnual = now()->subDays(2)->addYear()->toDateString();
+
+        $renewalComponent = Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents'])
+            ->call('openDocModal', 'stnk')
+            ->assertSet('is_initial_stnk', false)
+            ->assertSet('renew_five_year', false)
+            ->assertSet('doc_number', 'STNK-001/JK/2026')
+            ->assertSet('last_renewed_date', now()->toDateString())
+            // Simulate changing the payment date to test auto-calculation of next 1-year tax
+            ->set('last_renewed_date', $renewalPaymentDate)
+            ->assertSet('stnk_annual_expired_date', $expectedNextAnnual);
+
+        // Save routine renewal (only stnk_annual is renewed, 5-year plate is retained)
+        $renewalComponent->call('saveDocument')
+            ->assertHasNoErrors()
+            ->assertSet('showDocModal', false);
+
+        $latestAnnual = VehicleDocument::where('vehicle_id', $this->vehicle->id)
+            ->where('document_type', VehicleDocument::TYPE_STNK_ANNUAL)
+            ->latest('id')
+            ->first();
+
+        $this->assertEquals($expectedNextAnnual, $latestAnnual->expired_date->toDateString());
+        $this->assertEquals($renewalPaymentDate, $latestAnnual->last_renewed_date->toDateString());
+        // 5-Year STNK was NOT duplicated
+        $this->assertEquals(1, VehicleDocument::where('vehicle_id', $this->vehicle->id)->where('document_type', VehicleDocument::TYPE_STNK_FIVE_YEAR)->count());
+
+        // 5. deleteDocument on one record preserves the attachment for sibling STNK records
+        Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents'])
+            ->call('deleteDocument', $annualDoc->id)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseMissing('vehicle_documents', ['id' => $annualDoc->id]);
+        $this->assertDatabaseHas('vehicle_documents', ['id' => $fiveYearDoc->id]);
+        Storage::disk('public')->assertExists($fiveYearDoc->attachment_path);
+
+        // 6. deleteStnk cleans up all remaining STNK records and unlinks file
+        Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents'])
+            ->call('deleteStnk')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseMissing('vehicle_documents', ['vehicle_id' => $this->vehicle->id, 'document_type' => VehicleDocument::TYPE_STNK_FIVE_YEAR]);
+        Storage::disk('public')->assertMissing($fiveYearDoc->attachment_path);
+    }
 }

@@ -114,7 +114,13 @@
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
         <div class="relative w-full max-w-lg rounded-3xl bg-white shadow-2xl border border-slate-200 p-4 sm:p-6 space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 class="text-sm font-bold text-slate-900">Input / Perbarui Dokumen Legalitas</h3>
+                <h3 class="text-sm font-bold text-slate-900">
+                    @if ($doc_type === 'stnk')
+                        {{ $is_initial_stnk ? __('fleet.documents.modal_title_stnk_initial') : __('fleet.documents.modal_title_stnk_renewal') }}
+                    @else
+                        {{ __('fleet.documents.modal_title') }}
+                    @endif
+                </h3>
                 <button type="button" wire:click="closeDocModal" class="text-slate-400 hover:text-slate-600 cursor-pointer">
                     <i class="bi bi-x-lg"></i>
                 </button>
@@ -122,60 +128,169 @@
 
             <form wire:submit.prevent="saveDocument" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">Jenis Dokumen <span class="text-rose-500">*</span></label>
-                    <select wire:model.defer="doc_type"
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">{{ __('fleet.documents.type') }} <span class="text-rose-500">*</span></label>
+                    <select wire:model.live="doc_type"
                         class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-slate-500 focus:outline-none">
-                        <option value="kir">Uji Berkala (KIR) — Khusus Mobil Gede / Niaga</option>
-                        <option value="stnk_annual">Pajak STNK 1 Tahunan</option>
-                        <option value="stnk_five_year">STNK 5 Tahunan &amp; Ganti Plat Kaleng</option>
-                        <option value="insurance">Asuransi Kendaraan</option>
-                        <option value="other">Dokumen Lainnya</option>
+                        <option value="stnk">{{ __('fleet.documents.types.stnk') }}</option>
+                        <option value="kir">{{ __('fleet.documents.types.kir') }}</option>
+                        <option value="insurance">{{ __('fleet.documents.types.insurance') }}</option>
+                        <option value="other">{{ __('fleet.documents.types.other') }}</option>
                     </select>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nomor Dokumen / Surat</label>
-                    <input type="text" wire:model.defer="doc_number" placeholder="Contoh: KIR-JKT-123456"
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">{{ __('fleet.documents.doc_number') }}</label>
+                    <input type="text" wire:model.defer="doc_number" placeholder="Contoh: 01847291/JK/2023"
                         class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-slate-500 focus:outline-none">
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Jatuh Tempo <span class="text-rose-500">*</span></label>
-                        <input type="date" wire:model.defer="expired_date"
-                            class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-slate-500 focus:outline-none">
-                        @error('expired_date')
-                            <p class="mt-1 text-[11px] text-rose-600">{{ $message }}</p>
-                        @enderror
-                    </div>
+                @if ($doc_type === 'stnk')
+                    @if ($is_initial_stnk)
+                        {{-- FLOW A: INITIAL REGISTRATION --}}
+                        <div class="rounded-2xl bg-slate-50/80 border border-slate-200/80 p-3.5 space-y-3">
+                            <div class="text-[11px] text-slate-600 flex items-start gap-2">
+                                <i class="bi bi-info-circle text-slate-500 mt-0.5 shrink-0"></i>
+                                <span>{{ __('fleet.documents.stnk_initial_notice') }}</span>
+                            </div>
 
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 mb-1">Tanggal Diperbarui</label>
-                        <input type="date" wire:model.defer="last_renewed_date"
-                            class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-slate-500 focus:outline-none">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-900 mb-1">
+                                        {{ __('fleet.documents.stnk_five_year_expired_date') }} <span class="text-rose-500">*</span>
+                                    </label>
+                                    <input type="date" wire:model.defer="stnk_five_year_expired_date"
+                                        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-slate-500 focus:outline-none">
+                                    @error('stnk_five_year_expired_date')
+                                        <p class="mt-1 text-[11px] text-rose-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">
+                                        {{ __('fleet.documents.stnk_annual_expired_date') }} <span class="text-rose-500">*</span>
+                                    </label>
+                                    <input type="date" wire:model.defer="stnk_annual_expired_date"
+                                        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-slate-500 focus:outline-none">
+                                    @error('stnk_annual_expired_date')
+                                        <p class="mt-1 text-[11px] text-rose-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        {{-- FLOW B: ROUTINE RENEWAL --}}
+                        <div class="rounded-2xl bg-slate-50/80 border border-slate-200/80 p-3.5 space-y-3">
+                            <div class="text-[11px] text-slate-600 flex items-start gap-2">
+                                <i class="bi bi-arrow-repeat text-slate-500 mt-0.5 shrink-0"></i>
+                                <span>{{ __('fleet.documents.stnk_renewal_notice') }}</span>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-900 mb-1">
+                                        {{ __('fleet.documents.stnk_payment_date') }} <span class="text-rose-500">*</span>
+                                    </label>
+                                    <input type="date" wire:model.live="last_renewed_date"
+                                        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-slate-500 focus:outline-none font-semibold">
+                                    @error('last_renewed_date')
+                                        <p class="mt-1 text-[11px] text-rose-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">
+                                        {{ __('fleet.documents.stnk_next_annual_date') }} <span class="text-rose-500">*</span>
+                                    </label>
+                                    <input type="date" wire:model.defer="stnk_annual_expired_date"
+                                        class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-slate-500 focus:outline-none font-semibold">
+                                    @error('stnk_annual_expired_date')
+                                        <p class="mt-1 text-[11px] text-rose-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            {{-- 5-Year Plate & STNK Cycle Section --}}
+                            <div class="pt-2.5 border-t border-slate-200/70 space-y-2">
+                                <label class="flex items-start gap-2.5 cursor-pointer select-none">
+                                    <input type="checkbox" wire:model.live="renew_five_year"
+                                        class="mt-0.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900">
+                                    <div class="space-y-0.5">
+                                        <span class="text-xs font-bold text-slate-800">{{ __('fleet.documents.stnk_renew_five_year_toggle') }}</span>
+                                        <p class="text-[11px] text-slate-400 leading-relaxed">{{ __('fleet.documents.stnk_renew_five_year_desc') }}</p>
+                                    </div>
+                                </label>
+
+                                @if ($renew_five_year)
+                                    <div class="pl-6 pt-1">
+                                        <label class="block text-xs font-bold text-slate-900 mb-1">
+                                            {{ __('fleet.documents.stnk_new_five_year_date') }} <span class="text-rose-500">*</span>
+                                        </label>
+                                        <input type="date" wire:model.defer="stnk_five_year_expired_date"
+                                            class="w-full sm:w-1/2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-slate-500 focus:outline-none font-semibold">
+                                        @error('stnk_five_year_expired_date')
+                                            <p class="mt-1 text-[11px] text-rose-600">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                @else
+                                    @if ($stnk_five_year_expired_date)
+                                        <div class="pl-6 text-[11px] text-slate-500 flex items-center gap-1.5">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-slate-400"></span>
+                                            <span>{{ __('fleet.documents.stnk_five_year_retained', ['date' => \Illuminate\Support\Carbon::parse($stnk_five_year_expired_date)->isoFormat('D MMM YYYY')]) }}</span>
+                                        </div>
+                                    @endif
+                                @endif
+                            </div>
+                        </div>
+                    @endif
+                @else
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">{{ __('fleet.documents.expired_date') }} <span class="text-rose-500">*</span></label>
+                            <input type="date" wire:model.defer="expired_date"
+                                class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-slate-500 focus:outline-none">
+                            @error('expired_date')
+                                <p class="mt-1 text-[11px] text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">{{ __('fleet.documents.last_renewed_date') }}</label>
+                            <input type="date" wire:model.defer="last_renewed_date"
+                                class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-slate-500 focus:outline-none">
+                        </div>
                     </div>
-                </div>
+                @endif
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">Unggah Scan / Foto Fisik</label>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">
+                        @if ($doc_type === 'stnk')
+                            {{ $is_initial_stnk ? __('fleet.documents.stnk_scan_initial_label') : __('fleet.documents.stnk_scan_renewal_label') }}
+                        @else
+                            {{ __('fleet.documents.attachment') }}
+                        @endif
+                    </label>
                     <input type="file" wire:model="attachment" accept="image/*,application/pdf"
                         class="block w-full text-xs text-slate-500 file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700">
+                    <p class="mt-1 text-[11px] text-slate-400">{{ __('fleet.documents.file_help') }}</p>
+                    @error('attachment')
+                        <p class="mt-1 text-[11px] text-rose-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">Catatan Tambahan</label>
-                    <textarea wire:model.defer="notes" rows="2" placeholder="Catatan instansi / keterangan perpanjangan..."
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">{{ __('fleet.documents.notes') }}</label>
+                    <textarea wire:model.defer="notes" rows="2" placeholder="{{ __('fleet.documents.notes_placeholder') }}"
                         class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800 focus:border-slate-500 focus:outline-none"></textarea>
                 </div>
 
                 <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                     <button type="button" wire:click="closeDocModal"
                         class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer">
-                        Batal
+                        {{ __('fleet.documents.cancel_btn') }}
                     </button>
                     <button type="submit" wire:loading.attr="disabled"
                         class="rounded-xl bg-slate-900 px-5 py-2 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-60 cursor-pointer">
-                        Simpan Dokumen
+                        {{ __('fleet.documents.save_btn') }}
                     </button>
                 </div>
             </form>

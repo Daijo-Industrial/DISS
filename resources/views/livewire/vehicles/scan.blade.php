@@ -18,7 +18,9 @@
         },
 
         async initScanner() {
-            this.$cleanup(() => this.destroy());
+            if (window.Alpine && typeof window.Alpine.onElRemoved === 'function') {
+                window.Alpine.onElRemoved(this.$el, () => this.destroy());
+            }
 
             if (typeof Html5Qrcode === 'undefined') {
                 this.cameraError = this.labels.loading;
@@ -163,6 +165,8 @@
     }"
     x-init="initScanner()"
     x-on:livewire:navigating.window="destroy()"
+    x-on:pagehide.window="destroy()"
+    x-on:beforeunload.window="destroy()"
     x-on:page-unloaded.window="destroy()"
     x-on:scan-failed.window="scanSuccess = false; if (html5QrCode && !isScanning) { startCamera(); } else if (!html5QrCode) { initScanner(); }"
     class="min-h-[80vh] flex flex-col justify-start">

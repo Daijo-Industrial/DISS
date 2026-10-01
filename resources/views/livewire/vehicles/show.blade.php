@@ -16,10 +16,6 @@
 
     @php
         $last = $vehicle->latestService;
-        $lastKm = (int) ($last->odometer ?? 0);
-        $kmSinceLastService = max(0, $vehicle->odometer - $lastKm);
-        $nextServiceInterval = 10000;
-        $serviceProgressPercent = min(100, round(($kmSinceLastService / $nextServiceInterval) * 100));
         $isOut = $vehicle->is_out_on_trip;
         $hasExpired = $documents->where('status', 'expired')->count();
         $hasWarning = $documents->whereIn('status', ['critical', 'warning'])->count();

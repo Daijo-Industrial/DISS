@@ -181,7 +181,19 @@
                 @php
                     $isOut = $v->is_out_on_trip;
                     $kirDoc = $v->documents->where('document_type', 'kir')->sortByDesc('expired_date')->first();
-                    $stnkDoc = $v->documents->where('document_type', 'stnk_annual')->sortByDesc('expired_date')->first();
+                    $stnk1 = $v->documents->where('document_type', 'stnk_annual')->sortByDesc('expired_date')->first();
+                    $stnk5 = $v->documents->where('document_type', 'stnk_five_year')->sortByDesc('expired_date')->first();
+
+                    $stnkStatus = 'none';
+                    if ($stnk1 || $stnk5) {
+                        if (($stnk1 && $stnk1->status === 'expired') || ($stnk5 && $stnk5->status === 'expired')) {
+                            $stnkStatus = 'expired';
+                        } elseif (($stnk1 && in_array($stnk1->status, ['critical', 'warning'])) || ($stnk5 && in_array($stnk5->status, ['critical', 'warning']))) {
+                            $stnkStatus = 'warning';
+                        } else {
+                            $stnkStatus = 'valid';
+                        }
+                    }
                 @endphp
 
                 <div wire:key="veh-card-{{ $v->id }}"
@@ -254,7 +266,7 @@
 
                                 <div class="flex items-center gap-2 shrink-0 text-[10px] text-slate-400">
                                     <span class="inline-flex items-center gap-1 font-medium" title="STNK">
-                                        <span class="h-1.5 w-1.5 rounded-full {{ $stnkDoc ? ($stnkDoc->status === 'expired' ? 'bg-rose-500' : ($stnkDoc->status === 'warning' ? 'bg-amber-500' : 'bg-emerald-500')) : 'bg-slate-300' }}"></span>
+                                        <span class="h-1.5 w-1.5 rounded-full {{ $stnkStatus === 'expired' ? 'bg-rose-500' : ($stnkStatus === 'warning' ? 'bg-amber-500' : ($stnkStatus === 'valid' ? 'bg-emerald-500' : 'bg-slate-300')) }}"></span>
                                         STNK
                                     </span>
                                     @if ($v->requires_kir)
