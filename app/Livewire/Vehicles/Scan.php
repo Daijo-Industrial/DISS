@@ -13,10 +13,18 @@ class Scan extends Component
 
     public ?string $errorMessage = null;
 
-    public bool $isSearching = false;
+    public function mount(): void
+    {
+        $user = auth()->user();
+        if (! ($user?->can('fleet.inspect') || $user?->can('fleet.manage') || $user?->can('fleet.view'))) {
+            abort(403);
+        }
+    }
 
     /**
-     * Resolve scanned QR code or manual input to redirect to P2H inspection form.
+     * Resolve scanned QR code (camera payload).
+     * ONLY matches based on UUID (raw UUID or URL containing UUID).
+     * No fallback to license plate number, brand, model, or driver name.
      */
     public function resolve(string $code)
     {
@@ -25,11 +33,12 @@ class Scan extends Component
 
         if (empty($cleanCode)) {
             $this->errorMessage = __('fleet.scanner.not_found_alert');
+            $this->dispatch('scan-failed');
 
             return;
         }
 
-        // 1. Try to extract UUID (e.g. raw UUID or embedded in URL)
+        // Only extract and match by UUID (e.g. raw UUID or embedded in URL from physical QR sticker)
         if (preg_match('/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/', $cleanCode, $matches)) {
             $uuid = strtolower($matches[0]);
             $vehicle = Vehicle::where('id', $uuid)->first();
@@ -38,37 +47,115 @@ class Scan extends Component
             }
         }
 
-        // 2. Try match by plate number (raw or cleaned)
-        $normalizedInput = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $cleanCode));
-        $vehicle = Vehicle::all()->first(function ($v) use ($normalizedInput, $cleanCode) {
-            $plateClean = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $v->plate_number));
+        // If not a valid UUID or vehicle with this UUID does not exist, fail immediately without fallback
+        $this->errorMessage = __('fleet.scanner.not_found_code', ['code' => $cleanCode]);
+        $this->dispatch('scan-failed');
+    }
 
-            return $plateClean === $normalizedInput || strcasecmp($v->plate_number, $cleanCode) === 0;
-        });
+    /**
+     * Manual search: only searches by plate number or vehicle details (brand, model, driver).
+     * Explicitly rejects UUID queries.
+     */
+    public function searchManual()
+    {
+        $this->errorMessage = null;
+        $searchTerm = trim($this->manualInput);
+
+        if (empty($searchTerm)) {
+            $this->errorMessage = __('fleet.scanner.not_found_alert');
+
+            return;
+        }
+
+        // Explicitly disallow search by UUID
+        if (preg_match('/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/', $searchTerm)) {
+            $this->errorMessage = __('fleet.scanner.uuid_not_allowed');
+
+            return;
+        }
+
+        $normalizedSearch = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $searchTerm));
+
+        // 1. Exact plate match (with or without spaces)
+        $vehicle = Vehicle::whereNotIn('status', ['sold', 'retired'])
+            ->where(function ($q) use ($normalizedSearch, $searchTerm) {
+                if (! empty($normalizedSearch)) {
+                    $q->whereRaw("REPLACE(UPPER(plate_number), ' ', '') = ?", [$normalizedSearch]);
+                }
+                $q->orWhere('plate_number', $searchTerm);
+            })->first();
 
         if ($vehicle) {
             return $this->redirect(route('vehicles.inspect', ['vehicle' => $vehicle->id]), navigate: true);
         }
 
-        $this->errorMessage = __('fleet.scanner.not_found_code', ['code' => $cleanCode]);
+        // 2. Partial match on plate number or vehicle details (brand, model, driver_name)
+        $matches = Vehicle::whereNotIn('status', ['sold', 'retired'])
+            ->where(function ($q) use ($searchTerm, $normalizedSearch) {
+                if (! empty($normalizedSearch)) {
+                    $q->whereRaw("REPLACE(UPPER(plate_number), ' ', '') LIKE ?", ['%' . $normalizedSearch . '%']);
+                }
+                $q->orWhere('plate_number', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('brand', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('model', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('driver_name', 'like', '%' . $searchTerm . '%');
+            })
+            ->get();
+
+        if ($matches->count() === 1) {
+            return $this->redirect(route('vehicles.inspect', ['vehicle' => $matches->first()->id]), navigate: true);
+        }
+
+        if ($matches->isEmpty()) {
+            $this->errorMessage = __('fleet.scanner.not_found_code', ['code' => $searchTerm]);
+        }
     }
 
-    public function searchManual()
+    /**
+     * Directly select a vehicle from the manual picker list.
+     */
+    public function selectVehicle(string $id)
     {
-        return $this->resolve($this->manualInput);
+        return $this->redirect(route('vehicles.inspect', ['vehicle' => $id]), navigate: true);
+    }
+
+    public function clearManualSearch()
+    {
+        $this->manualInput = '';
+        $this->errorMessage = null;
     }
 
     public function render()
     {
-        $recentVehicles = Vehicle::query()
-            ->whereNull('deleted_at')
+        $searchTerm = trim($this->manualInput);
+        $normalizedSearch = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $searchTerm));
+
+        $query = Vehicle::query()
             ->whereNotIn('status', ['sold', 'retired'])
-            ->orderBy('plate_number')
-            ->take(8)
-            ->get();
+            ->orderBy('plate_number');
+
+        if (! empty($searchTerm)) {
+            // If user typed a UUID, return no results as UUID searching is disabled
+            if (preg_match('/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/', $searchTerm)) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->where(function ($q) use ($searchTerm, $normalizedSearch) {
+                    if (! empty($normalizedSearch)) {
+                        $q->whereRaw("REPLACE(UPPER(plate_number), ' ', '') LIKE ?", ['%' . $normalizedSearch . '%']);
+                    }
+                    $q->orWhere('plate_number', 'like', '%' . $searchTerm . '%')
+                        ->orWhere('brand', 'like', '%' . $searchTerm . '%')
+                        ->orWhere('model', 'like', '%' . $searchTerm . '%')
+                        ->orWhere('driver_name', 'like', '%' . $searchTerm . '%');
+                });
+            }
+        }
+
+        $vehicles = $query->take(12)->get();
 
         return view('livewire.vehicles.scan', [
-            'recentVehicles' => $recentVehicles,
+            'recentVehicles' => $vehicles,
+            'isSearching' => ! empty($searchTerm),
         ]);
     }
 }

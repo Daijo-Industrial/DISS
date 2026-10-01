@@ -323,7 +323,7 @@ class NavigationService
                         'route' => 'vehicles.index',
                         'icon' => 'truck',
                         'active' => request()->routeIs('vehicles.*') || request()->routeIs('services.*'),
-                        'permission' => 'ops.view',
+                        'permission' => ['fleet.view', 'fleet.manage', 'fleet.inspect', 'ops.view'],
                     ],
                     [
                         'label' => 'SPK Management',
@@ -722,12 +722,23 @@ class NavigationService
      */
     private static function applySmartDefaults(array $menu, $user): array
     {
+        $isInspectorOnly = $user && $user->can('fleet.inspect') && ! $user->can('fleet.manage');
+
         foreach ($menu as &$item) {
             if ($item['type'] === 'group' && isset($item['children'])) {
                 $hasActiveChild = collect($item['children'])
                     ->contains(fn ($child) => $child['active'] ?? false);
 
                 $item['defaultOpen'] = $hasActiveChild;
+
+                if ($isInspectorOnly) {
+                    foreach ($item['children'] as &$child) {
+                        if (($child['route'] ?? '') === 'vehicles.index') {
+                            $child['route'] = 'vehicles.scan';
+                            $child['label'] = 'P2H Armada';
+                        }
+                    }
+                }
             }
         }
 

@@ -26,6 +26,8 @@ class VehicleDocument extends Model
         'last_renewed_date' => 'date',
     ];
 
+    public const TYPE_STNK = 'stnk';
+
     public const TYPE_KIR = 'kir';
 
     public const TYPE_STNK_ANNUAL = 'stnk_annual';
@@ -39,6 +41,7 @@ class VehicleDocument extends Model
     public static function typeLabels(): array
     {
         return [
+            self::TYPE_STNK => __('fleet.documents.types.stnk'),
             self::TYPE_KIR => __('fleet.documents.types.kir'),
             self::TYPE_STNK_ANNUAL => __('fleet.documents.types.stnk_annual'),
             self::TYPE_STNK_FIVE_YEAR => __('fleet.documents.types.stnk_five_year'),
@@ -50,6 +53,21 @@ class VehicleDocument extends Model
     public function getTypeLabelAttribute(): string
     {
         return self::typeLabels()[$this->document_type] ?? ucfirst(str_replace('_', ' ', $this->document_type));
+    }
+
+    public function getDocumentTypeLabelAttribute(): string
+    {
+        return $this->type_label;
+    }
+
+    public function getIsImageAttachmentAttribute(): bool
+    {
+        return (bool) preg_match('/\.(jpg|jpeg|png|webp)$/i', (string) $this->attachment_path);
+    }
+
+    public function getAttachmentUrlAttribute(): ?string
+    {
+        return $this->attachment_path ? asset('storage/' . $this->attachment_path) : null;
     }
 
     public function vehicle()
@@ -104,7 +122,7 @@ class VehicleDocument extends Model
     {
         return match ($this->status) {
             'expired' => 'bg-rose-100 text-rose-800 ring-1 ring-rose-200',
-            'critical' => 'bg-orange-100 text-orange-800 ring-1 ring-orange-200 animate-pulse',
+            'critical' => 'bg-orange-100 text-orange-800 ring-1 ring-orange-200',
             'warning' => 'bg-amber-100 text-amber-800 ring-1 ring-amber-200',
             default => 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200',
         };

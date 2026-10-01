@@ -8,7 +8,7 @@
             <p class="text-xs text-slate-400">{{ __('fleet.show.services_desc') }}</p>
         </div>
 
-        @if (!$vehicle->is_sold)
+        @if (!$vehicle->is_sold && $canManage)
             <a href="{{ route('services.create', $vehicle) }}"
                 class="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-2xs hover:bg-slate-800 transition self-start sm:self-auto">
                 <i class="bi bi-plus-lg"></i>
@@ -17,21 +17,23 @@
         @endif
     </div>
 
-    {{-- iOS Wallet-Style Compact Cost Summary Bar --}}
-    <div class="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3 sm:p-4 grid grid-cols-2 divide-x divide-slate-200/60 min-w-0">
-        <div class="pr-3 sm:pr-4 min-w-0">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">{{ __('fleet.show.ytd_cost_label', ['year' => now()->year]) }}</span>
-            <div class="text-sm sm:text-xl font-black text-slate-900 mt-1 font-mono truncate" title="Rp {{ number_format($ytdCost, 0, ',', '.') }}">
-                Rp {{ number_format($ytdCost, 0, ',', '.') }}
+    @if ($canViewCosts)
+        {{-- iOS Wallet-Style Compact Cost Summary Bar --}}
+        <div class="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3 sm:p-4 grid grid-cols-2 divide-x divide-slate-200/60 min-w-0">
+            <div class="pr-3 sm:pr-4 min-w-0">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">{{ __('fleet.show.ytd_cost_label', ['year' => now()->year]) }}</span>
+                <div class="text-sm sm:text-xl font-black text-slate-900 mt-1 font-mono truncate" title="Rp {{ number_format($ytdCost, 0, ',', '.') }}">
+                    Rp {{ number_format($ytdCost, 0, ',', '.') }}
+                </div>
+            </div>
+            <div class="pl-3 sm:pl-4 min-w-0">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">{{ __('fleet.show.lifetime_cost_label') }}</span>
+                <div class="text-sm sm:text-xl font-black text-slate-900 mt-1 font-mono truncate" title="Rp {{ number_format($lifetimeCost, 0, ',', '.') }}">
+                    Rp {{ number_format($lifetimeCost, 0, ',', '.') }}
+                </div>
             </div>
         </div>
-        <div class="pl-3 sm:pl-4 min-w-0">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">{{ __('fleet.show.lifetime_cost_label') }}</span>
-            <div class="text-sm sm:text-xl font-black text-slate-900 mt-1 font-mono truncate" title="Rp {{ number_format($lifetimeCost, 0, ',', '.') }}">
-                Rp {{ number_format($lifetimeCost, 0, ',', '.') }}
-            </div>
-        </div>
-    </div>
+    @endif
 
     {{-- Filter Controls: Year & Workshop Search --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 min-w-0">
@@ -66,7 +68,9 @@
                         <th class="px-4 py-3">{{ __('fleet.show.col_workshop') }}</th>
                         <th class="px-4 py-3">{{ __('fleet.show.col_odometer') }}</th>
                         <th class="px-4 py-3">{{ __('fleet.show.col_parts_action') }}</th>
-                        <th class="px-4 py-3 text-right">{{ __('fleet.show.col_cost') }}</th>
+                        @if ($canViewCosts)
+                            <th class="px-4 py-3 text-right">{{ __('fleet.show.col_cost') }}</th>
+                        @endif
                         @if ($canManage)
                             <th class="px-4 py-3 text-right">{{ __('fleet.show.col_action') }}</th>
                         @endif
@@ -92,9 +96,11 @@
                                     <span class="text-slate-400 italic">{{ $rec->notes ?: '—' }}</span>
                                 @endif
                             </td>
-                            <td class="px-4 py-3 text-right font-bold text-slate-900 whitespace-nowrap font-mono">
-                                Rp {{ number_format($rec->total_cost, 0, ',', '.') }}
-                            </td>
+                            @if ($canViewCosts)
+                                <td class="px-4 py-3 text-right font-bold text-slate-900 whitespace-nowrap font-mono">
+                                    Rp {{ number_format($rec->total_cost, 0, ',', '.') }}
+                                </td>
+                            @endif
                             @if ($canManage)
                                 <td class="px-4 py-3 text-right whitespace-nowrap">
                                     <a href="{{ route('services.edit', $rec) }}" class="text-slate-600 hover:text-slate-900 mr-2" title="{{ __('fleet.common.edit') }}">

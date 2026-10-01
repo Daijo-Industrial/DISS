@@ -32,9 +32,17 @@ class Index extends Component
 
     public bool $canManage = false;
 
-    public function mount()
+    public bool $canInspect = false;
+
+    public function mount(): void
     {
-        $this->canManage = auth()->user()?->can('fleet.manage') ?? false;
+        $user = auth()->user();
+        if (! ($user?->can('fleet.view') || $user?->can('fleet.manage') || $user?->can('fleet.inspect'))) {
+            abort(403);
+        }
+
+        $this->canManage = $user?->can('fleet.manage') ?? false;
+        $this->canInspect = $this->canManage || ($user?->can('fleet.inspect') ?? false);
     }
 
     public function sortBy(string $field): void

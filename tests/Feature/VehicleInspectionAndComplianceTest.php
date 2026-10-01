@@ -9,6 +9,7 @@ use App\Livewire\Vehicles\Index as VehiclesIndex;
 use App\Livewire\Vehicles\InspectionForm;
 use App\Livewire\Vehicles\Scan as VehicleScan;
 use App\Livewire\Vehicles\Show as VehicleShow;
+use App\Models\ServiceRecord;
 use App\Models\User;
 use App\Models\VehicleDocument;
 use App\Models\VehicleInspection;
@@ -35,6 +36,12 @@ class VehicleInspectionAndComplianceTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
+        Permission::firstOrCreate(['name' => 'fleet.manage', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'fleet.view', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'fleet.inspect', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'fleet.documents', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'fleet.view-costs', 'guard_name' => 'web']);
+        $this->user->givePermissionTo(['fleet.manage', 'fleet.view', 'fleet.inspect', 'fleet.documents', 'fleet.view-costs']);
         $this->actingAs($this->user);
 
         $this->vehicle = Vehicle::create([
@@ -104,7 +111,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->set('trip_purpose', 'Kirim komponen ke pabrik Cikarang')
             ->set('severity', 'none')
             ->call('save')
-            ->assertRedirect(route('vehicles.show', ['vehicle' => $this->vehicle, 'tab' => 'inspections']));
+            ->assertRedirect(route('vehicles.index'));
 
         $this->vehicle->refresh();
         $this->assertEquals(50100, $this->vehicle->odometer);
@@ -120,7 +127,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->set('fuel_percentage', 75)
             ->set('severity', 'none')
             ->call('save')
-            ->assertRedirect(route('vehicles.show', ['vehicle' => $this->vehicle, 'tab' => 'inspections']));
+            ->assertRedirect(route('vehicles.index'));
 
         $this->vehicle->refresh();
         $this->assertEquals(50250, $this->vehicle->odometer);
@@ -144,7 +151,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->set('severity', 'critical_grounded')
             ->set('defect_notes', 'Lampu rem mati total, kabel putus')
             ->call('save')
-            ->assertRedirect(route('vehicles.show', ['vehicle' => $this->vehicle, 'tab' => 'inspections']));
+            ->assertRedirect(route('vehicles.index'));
 
         $this->vehicle->refresh();
         $this->assertEquals(VehicleStatus::MAINTENANCE, $this->vehicle->status);
@@ -171,7 +178,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->set('defect_notes', null) // Uraian temuan is optional even when severity is minor
             ->call('save')
             ->assertHasNoErrors()
-            ->assertRedirect(route('vehicles.show', ['vehicle' => $this->vehicle, 'tab' => 'inspections']));
+            ->assertRedirect(route('vehicles.index'));
 
         $inspection = $this->vehicle->inspections()->latest()->first();
         $this->assertNotNull($inspection);
@@ -438,11 +445,48 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->call('searchManual')
             ->assertRedirect(route('vehicles.inspect', ['vehicle' => $this->vehicle->id]));
 
-        // 2. Non-existent vehicle returns error message
+        // 2. Resolve by vehicle details (model, brand, driver name, partial plate)
+        Livewire::actingAs($this->user)
+            ->test(VehicleScan::class)
+            ->set('manualInput', 'Dutro')
+            ->call('searchManual')
+            ->assertRedirect(route('vehicles.inspect', ['vehicle' => $this->vehicle->id]));
+
+        Livewire::actingAs($this->user)
+            ->test(VehicleScan::class)
+            ->set('manualInput', '9999')
+            ->call('searchManual')
+            ->assertRedirect(route('vehicles.inspect', ['vehicle' => $this->vehicle->id]));
+
+        // 3. Search by UUID in manual search is explicitly disallowed
+        Livewire::actingAs($this->user)
+            ->test(VehicleScan::class)
+            ->set('manualInput', (string) $this->vehicle->id)
+            ->call('searchManual')
+            ->assertSet('errorMessage', __('fleet.scanner.uuid_not_allowed'))
+            ->assertNoRedirect();
+
+        // 4. Non-existent vehicle returns error message and dispatches scan-failed
         Livewire::actingAs($this->user)
             ->test(VehicleScan::class)
             ->call('resolve', '00000000-0000-0000-0000-000000000000')
-            ->assertSet('errorMessage', "Armada dengan kode/plat '00000000-0000-0000-0000-000000000000' tidak ditemukan dalam sistem DISS.");
+            ->assertSet('errorMessage', "Armada dengan kode/plat '00000000-0000-0000-0000-000000000000' tidak ditemukan dalam sistem DISS.")
+            ->assertDispatched('scan-failed');
+
+        // 5. Empty input returns generic error and dispatches scan-failed
+        Livewire::actingAs($this->user)
+            ->test(VehicleScan::class)
+            ->call('resolve', '')
+            ->assertSet('errorMessage', __('fleet.scanner.not_found_alert'))
+            ->assertDispatched('scan-failed');
+
+        // 6. Camera QR scan resolve() does NOT fallback to plate number or vehicle details
+        Livewire::actingAs($this->user)
+            ->test(VehicleScan::class)
+            ->call('resolve', $this->vehicle->plate_number)
+            ->assertSet('errorMessage', "Armada dengan kode/plat '{$this->vehicle->plate_number}' tidak ditemukan dalam sistem DISS.")
+            ->assertDispatched('scan-failed')
+            ->assertNoRedirect();
     }
 
     public function test_user_with_fleet_manage_permission_has_full_management_access()
@@ -583,5 +627,283 @@ class VehicleInspectionAndComplianceTest extends TestCase
 
         // Reset back to id
         app()->setLocale('id');
+    }
+
+    public function test_vehicle_legal_documents_lifecycle_lightbox_and_storage_cleanup()
+    {
+        Storage::fake('public');
+        Permission::firstOrCreate(['name' => 'fleet.manage', 'guard_name' => 'web']);
+        $this->user->givePermissionTo('fleet.manage');
+
+        // 1. Invalid mime type is rejected
+        $invalidFile = UploadedFile::fake()->create('script.sh', 50, 'application/x-sh');
+        Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents'])
+            ->call('openDocModal', VehicleDocument::TYPE_KIR)
+            ->set('doc_type', VehicleDocument::TYPE_KIR)
+            ->set('doc_number', 'KIR-TEST-001')
+            ->set('expired_date', now()->addMonths(6)->toDateString())
+            ->set('attachment', $invalidFile)
+            ->call('saveDocument')
+            ->assertHasErrors(['attachment' => 'mimes']);
+
+        // 2. Valid image upload succeeds and stores file
+        $validImage = UploadedFile::fake()->image('kir_scan.jpg');
+        Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents'])
+            ->call('openDocModal', VehicleDocument::TYPE_KIR)
+            ->set('doc_type', VehicleDocument::TYPE_KIR)
+            ->set('doc_number', 'KIR-TEST-001')
+            ->set('expired_date', now()->addMonths(6)->toDateString())
+            ->set('attachment', $validImage)
+            ->call('saveDocument')
+            ->assertHasNoErrors()
+            ->assertSet('showDocModal', false);
+
+        $savedDoc = VehicleDocument::where('vehicle_id', $this->vehicle->id)
+            ->where('document_number', 'KIR-TEST-001')
+            ->first();
+
+        $this->assertNotNull($savedDoc);
+        $this->assertNotNull($savedDoc->attachment_path);
+        Storage::disk('public')->assertExists($savedDoc->attachment_path);
+        $this->assertTrue($savedDoc->is_image_attachment);
+        $this->assertEquals('Uji Berkala KIR', $savedDoc->document_type_label);
+        $this->assertNotEmpty($savedDoc->attachment_url);
+
+        // 3. Tab view renders lightbox trigger and document details
+        $component = Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents']);
+        $component->assertSeeHtml('$dispatch(\'open-lightbox\'');
+        $component->assertSee('KIR-TEST-001');
+
+        // 4. Delete document unlinks physical file from storage disk
+        $attachmentPath = $savedDoc->attachment_path;
+        Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents'])
+            ->call('deleteDocument', $savedDoc->id)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseMissing('vehicle_documents', ['id' => $savedDoc->id]);
+        Storage::disk('public')->assertMissing($attachmentPath);
+
+        // 5. User without fleet.manage permission cannot delete document
+        $newDoc = VehicleDocument::create([
+            'vehicle_id' => $this->vehicle->id,
+            'document_type' => VehicleDocument::TYPE_OTHER,
+            'document_number' => 'DOC-READONLY',
+            'expired_date' => now()->addYear(),
+        ]);
+
+        $viewerUser = User::factory()->create();
+        $viewerUser->givePermissionTo('fleet.view');
+        Livewire::actingAs($viewerUser)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents'])
+            ->call('deleteDocument', $newDoc->id)
+            ->assertStatus(403);
+    }
+
+    public function test_vehicle_unified_stnk_creation_and_synchronization()
+    {
+        Storage::fake('public');
+        Permission::firstOrCreate(['name' => 'fleet.manage', 'guard_name' => 'web']);
+        $this->user->givePermissionTo('fleet.manage');
+
+        $annualDate = now()->addYear()->toDateString();
+        $fiveYearDate = now()->addYears(5)->toDateString();
+
+        // 1. Initial registration: no existing STNK, is_initial_stnk is true, last_renewed_date is null
+        $initComponent = Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents'])
+            ->call('openDocModal', VehicleDocument::TYPE_STNK)
+            ->assertSet('is_initial_stnk', true)
+            ->assertSet('renew_five_year', true)
+            ->assertSet('last_renewed_date', null);
+
+        // Validation fails if dates are empty
+        $initComponent->set('doc_number', 'STNK-001/JK/2026')
+            ->set('stnk_annual_expired_date', '')
+            ->set('stnk_five_year_expired_date', '')
+            ->call('saveDocument')
+            ->assertHasErrors(['stnk_annual_expired_date', 'stnk_five_year_expired_date']);
+
+        // 2. Successful initial creation saves both stnk_annual and stnk_five_year with null last_renewed_date
+        $stnkScan = UploadedFile::fake()->image('stnk_scan.jpg');
+
+        $initComponent->set('doc_number', 'STNK-001/JK/2026')
+            ->set('stnk_annual_expired_date', $annualDate)
+            ->set('stnk_five_year_expired_date', $fiveYearDate)
+            ->set('attachment', $stnkScan)
+            ->call('saveDocument')
+            ->assertHasNoErrors()
+            ->assertSet('showDocModal', false);
+
+        $annualDoc = VehicleDocument::where('vehicle_id', $this->vehicle->id)
+            ->where('document_type', VehicleDocument::TYPE_STNK_ANNUAL)
+            ->first();
+
+        $fiveYearDoc = VehicleDocument::where('vehicle_id', $this->vehicle->id)
+            ->where('document_type', VehicleDocument::TYPE_STNK_FIVE_YEAR)
+            ->first();
+
+        $this->assertNotNull($annualDoc);
+        $this->assertNotNull($fiveYearDoc);
+        $this->assertNull($annualDoc->last_renewed_date);
+        $this->assertNull($fiveYearDoc->last_renewed_date);
+        $this->assertEquals($annualDate, $annualDoc->expired_date->toDateString());
+        $this->assertEquals($fiveYearDate, $fiveYearDoc->expired_date->toDateString());
+        Storage::disk('public')->assertExists($annualDoc->attachment_path);
+
+        // 3. Document Tab renders unified STNK card with both dates
+        $tabComponent = Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents']);
+        $tabComponent->assertSee('STNK-001/JK/2026');
+        $tabComponent->assertSee(__('fleet.show.stnk_card_title'));
+        $tabComponent->assertSee(__('fleet.show.stnk_annual_label'));
+        $tabComponent->assertSee(__('fleet.show.stnk_five_year_label'));
+
+        // 4. Subsequent Routine Renewal: is_initial_stnk is false, last_renewed_date defaults to today
+        $renewalPaymentDate = now()->subDays(2)->toDateString();
+        $expectedNextAnnual = now()->subDays(2)->addYear()->toDateString();
+
+        $renewalComponent = Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents'])
+            ->call('openDocModal', 'stnk')
+            ->assertSet('is_initial_stnk', false)
+            ->assertSet('renew_five_year', false)
+            ->assertSet('doc_number', 'STNK-001/JK/2026')
+            ->assertSet('last_renewed_date', now()->toDateString())
+            // Simulate changing the payment date to test auto-calculation of next 1-year tax
+            ->set('last_renewed_date', $renewalPaymentDate)
+            ->assertSet('stnk_annual_expired_date', $expectedNextAnnual);
+
+        // Save routine renewal (only stnk_annual is renewed, 5-year plate is retained)
+        $renewalComponent->call('saveDocument')
+            ->assertHasNoErrors()
+            ->assertSet('showDocModal', false);
+
+        $latestAnnual = VehicleDocument::where('vehicle_id', $this->vehicle->id)
+            ->where('document_type', VehicleDocument::TYPE_STNK_ANNUAL)
+            ->latest('id')
+            ->first();
+
+        $this->assertEquals($expectedNextAnnual, $latestAnnual->expired_date->toDateString());
+        $this->assertEquals($renewalPaymentDate, $latestAnnual->last_renewed_date->toDateString());
+        // 5-Year STNK was NOT duplicated
+        $this->assertEquals(1, VehicleDocument::where('vehicle_id', $this->vehicle->id)->where('document_type', VehicleDocument::TYPE_STNK_FIVE_YEAR)->count());
+
+        // 5. deleteDocument on one record preserves the attachment for sibling STNK records
+        Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents'])
+            ->call('deleteDocument', $annualDoc->id)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseMissing('vehicle_documents', ['id' => $annualDoc->id]);
+        $this->assertDatabaseHas('vehicle_documents', ['id' => $fiveYearDoc->id]);
+        Storage::disk('public')->assertExists($fiveYearDoc->attachment_path);
+
+        // 6. deleteStnk cleans up all remaining STNK records and unlinks file
+        Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents'])
+            ->call('deleteStnk')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseMissing('vehicle_documents', ['vehicle_id' => $this->vehicle->id, 'document_type' => VehicleDocument::TYPE_STNK_FIVE_YEAR]);
+        Storage::disk('public')->assertMissing($fiveYearDoc->attachment_path);
+    }
+
+    public function test_inspector_role_can_access_scanner_and_submit_p2h(): void
+    {
+        $inspector = User::factory()->create();
+        $inspector->givePermissionTo(['fleet.view', 'fleet.inspect']);
+
+        // 1. Can access scanner
+        Livewire::actingAs($inspector)
+            ->test(VehicleScan::class)
+            ->assertOk()
+            ->call('resolve', (string) $this->vehicle->id)
+            ->assertRedirect(route('vehicles.inspect', ['vehicle' => $this->vehicle->id]));
+
+        // 2. Can submit P2H inspection and gets redirected to vehicles.index
+        Livewire::actingAs($inspector)
+            ->test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
+            ->set('driver_name', 'Inspector Budi')
+            ->set('odometer', 50600)
+            ->set('fuel_percentage', 95)
+            ->set('severity', 'none')
+            ->call('save')
+            ->assertRedirect(route('vehicles.index'));
+
+        // 3. Vehicles index shows scan button with standby CTA for inspector
+        Livewire::actingAs($inspector)
+            ->test(VehiclesIndex::class)
+            ->assertSet('canInspect', true)
+            ->assertSet('canManage', false)
+            ->assertSee(__('fleet.index.scan_qr'));
+    }
+
+    public function test_inspector_cannot_access_sensitive_documents_or_service_costs(): void
+    {
+        $inspector = User::factory()->create();
+        $inspector->givePermissionTo(['fleet.view', 'fleet.inspect']);
+
+        // Create a legal document and a service record with cost
+        VehicleDocument::create([
+            'vehicle_id' => $this->vehicle->id,
+            'document_type' => VehicleDocument::TYPE_STNK_ANNUAL,
+            'document_number' => 'SECRET-STNK-999',
+            'expired_date' => now()->addYear(),
+        ]);
+
+        ServiceRecord::create([
+            'vehicle_id' => $this->vehicle->id,
+            'service_date' => now()->subDays(5),
+            'workshop' => 'Bengkel Resmi Hino',
+            'odometer' => 49500,
+            'total_cost' => 2500000,
+        ]);
+
+        // 1. VehicleShow defaults ?tab=documents back to inspections for inspector
+        $component = Livewire::actingAs($inspector)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'documents'])
+            ->assertSet('canViewDocuments', false)
+            ->assertSet('canViewCosts', false)
+            ->assertSet('tab', 'inspections')
+            ->assertDontSee('SECRET-STNK-999');
+
+        // 2. Calling setTab('documents') also falls back to inspections
+        $component->call('setTab', 'documents')
+            ->assertSet('tab', 'inspections')
+            ->assertDontSee('SECRET-STNK-999');
+
+        // 3. Viewing services tab hides financial figures
+        $component->call('setTab', 'services')
+            ->assertSet('tab', 'services')
+            ->assertSee('Bengkel Resmi Hino')
+            ->assertDontSee('Rp 2.500.000');
+    }
+
+    public function test_manager_retains_full_visibility_and_management_access(): void
+    {
+        $manager = User::factory()->create();
+        $manager->givePermissionTo(['fleet.manage']);
+
+        // Create a service record with cost
+        ServiceRecord::create([
+            'vehicle_id' => $this->vehicle->id,
+            'service_date' => now()->subDays(2),
+            'workshop' => 'Bengkel Authorized',
+            'odometer' => 49800,
+            'total_cost' => 1750000,
+        ]);
+
+        Livewire::actingAs($manager)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'services'])
+            ->assertSet('canManage', true)
+            ->assertSet('canViewDocuments', true)
+            ->assertSet('canViewCosts', true)
+            ->assertSee('Rp 1.750.000')
+            ->assertSee(__('fleet.show.btn_add_service'))
+            ->assertSee(__('fleet.show.btn_edit_vehicle'));
     }
 }

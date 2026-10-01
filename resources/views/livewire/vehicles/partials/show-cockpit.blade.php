@@ -167,11 +167,11 @@
 
             {{-- Row 2: Secondary Quick Actions Grid --}}
             @php
-                $secondaryCount = (!$vehicle->is_sold ? 1 : 0) + ($canManage ? 1 : 0);
+                $secondaryCount = (!$vehicle->is_sold && $canManage ? 1 : 0) + ($canManage ? 1 : 0);
             @endphp
             @if ($secondaryCount > 0)
                 <div class="grid {{ $secondaryCount === 2 ? 'grid-cols-2' : 'grid-cols-1' }} gap-2 min-w-0">
-                    @if (!$vehicle->is_sold)
+                    @if (!$vehicle->is_sold && $canManage)
                         <a href="{{ route('services.create', $vehicle) }}"
                             class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white border border-slate-200/80 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs truncate min-w-0">
                             <i class="bi bi-wrench text-xs text-slate-500 shrink-0"></i>
@@ -193,34 +193,40 @@
 
     {{-- Compact Glance & Health Card --}}
     <div class="rounded-3xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-xs space-y-3 min-w-0">
-        {{-- Service Progress --}}
-        <div>
-            <div class="flex flex-wrap items-baseline justify-between gap-1 text-xs">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Servis Berkala (10.000 KM)</span>
-                <span class="font-mono text-[11px] font-bold shrink-0 {{ $serviceProgressPercent >= 90 ? 'text-rose-600' : 'text-slate-700' }}">
-                    {{ number_format($kmSinceLastService) }} / {{ number_format($nextServiceInterval) }} km
-                </span>
+        {{-- Last Service Record Shortcut --}}
+        <div class="cursor-pointer hover:bg-slate-50/80 -mx-1 px-1 py-1 rounded-xl transition"
+            wire:click="setTab('services')">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ __('fleet.show.last_service_title') }}</span>
+                <span class="text-[10px] text-slate-400">{{ __('fleet.show.doc_compliance_open') }}</span>
             </div>
-            <div class="mt-2 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                <div class="h-full rounded-full transition-all duration-500 {{ $serviceProgressPercent >= 90 ? 'bg-rose-500' : ($serviceProgressPercent >= 75 ? 'bg-amber-500' : 'bg-emerald-500') }}"
-                    style="width: {{ $serviceProgressPercent }}%"></div>
-            </div>
-            <div class="mt-1 flex items-center justify-between text-[10px] text-slate-400">
-                <span>{{ $serviceProgressPercent }}% interval</span>
-                @if ($last)
-                    <span>Terakhir: {{ $last->service_date->format('d/m/Y') }}</span>
-                @else
-                    <span>Belum pernah servis</span>
-                @endif
-            </div>
+            @if ($last)
+                <div class="mt-1 flex items-baseline justify-between gap-2">
+                    <span class="text-xs font-bold text-slate-900">{{ $last->service_date->isoFormat('D MMM YYYY') }}</span>
+                    <span class="font-mono text-xs font-semibold text-slate-600 shrink-0">{{ number_format($last->odometer) }} KM</span>
+                </div>
+                <div class="mt-0.5 flex items-center justify-between text-[11px] text-slate-500">
+                    <span class="truncate">{{ $last->workshop ?: __('fleet.show.internal_workshop') }}</span>
+                    @if ($last->items && $last->items->count() > 0)
+                        <span class="text-[10px] text-slate-400 shrink-0">{{ __('fleet.show.service_items_count', ['count' => $last->items->count()]) }}</span>
+                    @endif
+                </div>
+            @else
+                <div class="mt-1 flex items-center gap-2">
+                    <span class="h-2 w-2 rounded-full bg-slate-300 shrink-0"></span>
+                    <span class="text-xs font-medium text-slate-500">{{ __('fleet.show.no_service_records') }}</span>
+                </div>
+            @endif
         </div>
 
         {{-- Document Compliance Shortcut --}}
-        <div class="pt-2 border-t border-slate-100 cursor-pointer hover:bg-slate-50/80 -mx-1 px-1 py-1 rounded-xl transition"
-            wire:click="setTab('documents')">
+        <div class="pt-2 border-t border-slate-100 {{ $canViewDocuments ? 'cursor-pointer hover:bg-slate-50/80 -mx-1 px-1 py-1 rounded-xl transition' : '' }}"
+            @if ($canViewDocuments) wire:click="setTab('documents')" @endif>
             <div class="flex items-center justify-between">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ __('fleet.show.doc_compliance_title') }}</span>
-                <span class="text-[10px] text-slate-400">{{ __('fleet.show.doc_compliance_open') }}</span>
+                @if ($canViewDocuments)
+                    <span class="text-[10px] text-slate-400">{{ __('fleet.show.doc_compliance_open') }}</span>
+                @endif
             </div>
             <div class="mt-1 flex items-center gap-2">
                 @if ($hasExpired > 0)

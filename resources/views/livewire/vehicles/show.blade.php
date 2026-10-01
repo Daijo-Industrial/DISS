@@ -16,10 +16,6 @@
 
     @php
         $last = $vehicle->latestService;
-        $lastKm = (int) ($last->odometer ?? 0);
-        $kmSinceLastService = max(0, $vehicle->odometer - $lastKm);
-        $nextServiceInterval = 10000;
-        $serviceProgressPercent = min(100, round(($kmSinceLastService / $nextServiceInterval) * 100));
         $isOut = $vehicle->is_out_on_trip;
         $hasExpired = $documents->where('status', 'expired')->count();
         $hasWarning = $documents->whereIn('status', ['critical', 'warning'])->count();
@@ -45,20 +41,22 @@
                         </span>
                     </button>
 
-                    <button type="button" wire:click="setTab('documents')"
-                        class="flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition cursor-pointer flex-1 shrink-0 sm:shrink {{ $tab === 'documents' ? 'bg-white text-slate-900 font-bold shadow-xs' : 'text-slate-500 hover:text-slate-800 font-medium' }}">
-                        <i class="bi bi-file-earmark-text text-xs"></i>
-                        <span>{{ __('fleet.tabs.documents') }}</span>
-                        @if ($hasExpired + $hasWarning > 0)
-                            <span class="rounded-full bg-rose-50 text-rose-700 border border-rose-200/60 px-1.5 py-0.2 text-[10px] font-bold">
-                                {{ $hasExpired + $hasWarning }}
-                            </span>
-                        @else
-                            <span class="rounded-full px-1.5 py-0.2 text-[10px] {{ $tab === 'documents' ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-400 font-medium' }}">
-                                {{ $documents->count() }}
-                            </span>
-                        @endif
-                    </button>
+                    @if ($canViewDocuments)
+                        <button type="button" wire:click="setTab('documents')"
+                            class="flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition cursor-pointer flex-1 shrink-0 sm:shrink {{ $tab === 'documents' ? 'bg-white text-slate-900 font-bold shadow-xs' : 'text-slate-500 hover:text-slate-800 font-medium' }}">
+                            <i class="bi bi-file-earmark-text text-xs"></i>
+                            <span>{{ __('fleet.tabs.documents') }}</span>
+                            @if ($hasExpired + $hasWarning > 0)
+                                <span class="rounded-full bg-rose-50 text-rose-700 border border-rose-200/60 px-1.5 py-0.2 text-[10px] font-bold">
+                                    {{ $hasExpired + $hasWarning }}
+                                </span>
+                            @else
+                                <span class="rounded-full px-1.5 py-0.2 text-[10px] {{ $tab === 'documents' ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-400 font-medium' }}">
+                                    {{ $documents->count() }}
+                                </span>
+                            @endif
+                        </button>
+                    @endif
 
                     <button type="button" wire:click="setTab('services')"
                         class="flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition cursor-pointer flex-1 shrink-0 sm:shrink {{ $tab === 'services' ? 'bg-white text-slate-900 font-bold shadow-xs' : 'text-slate-500 hover:text-slate-800 font-medium' }}">
@@ -77,7 +75,7 @@
             @endif
 
             {{-- TAB 2: LEGALITAS & DOKUMEN --}}
-            @if ($tab === 'documents')
+            @if ($tab === 'documents' && $canViewDocuments)
                 @include('livewire.vehicles.partials.show-tab-documents')
             @endif
 
