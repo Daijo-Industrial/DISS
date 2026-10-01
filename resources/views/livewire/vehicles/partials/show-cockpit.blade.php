@@ -1,10 +1,10 @@
 {{-- ========================================================================= --}}
 {{-- LEFT COLUMN: Sticky Cockpit & Vehicle Identity (lg:col-span-4)            --}}
 {{-- ========================================================================= --}}
-<div class="lg:col-span-4 space-y-4 lg:sticky lg:top-6">
+<div class="lg:col-span-4 space-y-4 lg:sticky lg:top-6 min-w-0">
 
     {{-- Vehicle Identity & Primary Cockpit Card --}}
-    <div class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs relative z-20 space-y-4">
+    <div class="rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs relative z-20 space-y-4 min-w-0">
         {{-- Header with Photo + Plate & Badges --}}
         <div class="flex items-start gap-3.5">
             {{-- Profile Photo with Sleek Lightbox Trigger & Manage Button --}}
@@ -12,7 +12,7 @@
                 @if ($vehicle->image_path)
                     <button type="button" @click.prevent="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $vehicle->image_path) }}', title: '{{ __('fleet.show.lightbox_vehicle_photo', ['plate' => $vehicle->plate_number]) }}', subtitle: '{{ trim($vehicle->brand . ' ' . $vehicle->model) }}' })"
                         title="Klik untuk memperbesar foto armada"
-                        class="relative h-18 w-18 sm:h-20 sm:w-20 rounded-2xl overflow-hidden border border-slate-200/90 shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-400 block cursor-pointer">
+                        class="relative h-16 w-16 sm:h-20 sm:w-20 aspect-square rounded-2xl overflow-hidden border border-slate-200/90 shadow-2xs focus:outline-none focus:ring-2 focus:ring-slate-400 block cursor-pointer shrink-0">
                         <img src="{{ asset('storage/' . $vehicle->image_path) }}" alt="{{ $vehicle->plate_number }}"
                             class="h-full w-full object-cover group-hover:scale-105 transition duration-300">
                         <span class="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-base transition">
@@ -20,7 +20,7 @@
                         </span>
                     </button>
                 @else
-                    <div class="h-18 w-18 sm:h-20 sm:w-20 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shadow-2xs shrink-0 {{ $vehicle->category === 'commercial_truck' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700' }}">
+                    <div class="h-16 w-16 sm:h-20 sm:w-20 aspect-square rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shadow-2xs shrink-0 {{ $vehicle->category === 'commercial_truck' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700' }}">
                         @if ($vehicle->category === 'commercial_truck')
                             <i class="bi bi-truck"></i>
                         @else
@@ -31,7 +31,7 @@
 
                 @if ($canManage)
                     <button type="button" wire:click="openPhotoModal" title="{{ $vehicle->image_path ? __('fleet.show.photo_delete') : __('fleet.show.photo_modal_title') }}"
-                        class="absolute -bottom-1 -right-1 h-6 w-6 sm:h-7 sm:w-7 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 shadow-2xs flex items-center justify-center text-xs transition active:scale-95 cursor-pointer">
+                        class="absolute -bottom-1 -right-1 h-6 w-6 sm:h-7 sm:w-7 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-slate-300 shadow-2xs flex items-center justify-center text-xs transition active:scale-95 cursor-pointer z-10">
                         <i class="bi bi-camera"></i>
                     </button>
                 @endif
@@ -47,18 +47,18 @@
 
                 <div class="flex flex-wrap items-center gap-1.5">
                     @if ($isOut)
-                        <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 border border-amber-200/60">
+                        <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 border border-amber-200/60 shrink-0">
                             <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
                             {{ __('fleet.operational_statuses.on_trip') }}
                         </span>
                     @else
-                        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200/60">
+                        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200/60 shrink-0">
                             <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                             {{ __('fleet.operational_statuses.in_pool') }}
                         </span>
                     @endif
 
-                    <span class="rounded-lg bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700 border border-slate-200/60">
+                    <span class="rounded-lg bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700 border border-slate-200/60 shrink-0">
                         {{ $vehicle->category_label }}
                     </span>
                 </div>
@@ -66,37 +66,37 @@
         </div>
 
         {{-- Vehicle Specs & Driver Details --}}
-        <div class="rounded-2xl bg-slate-50/70 border border-slate-100 p-3 space-y-2 text-xs">
-            <div class="flex items-center justify-between text-slate-600">
-                <span class="text-slate-400">{{ __('fleet.common.brand') }} / {{ __('fleet.common.model') }}:</span>
-                <span class="font-bold text-slate-900 text-right">{{ trim($vehicle->brand . ' ' . $vehicle->model) }} {{ $vehicle->year ? "({$vehicle->year})" : '' }}</span>
+        <div class="rounded-2xl bg-slate-50/70 border border-slate-100 p-3 space-y-2 text-xs min-w-0">
+            <div class="flex items-center justify-between text-slate-600 gap-2 min-w-0">
+                <span class="text-slate-400 shrink-0">{{ __('fleet.common.brand') }} / {{ __('fleet.common.model') }}:</span>
+                <span class="font-bold text-slate-900 text-right min-w-0 break-words">{{ trim($vehicle->brand . ' ' . $vehicle->model) }} {{ $vehicle->year ? "({$vehicle->year})" : '' }}</span>
             </div>
-            <div class="flex items-center justify-between text-slate-600">
-                <span class="text-slate-400">{{ __('fleet.common.fuel_type') }}:</span>
-                <span class="font-semibold text-slate-800">{{ $vehicle->fuel_type_label }}</span>
+            <div class="flex items-center justify-between text-slate-600 gap-2 min-w-0">
+                <span class="text-slate-400 shrink-0">{{ __('fleet.common.fuel_type') }}:</span>
+                <span class="font-semibold text-slate-800 text-right min-w-0 break-words">{{ $vehicle->fuel_type_label }}</span>
             </div>
-            <div class="flex items-center justify-between text-slate-600">
-                <span class="text-slate-400">{{ __('fleet.show.driver_operational') }}:</span>
-                <span class="font-bold text-slate-900">{{ $vehicle->driver_name ?: __('fleet.show.driver_unassigned') }}</span>
+            <div class="flex items-center justify-between text-slate-600 gap-2 min-w-0">
+                <span class="text-slate-400 shrink-0">{{ __('fleet.show.driver_operational') }}:</span>
+                <span class="font-bold text-slate-900 text-right min-w-0 break-words">{{ $vehicle->driver_name ?: __('fleet.show.driver_unassigned') }}</span>
             </div>
-            <div class="flex items-center justify-between text-slate-600 border-t border-slate-200/60 pt-2">
-                <span class="text-slate-400 font-semibold">{{ __('fleet.show.gauge_odometer') }}:</span>
-                <span class="font-mono text-sm font-black text-slate-900">{{ number_format($vehicle->odometer) }} KM</span>
+            <div class="flex items-center justify-between text-slate-600 border-t border-slate-200/60 pt-2 gap-2 min-w-0">
+                <span class="text-slate-400 font-semibold shrink-0">{{ __('fleet.show.gauge_odometer') }}:</span>
+                <span class="font-mono text-sm font-black text-slate-900 text-right">{{ number_format($vehicle->odometer) }} KM</span>
             </div>
         </div>
 
         {{-- Apple Live Activity Banner (When On-Trip) --}}
         @if ($isOut && $vehicle->activeCheckOut)
-            <div class="rounded-2xl bg-amber-50/80 border border-amber-200/60 p-3 text-xs text-amber-950 space-y-1">
+            <div class="rounded-2xl bg-amber-50/80 border border-amber-200/60 p-3 text-xs text-amber-950 space-y-1 min-w-0">
                 <div class="flex items-center gap-2">
                     <span class="h-2 w-2 rounded-full bg-amber-500 shrink-0"></span>
                     <span class="font-bold text-amber-900">{{ __('fleet.show.active_trip_alert') }}</span>
                 </div>
-                <div class="text-[11px] text-amber-800 pl-4 space-y-0.5">
+                <div class="text-[11px] text-amber-800 pl-4 space-y-0.5 min-w-0">
                     <div>{{ __('fleet.common.driver') }}: <strong>{{ $vehicle->activeCheckOut->driver_name }}</strong></div>
                     <div>{{ __('fleet.show.departed_at') }} <strong>{{ $vehicle->activeCheckOut->created_at->isoFormat('HH:mm') }} WIB</strong> ({{ number_format($vehicle->activeCheckOut->odometer) }} km)</div>
                     @if ($vehicle->activeCheckOut->trip_purpose)
-                        <div class="italic">"{{ $vehicle->activeCheckOut->trip_purpose }}"</div>
+                        <div class="italic break-words">"{{ $vehicle->activeCheckOut->trip_purpose }}"</div>
                     @endif
                 </div>
             </div>
@@ -170,10 +170,10 @@
                 $secondaryCount = (!$vehicle->is_sold ? 1 : 0) + ($canManage ? 1 : 0);
             @endphp
             @if ($secondaryCount > 0)
-                <div class="grid {{ $secondaryCount === 2 ? 'grid-cols-2' : 'grid-cols-1' }} gap-2">
+                <div class="grid {{ $secondaryCount === 2 ? 'grid-cols-2' : 'grid-cols-1' }} gap-2 min-w-0">
                     @if (!$vehicle->is_sold)
                         <a href="{{ route('services.create', $vehicle) }}"
-                            class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white border border-slate-200/80 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs truncate">
+                            class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white border border-slate-200/80 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs truncate min-w-0">
                             <i class="bi bi-wrench text-xs text-slate-500 shrink-0"></i>
                             <span class="truncate">{{ __('fleet.show.btn_add_service') }}</span>
                         </a>
@@ -181,7 +181,7 @@
 
                     @if ($canManage)
                         <a href="{{ route('vehicles.edit', $vehicle) }}"
-                            class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white border border-slate-200/80 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs truncate">
+                            class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-white border border-slate-200/80 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs truncate min-w-0">
                             <i class="bi bi-pencil text-xs text-slate-500 shrink-0"></i>
                             <span class="truncate">{{ __('fleet.show.btn_edit_vehicle') }}</span>
                         </a>
@@ -192,12 +192,12 @@
     </div>
 
     {{-- Compact Glance & Health Card --}}
-    <div class="rounded-3xl border border-slate-200/80 bg-white p-4 shadow-xs space-y-3">
+    <div class="rounded-3xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-xs space-y-3 min-w-0">
         {{-- Service Progress --}}
         <div>
-            <div class="flex items-center justify-between text-xs">
+            <div class="flex flex-wrap items-baseline justify-between gap-1 text-xs">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Servis Berkala (10.000 KM)</span>
-                <span class="font-mono text-[11px] font-bold {{ $serviceProgressPercent >= 90 ? 'text-rose-600' : 'text-slate-700' }}">
+                <span class="font-mono text-[11px] font-bold shrink-0 {{ $serviceProgressPercent >= 90 ? 'text-rose-600' : 'text-slate-700' }}">
                     {{ number_format($kmSinceLastService) }} / {{ number_format($nextServiceInterval) }} km
                 </span>
             </div>

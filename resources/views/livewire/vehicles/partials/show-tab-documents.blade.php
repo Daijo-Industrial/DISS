@@ -1,8 +1,8 @@
 {{-- ========================================================================= --}}
 {{-- TAB 2: LEGALITAS & DOKUMEN                                                --}}
 {{-- ========================================================================= --}}
-<div class="rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs space-y-4">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+<div class="rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs space-y-4 min-w-0">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3 min-w-0">
         <div>
             <h2 class="text-sm font-bold text-slate-900">{{ __('fleet.show.documents_title') }}</h2>
             <p class="text-xs text-slate-400">{{ __('fleet.show.documents_desc') }}</p>
@@ -10,7 +10,7 @@
 
         @if ($canManage)
             <button type="button" wire:click="openDocModal"
-                class="rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-2xs hover:bg-slate-800 transition cursor-pointer">
+                class="rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-2xs hover:bg-slate-800 transition cursor-pointer self-start sm:self-auto">
                 <i class="bi bi-plus-lg mr-1"></i> {{ __('fleet.show.add_other_document') }}
             </button>
         @endif
@@ -28,14 +28,14 @@
     @endphp
 
     {{-- 3 Unified Interactive Legal Cards --}}
-    <div class="grid gap-3 sm:grid-cols-3">
+    <div class="grid gap-3 sm:grid-cols-3 min-w-0">
         {{-- Card 1: KIR --}}
-        <div class="rounded-2xl border p-4 transition flex flex-col justify-between
+        <div class="rounded-2xl border p-4 transition flex flex-col justify-between min-w-0
             {{ $vehicle->requires_kir ? ($kirDoc ? ($kirDoc->status === 'expired' ? 'border-rose-300 bg-rose-50/30' : 'border-slate-200 bg-white shadow-2xs') : 'border-amber-300 bg-amber-50/20') : 'border-slate-200 bg-slate-50/30 opacity-70' }}">
             <div>
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-wider text-slate-700">{{ __('fleet.show.kir_card_title') }}</span>
-                    <span class="rounded-md {{ $vehicle->requires_kir ? 'bg-slate-100 text-slate-700' : 'bg-slate-100 text-slate-500' }} px-2 py-0.5 text-[10px] font-bold">
+                <div class="flex items-center justify-between gap-2 min-w-0">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-700 truncate">{{ __('fleet.show.kir_card_title') }}</span>
+                    <span class="rounded-md {{ $vehicle->requires_kir ? 'bg-slate-100 text-slate-700' : 'bg-slate-100 text-slate-500' }} px-2 py-0.5 text-[10px] font-bold shrink-0">
                         {{ $vehicle->requires_kir ? __('fleet.show.mandatory_commercial') : __('fleet.show.optional_passenger') }}
                     </span>
                 </div>
@@ -53,7 +53,7 @@
                                 </span>
                             @endif
                         </div>
-                        <div class="font-mono text-[11px] text-slate-500 mt-2">{{ __('fleet.show.doc_number_short', ['num' => $kirDoc->document_number ?: '—']) }}</div>
+                        <div class="font-mono text-[11px] text-slate-500 mt-2 truncate">{{ __('fleet.show.doc_number_short', ['num' => $kirDoc->document_number ?: '—']) }}</div>
                     @else
                         <p class="text-xs text-slate-400 italic">{{ __('fleet.show.no_doc_kir') }}</p>
                     @endif
@@ -61,7 +61,7 @@
             </div>
 
             {{-- Actions: Preview & Renew --}}
-            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+            <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 min-w-0">
                 @if ($kirDoc && $kirDoc->attachment_path)
                     @php $isImageDoc = (bool) preg_match('/\.(jpg|jpeg|png|webp)$/i', $kirDoc->attachment_path); @endphp
                     @if ($isImageDoc)
@@ -89,12 +89,12 @@
         </div>
 
         {{-- Card 2: STNK 1 Tahun --}}
-        <div class="rounded-2xl border p-4 transition flex flex-col justify-between
+        <div class="rounded-2xl border p-4 transition flex flex-col justify-between min-w-0
             {{ $stnk1 ? ($stnk1->status === 'expired' ? 'border-rose-300 bg-rose-50/30' : 'border-slate-200 bg-white shadow-2xs') : 'border-amber-300 bg-amber-50/20' }}">
             <div>
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-wider text-slate-700">{{ __('fleet.show.stnk_annual_card_title') }}</span>
-                    <span class="rounded-md bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[10px] font-bold border border-emerald-200/60">
+                <div class="flex items-center justify-between gap-2 min-w-0">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-700 truncate">{{ __('fleet.show.stnk_annual_card_title') }}</span>
+                    <span class="rounded-md bg-emerald-50 text-emerald-700 px-2 py-0.5 text-[10px] font-bold border border-emerald-200/60 shrink-0">
                         {{ __('fleet.show.annual_badge') }}
                     </span>
                 </div>
@@ -120,7 +120,7 @@
             </div>
 
             {{-- Actions: Preview & Renew --}}
-            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+            <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 min-w-0">
                 @if ($stnk1 && $stnk1->attachment_path)
                     @php $isImageDoc = (bool) preg_match('/\.(jpg|jpeg|png|webp)$/i', $stnk1->attachment_path); @endphp
                     @if ($isImageDoc)
@@ -148,12 +148,12 @@
         </div>
 
         {{-- Card 3: STNK 5 Tahun --}}
-        <div class="rounded-2xl border p-4 transition flex flex-col justify-between
+        <div class="rounded-2xl border p-4 transition flex flex-col justify-between min-w-0
             {{ $stnk5 ? ($stnk5->status === 'expired' ? 'border-rose-300 bg-rose-50/30' : 'border-slate-200 bg-white shadow-2xs') : 'border-slate-200 bg-white shadow-2xs' }}">
             <div>
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-wider text-slate-700">{{ __('fleet.show.stnk_five_year_card_title') }}</span>
-                    <span class="rounded-md bg-blue-50 text-blue-700 px-2 py-0.5 text-[10px] font-bold border border-blue-200/60">
+                <div class="flex items-center justify-between gap-2 min-w-0">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-700 truncate">{{ __('fleet.show.stnk_five_year_card_title') }}</span>
+                    <span class="rounded-md bg-blue-50 text-blue-700 px-2 py-0.5 text-[10px] font-bold border border-blue-200/60 shrink-0">
                         {{ __('fleet.show.five_year_badge') }}
                     </span>
                 </div>
@@ -171,7 +171,7 @@
                                 </span>
                             @endif
                         </div>
-                        <div class="font-mono text-[11px] text-slate-500 mt-2">{{ __('fleet.show.doc_number_short', ['num' => $stnk5->document_number ?: '—']) }}</div>
+                        <div class="font-mono text-[11px] text-slate-500 mt-2 truncate">{{ __('fleet.show.doc_number_short', ['num' => $stnk5->document_number ?: '—']) }}</div>
                     @else
                         <p class="text-xs text-slate-400 italic">{{ __('fleet.show.no_doc_stnk5') }}</p>
                     @endif
@@ -179,7 +179,7 @@
             </div>
 
             {{-- Actions: Preview & Renew --}}
-            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+            <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 min-w-0">
                 @if ($stnk5 && $stnk5->attachment_path)
                     @php $isImageDoc = (bool) preg_match('/\.(jpg|jpeg|png|webp)$/i', $stnk5->attachment_path); @endphp
                     @if ($isImageDoc)
@@ -209,18 +209,18 @@
 
     {{-- Optional Secondary Section: Other Documents (Asuransi dll) --}}
     @if ($otherDocs->isNotEmpty())
-        <div class="space-y-2 pt-2 border-t border-slate-100">
+        <div class="space-y-2 pt-2 border-t border-slate-100 min-w-0">
             <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">{{ __('fleet.show.other_documents_title') }}</span>
-            <div class="divide-y divide-slate-100 rounded-2xl border border-slate-200/80 bg-white overflow-hidden">
+            <div class="divide-y divide-slate-100 rounded-2xl border border-slate-200/80 bg-white overflow-hidden min-w-0">
                 @foreach ($otherDocs as $oDoc)
-                    <div class="p-3 sm:px-4 flex items-center justify-between gap-3 text-xs">
-                        <div>
-                            <div class="font-bold text-slate-900">{{ $oDoc->type_label }}</div>
-                            <div class="text-[11px] text-slate-400">
+                    <div class="p-3 sm:px-4 flex items-center justify-between gap-3 text-xs min-w-0">
+                        <div class="min-w-0 flex-1">
+                            <div class="font-bold text-slate-900 truncate">{{ $oDoc->type_label }}</div>
+                            <div class="text-[11px] text-slate-400 truncate">
                                 {{ __('fleet.show.doc_number_short', ['num' => $oDoc->document_number ?: '—']) }} • Exp: {{ $oDoc->expired_date->isoFormat('DD MMM YYYY') }}
                             </div>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 shrink-0">
                             @if ($oDoc->attachment_path)
                                 <a href="{{ asset('storage/' . $oDoc->attachment_path) }}" target="_blank"
                                     class="text-xs text-slate-600 hover:text-slate-900 font-medium underline">

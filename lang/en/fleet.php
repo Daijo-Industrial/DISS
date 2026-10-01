@@ -29,6 +29,8 @@ return [
         'close' => 'Close',
         'confirm' => 'Confirm',
         'loading' => 'Loading...',
+        'optional' => 'Optional',
+        'required' => 'Required',
         'na' => '—',
     ],
 

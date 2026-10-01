@@ -1,8 +1,8 @@
 {{-- ========================================================================= --}}
 {{-- TAB 3: RIWAYAT SERVIS BENGKEL & BIAYA                                     --}}
 {{-- ========================================================================= --}}
-<div class="rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs space-y-4">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+<div class="rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs space-y-4 min-w-0">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3 min-w-0">
         <div>
             <h2 class="text-sm font-bold text-slate-900">{{ __('fleet.show.services_title') }}</h2>
             <p class="text-xs text-slate-400">{{ __('fleet.show.services_desc') }}</p>
@@ -10,7 +10,7 @@
 
         @if (!$vehicle->is_sold)
             <a href="{{ route('services.create', $vehicle) }}"
-                class="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-2xs hover:bg-slate-800 transition">
+                class="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-2xs hover:bg-slate-800 transition self-start sm:self-auto">
                 <i class="bi bi-plus-lg"></i>
                 <span>{{ __('fleet.show.add_service_btn') }}</span>
             </a>
@@ -18,25 +18,25 @@
     </div>
 
     {{-- iOS Wallet-Style Compact Cost Summary Bar --}}
-    <div class="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3 sm:p-4 grid grid-cols-2 divide-x divide-slate-200/60">
-        <div class="pr-3 sm:pr-4">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">{{ __('fleet.show.ytd_cost_label', ['year' => now()->year]) }}</span>
-            <div class="text-base sm:text-xl font-black text-slate-900 mt-1 font-mono">
+    <div class="rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3 sm:p-4 grid grid-cols-2 divide-x divide-slate-200/60 min-w-0">
+        <div class="pr-3 sm:pr-4 min-w-0">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">{{ __('fleet.show.ytd_cost_label', ['year' => now()->year]) }}</span>
+            <div class="text-sm sm:text-xl font-black text-slate-900 mt-1 font-mono truncate" title="Rp {{ number_format($ytdCost, 0, ',', '.') }}">
                 Rp {{ number_format($ytdCost, 0, ',', '.') }}
             </div>
         </div>
-        <div class="pl-3 sm:pl-4">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">{{ __('fleet.show.lifetime_cost_label') }}</span>
-            <div class="text-base sm:text-xl font-black text-slate-900 mt-1 font-mono">
+        <div class="pl-3 sm:pl-4 min-w-0">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block truncate">{{ __('fleet.show.lifetime_cost_label') }}</span>
+            <div class="text-sm sm:text-xl font-black text-slate-900 mt-1 font-mono truncate" title="Rp {{ number_format($lifetimeCost, 0, ',', '.') }}">
                 Rp {{ number_format($lifetimeCost, 0, ',', '.') }}
             </div>
         </div>
     </div>
 
     {{-- Filter Controls: Year & Workshop Search --}}
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-        <div class="flex items-center gap-2">
-            <select wire:model.live="year" class="rounded-xl border border-slate-200 bg-slate-50/70 py-1.5 px-3 text-xs text-slate-700 focus:outline-none cursor-pointer">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 min-w-0">
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+            <select wire:model.live="year" class="rounded-xl border border-slate-200 bg-slate-50/70 py-1.5 px-3 text-xs text-slate-700 focus:outline-none cursor-pointer w-full sm:w-auto">
                 <option value="all">{{ __('fleet.show.filter_year_all') }}</option>
                 @foreach ($availableYears as $yr)
                     <option value="{{ $yr }}">{{ $yr }}</option>
@@ -58,7 +58,7 @@
             {{ __('fleet.show.empty_services') }}
         </div>
     @else
-        <div class="overflow-x-auto rounded-2xl border border-slate-200/80">
+        <div class="overflow-x-auto rounded-2xl border border-slate-200/80 min-w-0">
             <table class="min-w-full divide-y divide-slate-200 text-left text-xs">
                 <thead class="bg-slate-50 font-semibold text-slate-600 uppercase tracking-wider">
                     <tr>

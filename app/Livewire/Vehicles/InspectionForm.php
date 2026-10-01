@@ -15,6 +15,8 @@ class InspectionForm extends Component
 
     public Vehicle $vehicle;
 
+    public int $currentStep = 1;
+
     public string $type = VehicleInspection::TYPE_CHECK_OUT;
 
     public ?int $parent_inspection_id = null;
@@ -25,7 +27,7 @@ class InspectionForm extends Component
 
     public int $odometer = 0;
 
-    public int $fuel_percentage = 100;
+    public int|string $fuel_percentage = 100;
 
     public array $checklist = [];
 
@@ -149,6 +151,128 @@ class InspectionForm extends Component
         }
     }
 
+    public function passAllChecklist(): void
+    {
+        foreach (array_keys($this->checklist) as $key) {
+            $this->checklist[$key]['status'] = 'ok';
+        }
+        $this->recalculateSeverity();
+    }
+
+    public function goToStep(int $step): void
+    {
+        if ($step < 1 || $step > 3) {
+            return;
+        }
+
+        if ($step > $this->currentStep) {
+            if ($this->currentStep === 1) {
+                $this->validateStep1();
+            } elseif ($this->currentStep === 2) {
+                $this->recalculateSeverity();
+            }
+        }
+
+        $this->currentStep = $step;
+    }
+
+    public function nextStep(): void
+    {
+        if ($this->currentStep === 1) {
+            $this->validateStep1();
+            $this->currentStep = 2;
+        } elseif ($this->currentStep === 2) {
+            $this->recalculateSeverity();
+            $this->currentStep = 3;
+        }
+    }
+
+    public function previousStep(): void
+    {
+        if ($this->currentStep > 1) {
+            $this->currentStep--;
+        }
+    }
+
+    public function updatedFuelPercentage($value): void
+    {
+        if ($value !== '' && $value !== null) {
+            $intVal = (int) $value;
+            if ($intVal > 100) {
+                $this->fuel_percentage = 100;
+            } elseif ($intVal < 0) {
+                $this->fuel_percentage = 0;
+            }
+        }
+    }
+
+    protected function validateStep1(): void
+    {
+        $minKm = $this->type === VehicleInspection::TYPE_CHECK_IN && $this->parentInspection
+            ? $this->parentInspection->odometer
+            : $this->vehicle->odometer;
+
+        $this->validate([
+            'driver_name' => ['required', 'string', 'max:255'],
+            'odometer' => ['required', 'integer', 'min:' . $minKm],
+            'fuel_percentage' => ['required', 'integer', 'min:0', 'max:100'],
+            'trip_purpose' => ['nullable', 'string', 'max:500'],
+        ], [
+            'driver_name.required' => 'Nama pengemudi / driver wajib diisi.',
+            'odometer.required' => 'Nilai KM Odometer wajib diisi.',
+            'odometer.min' => 'KM Odometer tidak boleh lebih kecil dari KM sebelumnya (:min km).',
+            'fuel_percentage.required' => 'Level bahan bakar wajib diisi.',
+        ]);
+    }
+
+    public function getZonesProperty(): array
+    {
+        return [
+            'front' => [
+                'title' => 'Depan & Bodi',
+                'icon' => 'bi-car-front',
+                'keys' => ['headlights', 'body'],
+            ],
+            'rear' => [
+                'title' => 'Sinyal & Belakang',
+                'icon' => 'bi-arrow-left-right',
+                'keys' => ['brake_lights', 'turn_signals'],
+            ],
+            'tires_engine' => [
+                'title' => 'Roda & Mesin',
+                'icon' => 'bi-disc',
+                'keys' => ['tires', 'battery_fuel'],
+            ],
+            'interior' => [
+                'title' => 'Kabin & Toolkit',
+                'icon' => 'bi-box-seam',
+                'keys' => ['interior'],
+            ],
+        ];
+    }
+
+    public function getOkCountProperty(): int
+    {
+        return collect($this->checklist)->where('status', 'ok')->count();
+    }
+
+    public function getTotalItemsProperty(): int
+    {
+        return count($this->checklist);
+    }
+
+    public function getReadinessPercentProperty(): int
+    {
+        $total = $this->totalItems;
+
+        return $total > 0 ? (int) round(($this->okCount / $total) * 100) : 100;
+    }
+
+    public function getDefectiveItemsProperty(): array
+    {
+        return array_filter($this->checklist, fn ($item) => ($item['status'] ?? 'ok') === 'issue');
+    }
+
     public function recalculateSeverity(): void
     {
         $hasIssue = false;
@@ -246,7 +370,7 @@ class InspectionForm extends Component
                 'driver_name' => $this->driver_name,
                 'inspector_id' => auth()->id() ?? 1,
                 'odometer' => $this->odometer,
-                'fuel_percentage' => $this->fuel_percentage,
+                'fuel_percentage' => (int) $this->fuel_percentage,
                 'checklist_results' => $this->checklist,
                 'severity' => $this->severity,
                 'defect_notes' => $this->defect_notes,

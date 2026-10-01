@@ -29,6 +29,8 @@ return [
         'close' => 'Tutup',
         'confirm' => 'Konfirmasi',
         'loading' => 'Memuat...',
+        'optional' => 'Opsional',
+        'required' => 'Wajib',
         'na' => '—',
     ],
 

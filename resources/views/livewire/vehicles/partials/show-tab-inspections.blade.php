@@ -1,16 +1,16 @@
 {{-- ========================================================================= --}}
 {{-- TAB 1: LOGBOOK PEMERIKSAAN HARIAN (P2H) - TIMELINE ACTIVITY VIEW          --}}
 {{-- ========================================================================= --}}
-<div class="rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs space-y-4">
+<div class="rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs space-y-4 min-w-0">
     {{-- Header with Title & Dual Filters --}}
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3 min-w-0">
         <div>
             <h2 class="text-sm font-bold text-slate-900">{{ __('fleet.show.inspections_title') }}</h2>
             <p class="text-xs text-slate-400">{{ __('fleet.show.inspections_desc') }}</p>
         </div>
 
         {{-- Dual Filter Controls: Type + Severity --}}
-        <div class="flex flex-wrap items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto [&>select]:flex-1 sm:[&>select]:flex-none">
             <select wire:model.live="inspectionType"
                 class="rounded-xl border border-slate-200 bg-slate-50/70 py-1.5 px-3 text-xs text-slate-700 focus:outline-none cursor-pointer">
                 <option value="all">{{ __('fleet.show.filter_type_all') }}</option>
@@ -34,7 +34,7 @@
         </div>
     @else
         {{-- CONTINUOUS TIMELINE FEED CONTAINER --}}
-        <div class="relative pl-6 sm:pl-8 space-y-3 before:absolute before:left-3 sm:before:left-3.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200/80">
+        <div class="relative pl-6 sm:pl-8 space-y-3 min-w-0 before:absolute before:left-3 sm:before:left-3.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200/80">
             @foreach ($inspections as $ins)
                 @php
                     $isOutTrip = $ins->inspection_type === 'check_out';
@@ -55,7 +55,7 @@
                     }
                 @endphp
 
-                <div x-data="{ showDetails: false }" class="relative group">
+                <div x-data="{ showDetails: false }" class="relative group min-w-0">
                     {{-- Timeline Bullet Node on the Vertical Thread --}}
                     <div @click="showDetails = !showDetails"
                         class="absolute -left-6 sm:-left-8 top-1.5 flex items-center justify-center cursor-pointer"
@@ -73,45 +73,47 @@
                         :aria-expanded="showDetails.toString()"
                         @keydown.enter="showDetails = !showDetails"
                         @keydown.space.prevent="showDetails = !showDetails"
-                        class="rounded-2xl border transition p-3 sm:p-3.5 cursor-pointer outline-none focus:outline-none focus:ring-0
+                        class="rounded-2xl border transition p-3 sm:p-3.5 cursor-pointer outline-none focus:outline-none focus:ring-0 min-w-0
                         {{ $isCritical ? 'border-rose-200 bg-rose-50/25 hover:border-rose-300 hover:bg-rose-50/40' : ($hasDefect ? 'border-amber-200 bg-amber-50/20 hover:border-amber-300 hover:bg-amber-50/35' : 'border-slate-200/80 bg-white hover:border-slate-300 hover:bg-slate-50/50 shadow-2xs') }}">
 
                         {{-- Line 1: Type, Badges, Driver, Time, and Metrics --}}
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 min-w-0">
                             {{-- Left: Event Identification --}}
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="text-xs font-bold text-slate-900">
+                            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
+                                <span class="text-xs font-bold text-slate-900 shrink-0">
                                     {{ $isOutTrip ? __('fleet.inspection.type_checkout') : __('fleet.inspection.type_checkin') }}
                                 </span>
 
-                                <span class="rounded-md px-2 py-0.5 text-[10px] font-bold {{ $ins->severity_badge_classes }}">
+                                <span class="rounded-md px-2 py-0.5 text-[10px] font-bold shrink-0 {{ $ins->severity_badge_classes }}">
                                     {{ $ins->severity_label }}
                                 </span>
 
-                                <span class="text-xs text-slate-600">
+                                <span class="text-xs text-slate-600 truncate max-w-[140px] sm:max-w-none">
                                     oleh <strong>{{ $ins->driver_name }}</strong>
                                 </span>
 
-                                <span class="text-[11px] text-slate-400">
+                                <span class="text-[11px] text-slate-400 shrink-0">
                                     • {{ $ins->created_at->isoFormat('DD MMM YYYY, HH:mm') }}
                                 </span>
                             </div>
 
                             {{-- Right: Key Telemetry (Odometer & Fuel & Delta) --}}
-                            <div class="flex items-center gap-2.5 text-xs text-slate-600 self-start sm:self-auto shrink-0">
-                                <span class="font-mono font-bold text-slate-900">{{ number_format($ins->odometer) }} km</span>
-                                <span class="text-slate-300">|</span>
-                                <span class="text-[11px] text-slate-500">{{ __('fleet.common.fuel') }}: {{ $ins->fuel_percentage }}%</span>
+                            <div class="flex flex-wrap items-center justify-between sm:justify-end gap-2 text-xs text-slate-600 w-full sm:w-auto min-w-0 pt-1.5 sm:pt-0 border-t border-slate-100 sm:border-0">
+                                <div class="flex items-center gap-2 font-mono">
+                                    <span class="font-bold text-slate-900">{{ number_format($ins->odometer) }} km</span>
+                                    <span class="text-slate-300">|</span>
+                                    <span class="text-[11px] text-slate-500 font-sans">{{ __('fleet.common.fuel') }}: {{ $ins->fuel_percentage }}%</span>
 
-                                @if ($ins->trip_distance)
-                                    <span class="rounded-lg bg-slate-100 border border-slate-200/70 px-2 py-0.5 text-[11px] font-bold text-slate-800">
-                                        +{{ number_format($ins->trip_distance) }} km
-                                    </span>
-                                @endif
+                                    @if ($ins->trip_distance)
+                                        <span class="rounded-lg bg-slate-100 border border-slate-200/70 px-1.5 py-0.2 text-[10px] font-bold text-slate-800">
+                                            +{{ number_format($ins->trip_distance) }} km
+                                        </span>
+                                    @endif
+                                </div>
 
                                 {{-- Compact Toggle Indicator --}}
                                 <div title="{{ __('fleet.show.view_checklist_details') }}"
-                                    class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-600 bg-slate-50 border border-slate-200/60 group-hover:bg-slate-100 group-hover:border-slate-300 transition">
+                                    class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-600 bg-slate-50 border border-slate-200/60 group-hover:bg-slate-100 group-hover:border-slate-300 transition shrink-0 ml-auto sm:ml-0">
                                     <i class="bi bi-list-check"></i>
                                     @if ($totalPhotos > 0)
                                         <span class="rounded-full bg-slate-200/80 text-slate-800 px-1.5 py-0.2 text-[9px] font-bold">
@@ -125,7 +127,7 @@
 
                         {{-- Line 2: Purpose or Defect Alerts (Shown only if present) --}}
                         @if ($ins->trip_purpose || $ins->defect_notes)
-                            <div class="mt-2 pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                            <div class="mt-2 pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs min-w-0">
                                 @if ($ins->trip_purpose)
                                     <div class="text-[11px] text-slate-500 italic truncate max-w-md">
                                         <i class="bi bi-geo-alt text-slate-400 mr-1 not-italic"></i>"{{ $ins->trip_purpose }}"
@@ -133,13 +135,15 @@
                                 @endif
 
                                 @if ($ins->defect_notes)
-                                    <div class="flex items-center gap-2 {{ $isCritical ? 'text-rose-700' : 'text-amber-800' }} font-semibold text-xs bg-white/60 px-2.5 py-1 rounded-xl border {{ $isCritical ? 'border-rose-200' : 'border-amber-200' }}">
-                                        <i class="bi bi-exclamation-triangle-fill shrink-0"></i>
-                                        <span class="truncate">{{ $ins->defect_notes }}</span>
+                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 {{ $isCritical ? 'text-rose-700' : 'text-amber-800' }} font-semibold text-xs bg-white/60 px-2.5 py-1.5 rounded-xl border {{ $isCritical ? 'border-rose-200' : 'border-amber-200' }} min-w-0 w-full sm:w-auto">
+                                        <div class="flex items-center gap-1.5 min-w-0">
+                                            <i class="bi bi-exclamation-triangle-fill shrink-0"></i>
+                                            <span class="truncate">{{ $ins->defect_notes }}</span>
+                                        </div>
 
                                         <a href="{{ route('services.create', ['vehicle' => $vehicle, 'odometer' => $ins->odometer, 'notes' => 'Temuan P2H: ' . $ins->defect_notes]) }}"
                                             @click.stop
-                                            class="ml-auto inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2 py-0.5 text-[10px] font-bold text-white hover:bg-slate-800 transition shrink-0 shadow-2xs">
+                                            class="inline-flex items-center justify-center gap-1 rounded-lg bg-slate-900 px-2 py-1 text-[10px] font-bold text-white hover:bg-slate-800 transition shrink-0 shadow-2xs self-end sm:self-auto">
                                             <i class="bi bi-wrench"></i> {{ __('fleet.show.escalate_service_btn') }}
                                         </a>
                                     </div>
@@ -156,12 +160,12 @@
                                             $statusOk = ($item['status'] ?? 'ok') === 'ok';
                                             $pointPhotos = $item['photos'] ?? [];
                                         @endphp
-                                        <div class="rounded-xl border p-2 text-xs {{ $statusOk ? 'border-slate-100 bg-slate-50/70' : 'border-rose-200 bg-rose-50/50' }}">
-                                            <div class="flex items-center justify-between gap-1">
-                                                <span class="font-bold {{ $statusOk ? 'text-slate-800' : 'text-rose-900' }}">
+                                        <div class="rounded-xl border p-2 text-xs min-w-0 {{ $statusOk ? 'border-slate-100 bg-slate-50/70' : 'border-rose-200 bg-rose-50/50' }}">
+                                            <div class="flex items-center justify-between gap-1.5 min-w-0">
+                                                <span class="font-bold min-w-0 break-words {{ $statusOk ? 'text-slate-800' : 'text-rose-900' }}">
                                                     {{ $item['label'] ?? ucfirst($itemKey) }}
                                                 </span>
-                                                <span class="rounded-md px-1.5 py-0.2 text-[10px] font-bold {{ $statusOk ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800' }}">
+                                                <span class="rounded-md px-1.5 py-0.2 text-[10px] font-bold shrink-0 {{ $statusOk ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800' }}">
                                                     {{ $statusOk ? __('fleet.show.checklist_ok') : __('fleet.show.checklist_issue') }}
                                                 </span>
                                             </div>
