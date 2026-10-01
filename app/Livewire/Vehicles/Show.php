@@ -37,6 +37,28 @@ class Show extends Component
     // Inspection filters
     public string $inspectionType = 'all';
 
+    public string $inspectionSeverity = 'all'; // 'all', 'defects_only', 'critical_only'
+
+    public function updatedInspectionType(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedInspectionSeverity(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedYear(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedWorkshop(): void
+    {
+        $this->resetPage();
+    }
+
     // Document modal
     public bool $showDocModal = false;
 
@@ -298,6 +320,14 @@ class Show extends Component
             ->with('items')
             ->where('vehicle_id', $this->vehicle->id);
 
+        $availableYears = (clone $baseServices)
+            ->selectRaw('DISTINCT YEAR(service_date) as yr')
+            ->orderByDesc('yr')
+            ->pluck('yr')
+            ->filter()
+            ->values()
+            ->all();
+
         $records = (clone $baseServices)
             ->when($this->year !== 'all', fn ($q) => $q->whereYear('service_date', $this->year))
             ->when($this->workshop !== '', fn ($q) => $q->where('workshop', 'like', '%' . $this->workshop . '%'))
@@ -312,6 +342,8 @@ class Show extends Component
             ->with(['inspector', 'parentCheckOut'])
             ->where('vehicle_id', $this->vehicle->id)
             ->when($this->inspectionType !== 'all', fn ($q) => $q->where('inspection_type', $this->inspectionType))
+            ->when($this->inspectionSeverity === 'defects_only', fn ($q) => $q->whereIn('severity', ['minor', 'critical_grounded']))
+            ->when($this->inspectionSeverity === 'critical_only', fn ($q) => $q->where('severity', 'critical_grounded'))
             ->orderByDesc('created_at')
             ->paginate(15);
 
@@ -322,6 +354,6 @@ class Show extends Component
             ->orderBy('expired_date')
             ->get();
 
-        return view('livewire.vehicles.show', compact('records', 'lifetimeCost', 'ytdCost', 'inspections', 'documents'));
+        return view('livewire.vehicles.show', compact('records', 'lifetimeCost', 'ytdCost', 'inspections', 'documents', 'availableYears'));
     }
 }
