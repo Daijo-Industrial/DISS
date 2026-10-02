@@ -5,8 +5,8 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\JobProgressController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\NavPinController;
+use App\Livewire\Account\AccountSettingsPage;
 use App\Livewire\Approval\ApprovalsPage;
-use App\Livewire\Auth\ChangePasswordPage;
 use App\Livewire\Auth\NotificationSettingsPage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -32,7 +32,8 @@ Auth::routes();
 Route::middleware('auth')->group(function () {
     Route::get('/home', [HomeController::class, 'index'])->name('home');
     Route::get('/approvals', ApprovalsPage::class)->name('approvals');
-    Route::get('/account/security', ChangePasswordPage::class)->name('account.security');
+    Route::get('/account/settings', AccountSettingsPage::class)->name('account.settings');
+    Route::get('/account/security', fn () => redirect()->route('account.settings', ['tab' => 'security']))->name('account.security');
     Route::get('/account/notifications', NotificationSettingsPage::class)->name('account.notifications');
 
     // Quick Access Pin/Unpin API

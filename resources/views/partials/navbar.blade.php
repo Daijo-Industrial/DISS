@@ -20,15 +20,25 @@
                         class="fw-medium text-secondary-emphasis">{{ optional(Auth::user()->department)->name }}</span>
                 </div>
                 <hr>
-                @if (Route::has('change.password.show'))
-                    <a class="dropdown-item" href="{{ route('change.password.show') }}">
-                        <i class='bi bi-key me-2'></i>{{ __('Change Password') }}
-                    </a>
-                @endif
+                <a class="dropdown-item" href="{{ route('account.settings', ['tab' => 'profile']) }}">
+                    <i class='bi bi-person me-2'></i>{{ __('Profile & Account') }}
+                </a>
+                <a class="dropdown-item" href="{{ route('account.settings', ['tab' => 'security']) }}">
+                    <i class='bi bi-key me-2'></i>{{ __('Change Password') }}
+                </a>
+                <a class="dropdown-item" href="{{ route('account.settings', ['tab' => 'notifications']) }}">
+                    <i class='bi bi-bell me-2'></i>{{ __('Notification Settings') }}
+                </a>
                 <a href="{{ route('signatures.manage') }}" class="dropdown-item">
                     <i class='bi bi-pencil-square me-2'></i>{{ __('My Signatures') }}
                 </a>
-                <a class="dropdown-item" href="#"
+                @if (Auth::user()->hasRole('super-admin'))
+                    <a class="dropdown-item text-primary" href="{{ route('account.settings', ['tab' => 'abilities']) }}">
+                        <i class='bi bi-shield-check me-2'></i>{{ __('System Abilities (Admin)') }}
+                    </a>
+                @endif
+                <hr>
+                <a class="dropdown-item text-danger" href="#"
                     onclick="event.preventDefault();document.getElementById('logout-form').submit();">
                     <i class='bi bi-door-closed me-2'></i>{{ __('Logout') }}
                 </a>
