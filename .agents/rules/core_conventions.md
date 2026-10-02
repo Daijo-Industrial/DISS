@@ -6,7 +6,10 @@
   - `app/Domain/<Feature>/Services/`: Business and calculation logic.
   - `app/Infrastructure/Persistence/Eloquent/Models/`: Concrete persistence models.
   - `app/Models/`: Legacy models (extend infrastructure counterparts).
-- **Authorization**: Spatie `laravel-permission` (`$user->hasRole(...)`). `super-admin` has global bypass.
+- **Authorization & Role Privacy**:
+  - Spatie `laravel-permission` (`$user->hasRole(...)`). `super-admin` has global bypass.
+  - **User Portal Privacy**: Do NOT display user roles, role pills, or permission lists in user-facing / self-service views (e.g., profile headers, user settings, navigation dropdowns). Regular users experience authorization implicitly through feature access.
+  - **Abilities Visibility**: Inspection of system abilities, permissions matrices, and role assignments is strictly restricted to administrative views for `super-admin`.
 - **Ponytail Standard**:
   - YAGNI: Build the minimum that works; no unrequested abstractions or dependencies.
   - Favor native PHP / Laravel built-ins (e.g., native stream filters for large file parsing).
@@ -16,4 +19,10 @@
 - **Development Invariants**:
   - **No Production Frontend Builds**: Do NOT run `npm run build` in the development environment; Vite HMR is running actively.
   - **Targeted Code Styling**: NEVER run `vendor/bin/pint` without specific file arguments. The legacy repository contains hundreds of unformatted files and will time out; always pass specific modified file paths.
+- **Apple-Inspired Minimalist UI Standard**:
+  - **Deference & Calmness**: Content precedes chrome. Avoid loud, stacked warning banners and aggressive alert colors; favor calm neutral cards (`slate-50/60`) and subtle status pills.
+  - **Progressive Disclosure & Single Touchpoints**: Do not repeat action buttons across multiple headers. Place actionable triggers contextually where the user interacts with the data (e.g., inline next to the relevant input).
+  - **Soft Geometry & Restrained Depth**: Use generous rounded corners (`rounded-2xl`, `rounded-3xl`), ultra-subtle border rings (`ring-1 ring-slate-900/5`, `border-slate-200/80`), and soft shadows over harsh borders.
+  - **Typography & Hierarchy**: Rely on font scale and weight (`Plus Jakarta Sans`) rather than high-contrast background colors to establish information hierarchy.
+
 
