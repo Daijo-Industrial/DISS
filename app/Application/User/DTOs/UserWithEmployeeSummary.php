@@ -18,5 +18,8 @@ class UserWithEmployeeSummary
         public ?string $employeeName,
         public ?string $employeeBranch,
         public ?string $employeeDeptCode,
+        public ?\DateTimeInterface $emailVerifiedAt = null,
+        public ?\DateTimeInterface $lastVisitedAt = null,
+        public ?\DateTimeInterface $createdAt = null,
     ) {}
 }

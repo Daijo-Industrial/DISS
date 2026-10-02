@@ -8,5 +8,6 @@ class UserFilter
         public ?string $search = null,
         public ?bool $onlyActive = null,
         public int $perPage = 20,
+        public ?bool $onlyDormant = null,
     ) {}
 }

@@ -18,6 +18,7 @@ class ListUsers
             perPage: $filter->perPage,
             search: $filter->search,
             onlyActive: $filter->onlyActive,
+            onlyDormant: $filter->onlyDormant,
         );
     }
 }

@@ -6,6 +6,8 @@ use App\Application\User\DTOs\UserFilter;
 use App\Application\User\UseCases\ChangeUserPassword;
 use App\Application\User\UseCases\ListUsersWithEmployees;
 use App\Application\User\UseCases\ToggleUserStatus;
+use App\Domain\User\Repositories\UserRepository;
+use App\Infrastructure\Persistence\Eloquent\Models\User;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -23,24 +25,33 @@ class UserIndex extends Component
     public bool $onlyActive = false;
 
     #[Url(history: true)]
+    public bool $onlyDormant = false;
+
+    #[Url(history: true)]
     public int $perPage = 10;
 
     // Suspend Guardrail
     public ?int $userToSuspendId = null;
+
     public bool $showSuspendModal = false;
 
     // Password Reset Guardrail
     public ?int $passwordUserId = null;
+
     public bool $showPasswordModal = false;
+
     public string $newPassword = '';
+
     public string $newPassword_confirmation = '';
 
     // Bulk selection
     public array $selectedRows = [];
+
     public bool $selectAll = false;
 
     // Bulk Role Assignment
     public bool $showBulkRoleModal = false;
+
     public string $bulkRoleToAssign = '';
 
     public function updatedSearch(): void
@@ -50,6 +61,12 @@ class UserIndex extends Component
     }
 
     public function updatedOnlyActive(): void
+    {
+        $this->resetPage();
+        $this->clearSelection();
+    }
+
+    public function updatedOnlyDormant(): void
     {
         $this->resetPage();
         $this->clearSelection();
@@ -115,11 +132,12 @@ class UserIndex extends Component
     {
         $this->authorize('user.update');
         $this->validate($this->passwordRules());
-        
+
         try {
             $changeUserPassword->execute($this->passwordUserId, $this->newPassword);
         } catch (\DomainException $e) {
             $this->addError('newPassword', $e->getMessage());
+
             return;
         }
 
@@ -135,18 +153,25 @@ class UserIndex extends Component
     public function users()
     {
         $filter = new UserFilter(
-            search: $this->search !== '' ? $this->search : null, 
-            onlyActive: $this->onlyActive ? true : null, 
-            perPage: $this->perPage
+            search: $this->search !== '' ? $this->search : null,
+            onlyActive: $this->onlyActive ? true : null,
+            perPage: $this->perPage,
+            onlyDormant: $this->onlyDormant ? true : null,
         );
 
         return app(ListUsersWithEmployees::class)->execute($filter);
     }
 
+    #[Computed]
+    public function dormantCount(): int
+    {
+        return app(UserRepository::class)->countDormantUsers();
+    }
+
     public function updatedSelectAll($value)
     {
         if ($value) {
-            $this->selectedRows = collect($this->users->items())->pluck('id')->map(fn($id) => (string) $id)->toArray();
+            $this->selectedRows = collect($this->users->items())->pluck('id')->map(fn ($id) => (string) $id)->toArray();
         } else {
             $this->selectedRows = [];
         }
@@ -155,8 +180,10 @@ class UserIndex extends Component
     public function bulkSuspend(ToggleUserStatus $toggleUserStatus): void
     {
         $this->authorize('user.update');
-        
-        if (empty($this->selectedRows)) return;
+
+        if (empty($this->selectedRows)) {
+            return;
+        }
 
         foreach ($this->selectedRows as $userId) {
             $toggleUserStatus->execute((int) $userId);
@@ -164,15 +191,17 @@ class UserIndex extends Component
 
         $this->selectedRows = [];
         $this->selectAll = false;
-        
+
         $this->dispatch('toast', message: 'Selected users have been toggled.', type: 'success');
     }
 
     public function openBulkRoleModal(): void
     {
         $this->authorize('user.update');
-        if (empty($this->selectedRows)) return;
-        
+        if (empty($this->selectedRows)) {
+            return;
+        }
+
         $this->bulkRoleToAssign = '';
         $this->showBulkRoleModal = true;
     }
@@ -182,9 +211,11 @@ class UserIndex extends Component
         $this->authorize('user.update');
         $this->validate(['bulkRoleToAssign' => 'required|string|exists:roles,name']);
 
-        if (empty($this->selectedRows)) return;
+        if (empty($this->selectedRows)) {
+            return;
+        }
 
-        $users = \App\Infrastructure\Persistence\Eloquent\Models\User::whereIn('id', $this->selectedRows)->get();
+        $users = User::whereIn('id', $this->selectedRows)->get();
         foreach ($users as $user) {
             $user->assignRole($this->bulkRoleToAssign);
         }
@@ -201,6 +232,7 @@ class UserIndex extends Component
     {
         return view('livewire.admin.users.user-index', [
             'users' => $this->users,
+            'dormantCount' => $this->dormantCount,
         ]);
     }
 }
