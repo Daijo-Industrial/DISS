@@ -106,6 +106,14 @@ class UserCreate extends Component
         $this->employeeOptions = [];
     }
 
+    public function clearEmployee(): void
+    {
+        $this->employeeId = null;
+        $this->selectedEmployeeLabel = null;
+        $this->employeeSearch = '';
+        $this->employeeOptions = [];
+    }
+
     public function save(CreateUser $createUser): void
     {
         $this->authorize('user.create');
@@ -120,7 +128,12 @@ class UserCreate extends Component
             employeeId: $this->employeeId
         );
 
-        $createUser->execute($dto);
+        try {
+            $createUser->execute($dto);
+        } catch (\DomainException $e) {
+            $this->addError('email', $e->getMessage());
+            return;
+        }
 
         session()->flash('success', 'User created successfully.');
         $this->redirectRoute('admin.users.index');

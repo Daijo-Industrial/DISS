@@ -21,22 +21,20 @@ class CreateUser
             throw new \DomainException('Email already in use');
         }
 
-        if ($data->employeeId === null) {
-            throw new \DomainException('Employee is required for user creation');
+        if ($data->employeeId !== null) {
+            $employee = $this->employees->findById($data->employeeId);
+
+            if (! $employee) {
+                throw new \DomainException('Employee not found');
+            }
+
+            $existingEmployee = $this->users->findByEmployeeId($data->employeeId);
+            if ($existingEmployee) {
+                throw new \DomainException('This employee already has a user account.');
+            }
         }
 
-        $employee = $this->employees->findById($data->employeeId);
-
-        if (! $employee) {
-            throw new \DomainException('Employee not found');
-        }
-
-        $existingEmployee = $this->users->findByEmployeeId($data->employeeId);
-        if ($existingEmployee) {
-            throw new \DomainException('This employee already has a user account.');
-        }
-
-        if ($data->password === null && $data->password === '') {
+        if ($data->password === null || $data->password === '') {
             throw new \DomainException('Password is required when creating a user.');
         }
 
