@@ -108,7 +108,7 @@ class AccountSettingsPage extends Component
             'email' => [
                 'required',
                 'string',
-                'email:rfc,dns',
+                'email',
                 'max:255',
                 Rule::unique('users', 'email')->ignore($user->id),
             ],
