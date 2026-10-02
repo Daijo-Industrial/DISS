@@ -53,7 +53,7 @@
                             setTimeout(() => loading = false, 500);
                         "
                     class="absolute right-2 top-1/2 -translate-y-1/2
-                               opacity-10 group-hover/qi:opacity-100
+                               {{ $isMobile ? 'opacity-40 hover:opacity-100' : 'opacity-10 group-hover/qi:opacity-100' }}
                                transition-opacity duration-200 p-1.5 rounded-lg
                                hover:bg-rose-50 text-slate-400 hover:text-rose-500"
                     title="{{ $quickItem['pinned'] ? 'Unpin from Quick Access' : 'Remove from Quick Access' }}">

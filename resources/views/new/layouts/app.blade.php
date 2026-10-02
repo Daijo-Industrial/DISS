@@ -59,7 +59,6 @@
             ->map(fn($part) => mb_substr($part, 0, 1))
             ->join('')
         : 'U';
-    $searchableMenu = App\Services\NavigationService::getSearchableMenu() ?? [];
     $appName = config('app.name');
     $words = preg_split('/\s+/', trim($appName));
     $appAcronym = '';
@@ -70,25 +69,17 @@
 
 <body
     class="min-h-screen main-gradient text-slate-900 font-sans antialiased selection:bg-blue-100 selection:text-blue-900"
+    :class="{ 'overflow-hidden': sidebarOpen }"
     x-data='{
         sidebarOpen: false,
         sidebarCollapsed: localStorage.getItem("sidebarCollapsed") === "true",
-        q: "",
-        searchableMenu: @json($searchableMenu),
+        touchStartX: 0,
         init() {
             this.$watch("sidebarCollapsed", val => localStorage.setItem("sidebarCollapsed", val));
             // Auto-collapse sidebar on tablet / medium desktop screens (< 1280px)
             if (window.innerWidth < 1280) {
                 this.sidebarCollapsed = true;
             }
-        },
-        getSearchResultCount() {
-            if (!this.q) return 0;
-            const query = this.q.toLowerCase();
-            return this.searchableMenu.filter(item => 
-                item.label.toLowerCase().includes(query) || 
-                (item.parent_label && item.parent_label.toLowerCase().includes(query))
-            ).length;
         }
     }'
     @keydown.window.cmd.b.prevent="sidebarCollapsed = !sidebarCollapsed"
@@ -105,31 +96,36 @@
 
 
     {{-- Mobile & Tablet sidebar drawer (< lg / < 1024px) --}}
-    <div class="lg:hidden" x-show="sidebarOpen" x-transition.opacity>
-        <div class="fixed inset-0 z-[70] bg-slate-950/40 backdrop-blur-sm" @click="sidebarOpen = false"></div>
+    <div class="lg:hidden" x-show="sidebarOpen" x-transition.opacity.duration.300ms x-cloak>
+        <div class="fixed inset-0 z-[70] bg-slate-950/60 backdrop-blur-sm" @click="sidebarOpen = false"></div>
 
         <aside
-            class="fixed inset-y-0 left-0 z-[80] flex w-72 sm:w-80 flex-col bg-white/95 backdrop-blur-xl border-r border-slate-200/50 shadow-2xl"
+            class="fixed inset-y-0 left-0 z-[80] flex w-[86vw] max-w-[340px] flex-col bg-white border-r border-slate-200/80 shadow-2xl"
             x-show="sidebarOpen" x-transition:enter="transition ease-out duration-300 transform"
             x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0"
             x-transition:leave="transition ease-in duration-200 transform" x-transition:leave-start="translate-x-0"
-            x-transition:leave-end="-translate-x-full">
+            x-transition:leave-end="-translate-x-full"
+            @touchstart="touchStartX = $event.touches[0].clientX"
+            @touchend="if ($event.changedTouches[0].clientX - touchStartX < -50) sidebarOpen = false">
             {{-- Header --}}
-            <div class="flex items-center justify-between h-16 px-5 border-b border-slate-100/60">
+            <div class="flex items-center justify-between h-16 px-5 border-b border-slate-100 bg-slate-50/50 shrink-0">
                 <a href="{{ url('/') }}" class="flex items-center gap-3">
                     <div
-                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 shadow-lg shadow-blue-200 shrink-0">
+                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 shadow-md shadow-blue-200 shrink-0">
                         <img class="h-5 w-5 brightness-0 invert" src="{{ asset('image/Asset 1.svg') }}" alt="logo">
                     </div>
                     <div class="flex flex-col justify-center">
-                        <span
-                            class="text-[15px] font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 leading-none">
+                        <span class="text-[15px] font-extrabold text-slate-900 leading-tight">
                             {{ config('app.name') }}
+                        </span>
+                        <span class="text-[9px] font-bold text-blue-600 uppercase tracking-widest leading-none">
+                            {{ strtoupper($appAcronym) }} System
                         </span>
                     </div>
                 </a>
                 <button type="button"
-                    class="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-all duration-200"
+                    class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100/80 text-slate-400 hover:bg-rose-50 hover:text-rose-600 active:scale-95 transition-all duration-200"
+                    aria-label="Close menu"
                     @click="sidebarOpen = false">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -138,32 +134,79 @@
                 </button>
             </div>
 
-            <div class="flex-1 flex flex-col min-h-0" @click="if ($event.target.closest('a')) sidebarOpen = false">
+            {{-- Nav Scroll Area --}}
+            <div class="flex-1 flex flex-col min-h-0 overflow-hidden" @click="if ($event.target.closest('a')) sidebarOpen = false">
                 @include('new.layouts.partials.sidebar-nav', ['isMobile' => true])
             </div>
 
-            <div class="border-t border-slate-100/60 p-4 bg-slate-50/50">
-                <div class="flex items-center gap-3 mb-4 px-1">
-                    <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 flex items-center justify-center text-white font-bold shadow-md shadow-blue-200">
-                        {{ strtoupper(mb_substr($initials, 0, 2)) }}
-                    </div>
-                    <div class="flex-1 flex flex-col justify-center min-w-0 pr-2">
-                        <p class="text-[13px] font-bold text-slate-800 truncate leading-none pt-[1px]">{{ $user->name ?? 'User' }}</p>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1 leading-none">{{ $user->email ?? '' }}</p>
-                    </div>
-                <div class="mb-3">
-                    <x-locale-switcher :mobile="true" />
-                </div>
-                <div class="flex flex-col gap-1">
-                    <a href="{{ route('account.security') }}" class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-200/50 transition-colors">
-                        <span class="w-5 h-5 flex items-center justify-center">@include('new.layouts.partials.nav-icon', ['name' => 'shield'])</span> Security Settings
+            {{-- Concise Drawer Footer with Clickable User Profile Menu --}}
+            <div class="border-t border-slate-200/80 p-3 bg-slate-50/80 shrink-0"
+                x-data="{ userMenuOpen: false }"
+                @click.outside="userMenuOpen = false">
+                {{-- Collapsible User Menu (Manage Signature, Security, Sign Out) --}}
+                <div x-show="userMenuOpen"
+                    x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="opacity-0 -translate-y-2 scale-98"
+                    x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                    x-transition:leave="transition ease-in duration-150"
+                    x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                    x-transition:leave-end="opacity-0 -translate-y-2 scale-98"
+                    class="mb-2.5 p-1.5 bg-white rounded-2xl border border-slate-200/80 shadow-xl shadow-slate-900/10 space-y-1"
+                    x-cloak>
+                    <a href="{{ route('signatures.manage') }}"
+                        class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors">
+                        <span class="w-4 h-4 text-slate-400 flex items-center justify-center">@include('new.layouts.partials.nav-icon', ['name' => 'document-text'])</span>
+                        <span>Manage Signature</span>
                     </a>
-                    <form method="POST" action="{{ route('logout') }}">
+                    <a href="{{ route('account.security') }}"
+                        class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors">
+                        <span class="w-4 h-4 text-slate-400 flex items-center justify-center">@include('new.layouts.partials.nav-icon', ['name' => 'shield'])</span>
+                        <span>Security Settings</span>
+                    </a>
+                    <div class="h-[1px] bg-slate-100 my-1"></div>
+                    <form method="POST" action="{{ route('logout') }}" class="w-full">
                         @csrf
-                        <button type="submit" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors">
-                            <span class="w-5 h-5 flex items-center justify-center">@include('new.layouts.partials.nav-icon', ['name' => 'logout'])</span> Sign out
+                        <button type="submit"
+                            class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors text-left">
+                            <span class="w-4 h-4 text-rose-500 flex items-center justify-center">@include('new.layouts.partials.nav-icon', ['name' => 'logout'])</span>
+                            <span>Sign out</span>
                         </button>
                     </form>
+                </div>
+
+                {{-- User Profile Row (Clickable) + Language Selector --}}
+                <div class="flex items-center justify-between gap-2.5 px-0.5">
+                    <button type="button"
+                        @click="userMenuOpen = !userMenuOpen"
+                        class="flex items-center gap-2.5 min-w-0 flex-1 p-1 -m-1 rounded-xl hover:bg-slate-200/50 active:scale-[0.99] transition-all text-left group"
+                        :class="{ 'bg-slate-200/50': userMenuOpen }"
+                        aria-label="Toggle user menu"
+                        :aria-expanded="userMenuOpen">
+                        <div class="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 flex items-center justify-center text-white text-xs font-bold shadow-sm shadow-blue-200 shrink-0 group-hover:scale-105 transition-transform">
+                            {{ strtoupper(mb_substr($initials, 0, 2)) }}
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs font-bold text-slate-900 truncate leading-tight group-hover:text-blue-600 transition-colors">{{ $user->name ?? 'User' }}</p>
+                            <p class="text-[10px] font-medium text-slate-400 truncate leading-tight mt-0.5">{{ $user->email ?? '' }}</p>
+                        </div>
+                        <svg class="h-4 w-4 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 mr-1 shrink-0"
+                            :class="userMenuOpen ? 'rotate-180 text-blue-600' : ''"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    {{-- Segmented Language Pill (ID | EN) --}}
+                    <div class="flex items-center rounded-lg bg-slate-200/60 p-0.5 border border-slate-200/80 text-[10px] font-bold shrink-0">
+                        <a href="{{ route('locale.switch', 'id') }}"
+                            class="px-2 py-0.5 rounded-md transition-all {{ app()->getLocale() === 'id' ? 'bg-white text-blue-700 shadow-2xs font-extrabold' : 'text-slate-500 hover:text-slate-900' }}">
+                            ID
+                        </a>
+                        <a href="{{ route('locale.switch', 'en') }}"
+                            class="px-2 py-0.5 rounded-md transition-all {{ app()->getLocale() === 'en' ? 'bg-white text-blue-700 shadow-2xs font-extrabold' : 'text-slate-500 hover:text-slate-900' }}">
+                            EN
+                        </a>
+                    </div>
                 </div>
             </div>
         </aside>
@@ -277,21 +320,33 @@
             </header>
 
             {{-- Mobile & Tablet Minimal Header (< lg) --}}
-            <header class="lg:hidden h-16 flex items-center justify-between border-b border-slate-200/60 bg-white/90 backdrop-blur-sm px-4 sm:px-6 sticky top-0 z-40">
+            <header class="lg:hidden h-16 flex items-center justify-between border-b border-slate-200/80 bg-white/95 backdrop-blur-md px-4 sm:px-6 sticky top-0 z-40 transition-colors">
                 <div class="flex items-center gap-3">
-                    <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 shadow-sm shrink-0">
-                        <img class="h-5 w-5 brightness-0 invert" src="{{ asset('image/Asset 1.svg') }}" alt="logo">
-                    </div>
-                    <span class="text-[15px] font-extrabold text-slate-900 leading-none tracking-tight">{{ config('app.name') }}</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    @livewire('notifications.bell', key('bell-mobile'))
                     <button type="button" @click="sidebarOpen = true"
-                        class="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-all">
+                        class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-slate-50/80 text-slate-700 hover:text-blue-600 hover:bg-blue-50/50 hover:border-blue-200 transition-all active:scale-95 shadow-sm"
+                        aria-label="Open sidebar menu">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </button>
+                    <a href="{{ url('/') }}" class="flex items-center gap-2.5">
+                        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 shadow-sm shrink-0">
+                            <img class="h-5 w-5 brightness-0 invert" src="{{ asset('image/Asset 1.svg') }}" alt="logo">
+                        </div>
+                        <span class="text-[15px] font-extrabold text-slate-900 leading-none tracking-tight">{{ config('app.name') }}</span>
+                    </a>
+                </div>
+                <div class="flex items-center gap-2">
+                    {{-- Quick Search / Command Palette Trigger on Mobile --}}
+                    <button type="button" @click="$dispatch('open-cmd-k')"
+                        class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-600 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50/30 transition-all active:scale-95 shadow-sm"
+                        aria-label="Quick search commands">
+                        <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                        </svg>
+                    </button>
+
+                    @livewire('notifications.bell', key('bell-mobile'))
                 </div>
             </header>
 
@@ -524,6 +579,7 @@
                 flyoutTop: 0,
                 flyoutTimer: null,
                 myIdx: idx,
+                isMobile: isMobile,
 
                 init() {
                     if (this.open) {
@@ -531,8 +587,21 @@
                     }
                 },
 
+                toggle() {
+                    this.open = !this.open;
+                    if (this.open && this.isMobile) {
+                        this.$dispatch('mobile-group-open', { idx: this.myIdx });
+                    }
+                },
+
+                handleMobileGroupOpen(e) {
+                    if (this.isMobile && e.detail.idx !== this.myIdx) {
+                        this.open = false;
+                    }
+                },
+
                 handleMouseEnter() {
-                    if (isMobile) return;
+                    if (this.isMobile) return;
                     clearTimeout(this.flyoutTimer);
                     this.flyoutTimer = setTimeout(() => {
                         this.hover = true;
@@ -552,7 +621,7 @@
                 },
 
                 handleMouseLeave() {
-                    if (isMobile) return;
+                    if (this.isMobile) return;
                     clearTimeout(this.flyoutTimer);
                     this.flyoutTimer = setTimeout(() => { 
                         this.flyoutOpen = false; 

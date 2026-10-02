@@ -2,36 +2,6 @@
     $isMobile = $isMobile ?? false;
 @endphp
 
-{{-- Sidebar Search Section --}}
-<div class="px-4 pt-3 pb-1" x-show="!sidebarCollapsed || {{ $isMobile ? 'true' : 'false' }}">
-    <div class="relative group">
-        <input type="text" x-model="q" placeholder="Explore menu..."
-            aria-label="Search navigation menu"
-            class="w-full rounded-xl border border-slate-200/60 bg-white/50 backdrop-blur-md py-2.5 pl-10
-                   text-sm text-slate-700 shadow-sm outline-none ring-offset-2
-                   focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20
-                   placeholder:text-slate-400 transition-all duration-300">
-        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-            <svg class="h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors duration-300"
-                fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-            </svg>
-        </div>
-        <button x-show="q.length > 0" @click="q = ''"
-            class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-rose-500 transition-colors duration-200">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-        </button>
-    </div>
-    <div x-show="q.length > 0"
-        class="mt-2 text-[10px] font-semibold text-slate-400 uppercase tracking-tighter px-1 flex items-center justify-between">
-        <span>Matches found</span>
-        <span x-text="getSearchResultCount()" class="text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded"></span>
-    </div>
-</div>
-
 @php
     use App\Services\NavigationService;
     $nav = NavigationService::getPersonalizedMenu();
@@ -39,32 +9,7 @@
 
 <nav class="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar px-3 py-3 w-full" role="navigation"
     aria-label="Main system navigation">
-    {{-- High-Priority Search Results (Visible only when searching) --}}
-    <div x-show="q.length > 0" class="mb-6 space-y-1 px-2 border-b border-slate-100 pb-6">
-        @foreach ($searchableMenu as $flatItem)
-            <a href="{{ route($flatItem['route'], $flatItem['params'] ?? []) }}"
-                x-show="'{{ strtolower($flatItem['label']) }}'.includes(q.toLowerCase()) || '{{ strtolower($flatItem['parent_label'] ?? '') }}'.includes(q.toLowerCase())"
-                class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-all duration-300 group
-                      hover:bg-blue-50/50 hover:translate-x-1
-                      {{ $flatItem['active'] ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600' }}">
-                <span
-                    class="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100/80 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600 transition-all duration-300">
-                    @include('new.layouts.partials.nav-icon', ['name' => $flatItem['icon']])
-                </span>
-                <div class="flex flex-col min-w-0">
-                    <span
-                        class="font-bold truncate text-[13px] tracking-tight leading-none pt-1 group-hover:text-blue-700 transition-colors"
-                        x-html="'{{ $flatItem['label'] }}'.replace(new RegExp(q, 'gi'), match => `<mark class='bg-blue-100 text-blue-900 rounded-sm px-0.5 font-black'>${match}</mark>`)"></span>
-                    @if (isset($flatItem['parent_label']))
-                        <span
-                            class="text-[9px] text-slate-400 uppercase tracking-widest mt-1 font-black">{{ $flatItem['parent_label'] }}</span>
-                    @endif
-                </div>
-            </a>
-        @endforeach
-    </div>
-
-    <div class="space-y-1.5" role="menubar" x-show="q.length === 0">
+    <div class="space-y-1.5" role="menubar">
         @foreach ($nav as $item)
             @if ($item['type'] === 'quick-access')
                 {{-- Quick Access is now a reactive Livewire component --}}
@@ -90,7 +35,7 @@
                 @endphp
                 @if ($hasItemsAfter)
                     <div class="px-4 py-4"
-                        x-show="(!sidebarCollapsed || {{ $isMobile ? 'true' : 'false' }}) && q.length === 0">
+                        x-show="!sidebarCollapsed || {{ $isMobile ? 'true' : 'false' }}">
                         <div class="flex items-center gap-3">
                             <span
                                 class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">
@@ -210,9 +155,10 @@
                     @mouseenter="handleMouseEnter"
                     @mouseleave="handleMouseLeave"
                     @sbflyout.window="handleFlyoutWindow"
+                    @mobile-group-open.window="handleMobileGroupOpen"
                     role="none">
                     {{-- Group Header --}}
-                    <button type="button" @click="open = !open"
+                    <button type="button" @click="if (sidebarCollapsed && !{{ $isMobile ? 'true' : 'false' }}) { sidebarCollapsed = false; open = true; } else { toggle(); }"
                         class="group flex w-full items-center rounded-xl px-3 py-2.5 text-[13px] font-bold
                                 transition-all duration-300 active:scale-[0.98]
                                 focus:outline-none focus:ring-2 focus:ring-blue-500/20 outline-none
@@ -351,10 +297,3 @@
         @endforeach
     </div>
 </nav>
-
-<style>
-    mark {
-        background: transparent;
-        color: inherit;
-    }
-</style>
