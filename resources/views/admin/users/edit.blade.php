@@ -1,10 +1,9 @@
-@extends('new.layouts.admin-settings')
+@extends('new.layouts.app')
 
 @section('title', 'Edit User')
 
-@section('page-title', 'Edit User')
-@section('page-subtitle', 'Modify user details and roles.')
-
-@section('settings-content')
-    <livewire:admin.users.user-edit :userId="$id" />
+@section('content')
+    <div class="max-w-6xl mx-auto">
+        <livewire:admin.users.user-edit :userId="$id" />
+    </div>
 @endsection
