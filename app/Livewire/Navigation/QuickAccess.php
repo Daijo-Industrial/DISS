@@ -28,8 +28,8 @@ class QuickAccess extends Component
 
         $count = UserPinnedRoute::where('user_id', $userId)->count();
 
-        if ($count >= 3) {
-            $this->dispatch('toast', type: 'warning', message: 'Maximum 3 pinned items allowed.');
+        if ($count >= 8) {
+            $this->dispatch('toast', type: 'warning', message: 'Maximum 8 pinned items allowed.');
 
             return;
         }

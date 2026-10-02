@@ -2,6 +2,7 @@
 
 namespace App\Application\Dashboard;
 
+use App\Infrastructure\Persistence\Eloquent\Models\ApprovalRequest;
 use App\Infrastructure\Persistence\Eloquent\Models\ApprovalStep;
 use App\Infrastructure\Persistence\Eloquent\Models\User;
 use Illuminate\Database\Eloquent\Collection;
@@ -71,6 +72,22 @@ class DashboardService
                 });
             })
             ->latest();
+    }
+
+    /**
+     * Get recent submissions created by the current user.
+     */
+    public function getUserSubmissions(User $user, int $limit = 5): Collection
+    {
+        if (! $user) {
+            return new Collection();
+        }
+
+        return ApprovalRequest::with(['approvable', 'steps'])
+            ->where('submitted_by', $user->id)
+            ->latest('submitted_at')
+            ->take($limit)
+            ->get();
     }
 
     /**
