@@ -337,13 +337,19 @@
                     </a>
                 </div>
                 <div class="flex items-center gap-2">
-                    {{-- Quick Search / Command Palette Trigger on Mobile --}}
+                    {{-- Quick Search / Command Palette Trigger on Mobile & Tablet --}}
                     <button type="button" @click="$dispatch('open-cmd-k')"
-                        class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-600 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50/30 transition-all active:scale-95 shadow-sm"
+                        class="flex h-10 w-10 sm:w-auto sm:px-3 sm:gap-2.5 items-center justify-center rounded-xl border border-slate-200/80 bg-slate-50/80 hover:bg-blue-50/50 hover:border-blue-200 text-slate-500 hover:text-blue-600 transition-all active:scale-95 shadow-2xs group"
                         aria-label="Quick search commands">
-                        <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                        <svg class="h-5 w-5 shrink-0 text-slate-500 group-hover:text-blue-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                         </svg>
+                        <span class="hidden sm:inline text-xs font-semibold text-slate-400 group-hover:text-slate-600 transition-colors">
+                            Search commands...
+                        </span>
+                        <kbd class="hidden sm:inline-flex items-center gap-0.5 rounded-md bg-white px-1.5 py-0.5 text-[10px] font-bold text-slate-400 border border-slate-200 shadow-2xs">
+                            ⌘K
+                        </kbd>
                     </button>
 
                     @livewire('notifications.bell', key('bell-mobile'))
