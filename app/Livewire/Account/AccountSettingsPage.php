@@ -6,6 +6,7 @@ use App\Application\User\Queries\GetUserAbilitiesQuery;
 use App\Application\User\UseCases\ChangeUserPassword;
 use App\Infrastructure\Persistence\Eloquent\Models\User;
 use App\Notifications\EmailVerificationCodeNotification;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
@@ -238,10 +239,15 @@ class AccountSettingsPage extends Component
 
         // Verification successful! Update email & mark verified
         $targetEmail = $cached['email'];
-        $user->update([
+        $user->forceFill([
             'email' => $targetEmail,
             'email_verified_at' => now(),
-        ]);
+        ])->save();
+
+        $user->refresh();
+        Auth::setUser($user);
+
+        event(new Verified($user));
 
         Cache::forget('email_change_otp:' . $user->id);
 

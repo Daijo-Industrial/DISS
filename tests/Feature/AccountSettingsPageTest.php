@@ -93,9 +93,10 @@ class AccountSettingsPageTest extends TestCase
 
     public function test_submitting_correct_otp_updates_email()
     {
-        $user = User::factory()->create([
+        $user = User::factory()->unverified()->create([
             'email' => 'old@example.com',
         ]);
+        $this->assertNull($user->email_verified_at);
 
         // Mock cached OTP
         Cache::put('email_change_otp:' . $user->id, [
@@ -222,5 +223,34 @@ class AccountSettingsPageTest extends TestCase
         Notification::assertSentOnDemand(EmailVerificationCodeNotification::class, function ($notification, $channels, $notifiable) {
             return $notifiable->routes['mail'] === 'unverified@example.com';
         });
+    }
+
+    public function test_unverified_user_verifying_current_email_via_otp_updates_verified_status()
+    {
+        $user = User::factory()->unverified()->create([
+            'email' => 'active@example.com',
+        ]);
+        $this->assertNull($user->email_verified_at);
+
+        // Mock cached OTP for current email
+        Cache::put('email_change_otp:' . $user->id, [
+            'email' => 'active@example.com',
+            'code' => '998877',
+            'attempts' => 0,
+            'resend_allowed_at' => now()->addSeconds(60)->timestamp,
+        ], now()->addMinutes(15));
+
+        Livewire::actingAs($user)
+            ->test(AccountSettingsPage::class)
+            ->set('emailOtp', '998877')
+            ->call('confirmEmailChange')
+            ->assertHasNoErrors()
+            ->assertSet('showEmailOtpModal', false)
+            ->assertSee('Verified')
+            ->assertDontSee('Verify now');
+
+        $user->refresh();
+        $this->assertEquals('active@example.com', $user->email);
+        $this->assertNotNull($user->email_verified_at);
     }
 }
