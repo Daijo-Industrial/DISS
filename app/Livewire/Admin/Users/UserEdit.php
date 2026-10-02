@@ -9,29 +9,45 @@ use App\Domain\Employee\Repositories\EmployeeRepository;
 use App\Domain\User\Repositories\UserRepository;
 use App\Infrastructure\Common\PermissionRegistry;
 use App\Infrastructure\Persistence\Eloquent\Models\User as EloquentUser;
+use App\Models\UserPageVisit;
 use App\Presentation\Http\Requests\UserRequest;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Spatie\Permission\Models\Role;
 
 class UserEdit extends Component
 {
     public int $editingId;
+
     public string $name = '';
+
     public string $email = '';
+
     public string $password = '';
+
     public string $password_confirmation = '';
+
     public bool $active = true;
+
+    public ?\DateTimeInterface $emailVerifiedAt = null;
+
+    public ?\DateTimeInterface $createdAt = null;
 
     /** @var string[] */
     public array $selectedRoles = [];
+
     public array $availableRoles = [];
-    
+
     public array $originalDirectPermissions = [];
+
     public array $selectedDirectPermissions = [];
-    
+
     public ?int $employeeId = null;
+
     public string $employeeSearch = '';
+
     public array $employeeOptions = [];
+
     public ?string $selectedEmployeeLabel = null;
 
     protected array $roleDescriptions = [];
@@ -52,6 +68,8 @@ class UserEdit extends Component
         $this->email = (string) $user->email();
         $this->active = $user->isActive();
         $this->selectedRoles = $user->roles();
+        $this->emailVerifiedAt = $user->emailVerifiedAt();
+        $this->createdAt = $user->createdAt();
         $this->employeeId = method_exists($user, 'employeeId') ? $user->employeeId() : null;
 
         if ($this->employeeId) {
@@ -114,6 +132,7 @@ class UserEdit extends Component
         $term = trim($this->employeeSearch);
         if ($term === '') {
             $this->employeeOptions = [];
+
             return;
         }
 
@@ -132,7 +151,9 @@ class UserEdit extends Component
     public function selectEmployee(int $employeeId): void
     {
         $option = collect($this->employeeOptions)->firstWhere('id', $employeeId);
-        if (! $option) return;
+        if (! $option) {
+            return;
+        }
 
         $this->employeeId = $option['id'];
         $this->selectedEmployeeLabel = sprintf('%s - %s (%s)', $option['nik'], $option['name'], $option['branch'] ?? '-');
@@ -154,11 +175,11 @@ class UserEdit extends Component
         $this->validate();
 
         $dto = new UserData(
-            name: $this->name, 
-            email: $this->email, 
-            password: ! empty($this->password) ? $this->password : null, 
-            roles: $this->selectedRoles, 
-            active: $this->active, 
+            name: $this->name,
+            email: $this->email,
+            password: ! empty($this->password) ? $this->password : null,
+            roles: $this->selectedRoles,
+            active: $this->active,
             employeeId: $this->employeeId
         );
 
@@ -166,6 +187,7 @@ class UserEdit extends Component
             $updateUser->execute($this->editingId, $dto);
         } catch (\DomainException $e) {
             $this->addError('email', $e->getMessage());
+
             return;
         }
 
@@ -178,8 +200,47 @@ class UserEdit extends Component
         $this->redirectRoute('admin.users.index');
     }
 
+    #[Computed]
+    public function topVisitedPages(): array
+    {
+        return UserPageVisit::query()
+            ->where('user_id', $this->editingId)
+            ->orderByDesc('visit_count')
+            ->limit(10)
+            ->get()
+            ->map(function (UserPageVisit $visit) {
+                $parts = explode('.', $visit->route_name);
+                $module = ucfirst(str_replace(['-', '_'], ' ', $parts[0] ?? $visit->route_name));
+                $action = isset($parts[1]) ? ucfirst(str_replace(['-', '_'], ' ', $parts[1])) : 'Overview';
+
+                return [
+                    'route_name' => $visit->route_name,
+                    'module' => $module,
+                    'action' => $action,
+                    'visit_count' => (int) $visit->visit_count,
+                    'last_visited_at' => $visit->last_visited_at,
+                ];
+            })
+            ->toArray();
+    }
+
+    #[Computed]
+    public function visitStats(): array
+    {
+        $visits = UserPageVisit::query()->where('user_id', $this->editingId);
+
+        return [
+            'total_visits' => (int) $visits->sum('visit_count'),
+            'last_visited_at' => $visits->max('last_visited_at'),
+            'distinct_routes' => (int) $visits->count(),
+        ];
+    }
+
     public function render()
     {
-        return view('livewire.admin.users.user-edit');
+        return view('livewire.admin.users.user-edit', [
+            'topVisitedPages' => $this->topVisitedPages,
+            'visitStats' => $this->visitStats,
+        ]);
     }
 }

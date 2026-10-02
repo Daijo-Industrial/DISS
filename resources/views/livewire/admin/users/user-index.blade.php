@@ -34,7 +34,20 @@
                     class="flex h-9 w-full rounded-md border border-slate-200 bg-transparent py-1 pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-slate-950 transition-colors placeholder:text-slate-500"
                     placeholder="Search users by name, email, or role...">
             </div>
-            <div class="flex items-center gap-4 w-full sm:w-auto">
+            <div class="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+                @if ($dormantCount > 0)
+                    <button type="button" wire:click="$toggle('onlyDormant')"
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer {{ $onlyDormant ? 'bg-amber-500 text-white border-amber-600 shadow-xs ring-2 ring-amber-400/20' : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100/80' }}">
+                        <svg class="w-3.5 h-3.5 {{ $onlyDormant ? 'text-white' : 'text-amber-500' }}" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                        </svg>
+                        <span>{{ $dormantCount }} Dormant (&gt;30d)</span>
+                        @if ($onlyDormant)
+                            <span class="ml-0.5 text-white/80 hover:text-white">&times;</span>
+                        @endif
+                    </button>
+                @endif
+
                 <label class="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" wire:model.live="onlyActive" class="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-950">
                     <span class="text-sm font-medium text-slate-700">Active Only</span>
@@ -74,12 +87,44 @@
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
-                                    <div class="h-8 w-8 flex-shrink-0 rounded-md bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-xs border border-slate-200">
+                                    <div class="h-9 w-9 flex-shrink-0 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-xs border border-slate-200/80">
                                         {{ substr($user->name, 0, 1) }}
                                     </div>
-                                    <div>
-                                        <div class="font-semibold text-slate-900">{{ $user->name }}</div>
-                                        <div class="text-xs text-slate-500">{{ $user->email }}</div>
+                                    <div class="space-y-1">
+                                        <div class="font-semibold text-slate-900 leading-tight">{{ $user->name }}</div>
+                                        <div class="text-xs text-slate-500 font-mono">{{ $user->email }}</div>
+                                        <div class="flex items-center gap-2 pt-0.5 flex-wrap">
+                                            {{-- Email Verification Badge --}}
+                                            @if ($user->emailVerifiedAt)
+                                                <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60" title="Verified at {{ $user->emailVerifiedAt->format('Y-m-d H:i:s') }}">
+                                                    <svg class="w-3 h-3 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                                    </svg>
+                                                    Verified {{ $user->emailVerifiedAt->format('M d, Y') }}
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60">
+                                                    Unverified
+                                                </span>
+                                            @endif
+
+                                            {{-- Activity Indicator --}}
+                                            @if ($user->lastVisitedAt)
+                                                @php
+                                                    $isDormant = $user->active && $user->lastVisitedAt < now()->subDays(30);
+                                                @endphp
+                                                <span class="text-[10px] {{ $isDormant ? 'text-amber-600 font-medium' : 'text-slate-400' }}" title="Last visited {{ $user->lastVisitedAt->format('Y-m-d H:i:s') }}">
+                                                    • {{ $isDormant ? 'Inactive' : 'Active' }} {{ \Illuminate\Support\Carbon::parse($user->lastVisitedAt)->diffForHumans() }}
+                                                </span>
+                                            @else
+                                                @php
+                                                    $isDormant = $user->active && $user->createdAt && $user->createdAt <= now()->subDays(30);
+                                                @endphp
+                                                <span class="text-[10px] {{ $isDormant ? 'text-amber-600 font-semibold' : 'text-slate-400 italic' }}">
+                                                    • {{ $isDormant ? 'Dormant (Never visited)' : 'Never active' }}
+                                                </span>
+                                            @endif
+                                        </div>
                                     </div>
                                 </div>
                             </td>

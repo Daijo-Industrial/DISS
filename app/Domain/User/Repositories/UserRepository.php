@@ -16,8 +16,11 @@ interface UserRepository
     public function paginate(
         int $perPage,
         ?string $search = null,
-        ?bool $onlyActive = null
+        ?bool $onlyActive = null,
+        ?bool $onlyDormant = null
     ): LengthAwarePaginator;
+
+    public function countDormantUsers(int $days = 30): int;
 
     public function create(User $user, string $plainPassword): User;
 
