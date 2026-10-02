@@ -19,6 +19,12 @@
 - **Development Invariants**:
   - **No Production Frontend Builds**: Do NOT run `npm run build` in the development environment; Vite HMR is running actively.
   - **Targeted Code Styling**: NEVER run `vendor/bin/pint` without specific file arguments. The legacy repository contains hundreds of unformatted files and will time out; always pass specific modified file paths.
+  - **Testing Invariants**:
+    - **Livewire Ampersand Escaping**: Pass `escape: false` when testing strings containing literal `&` (e.g. `assertSee('Navigation & Usage', escape: false)`).
+    - **Indonesian Locale**: `config('app.locale')` is `'id'`. `Carbon::diffForHumans()` produces Indonesian strings; evaluate dynamically in tests instead of hardcoding English.
+- **Admin Layout Standard**:
+  - **Directory vs Record Canvas**: `new.layouts.admin-settings` (with inner 260px category sidebar) is strictly for directory/index listings.
+  - **Edit & Create Canvas**: Entity edit and create views MUST extend `new.layouts.app` directly and wrap inside `max-w-6xl mx-auto` with a `← Back to <Module>` button, eliminating the double-sidebar penalty and accidental navigation away from unsaved data.
 - **Apple-Inspired Minimalist UI Standard**:
   - **Deference & Calmness**: Content precedes chrome. Avoid loud, stacked warning banners and aggressive alert colors; favor calm neutral cards (`slate-50/60`) and subtle status pills.
   - **Progressive Disclosure & Single Touchpoints**: Do not repeat action buttons across multiple headers. Place actionable triggers contextually where the user interacts with the data (e.g., inline next to the relevant input).
