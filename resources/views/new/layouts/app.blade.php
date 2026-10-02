@@ -96,40 +96,52 @@
 
 
     {{-- Mobile & Tablet sidebar drawer (< lg / < 1024px) --}}
-    <div class="lg:hidden" x-show="sidebarOpen" x-transition.opacity.duration.300ms x-cloak>
-        <div class="fixed inset-0 z-[70] bg-slate-950/60 backdrop-blur-sm" @click="sidebarOpen = false"></div>
+    <div class="relative z-[70] lg:hidden" x-show="sidebarOpen" role="dialog" aria-modal="true" x-cloak>
+        {{-- Snappy Backdrop Fade --}}
+        <div class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"
+            x-show="sidebarOpen"
+            x-transition:enter="transition-opacity ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition-opacity ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            @click="sidebarOpen = false"></div>
 
+        {{-- Snappy & Fast Slide-over Drawer Panel (200ms) --}}
         <aside
-            class="fixed inset-y-0 left-0 z-[80] flex w-[86vw] max-w-[340px] flex-col bg-white border-r border-slate-200/80 shadow-2xl"
-            x-show="sidebarOpen" x-transition:enter="transition ease-out duration-300 transform"
-            x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0"
-            x-transition:leave="transition ease-in duration-200 transform" x-transition:leave-start="translate-x-0"
+            class="fixed inset-y-0 left-0 z-[80] flex w-[86vw] max-w-[340px] flex-col bg-white border-r border-slate-200/80 shadow-2xl will-change-transform"
+            x-show="sidebarOpen"
+            x-transition:enter="transform transition ease-out duration-200"
+            x-transition:enter-start="-translate-x-full"
+            x-transition:enter-end="translate-x-0"
+            x-transition:leave="transform transition ease-in duration-150"
+            x-transition:leave-start="translate-x-0"
             x-transition:leave-end="-translate-x-full"
             @touchstart="touchStartX = $event.touches[0].clientX"
             @touchend="if ($event.changedTouches[0].clientX - touchStartX < -50) sidebarOpen = false">
             {{-- Header --}}
-            <div class="flex items-center justify-between h-16 px-5 border-b border-slate-100 bg-slate-50/50 shrink-0">
-                <a href="{{ url('/') }}" class="flex items-center gap-3">
+            <div class="flex items-center justify-between h-16 px-4 sm:px-5 border-b border-slate-100 bg-white/80 backdrop-blur-sm shrink-0">
+                <a href="{{ url('/') }}" class="flex items-center gap-3 group">
                     <div
-                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 shadow-md shadow-blue-200 shrink-0">
+                        class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 shadow-md shadow-blue-200/60 transition-transform duration-200 group-hover:scale-105 shrink-0">
                         <img class="h-5 w-5 brightness-0 invert" src="{{ asset('image/Asset 1.svg') }}" alt="logo">
                     </div>
-                    <div class="flex flex-col justify-center">
-                        <span class="text-[15px] font-extrabold text-slate-900 leading-tight">
+                    <div class="flex flex-col justify-center min-w-0">
+                        <span class="text-[15px] font-extrabold text-slate-900 leading-tight tracking-tight truncate">
                             {{ config('app.name') }}
                         </span>
-                        <span class="text-[9px] font-bold text-blue-600 uppercase tracking-widest leading-none">
+                        <span class="text-[9px] font-bold text-blue-600 uppercase tracking-widest leading-none mt-0.5">
                             {{ strtoupper($appAcronym) }} System
                         </span>
                     </div>
                 </a>
                 <button type="button"
-                    class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100/80 text-slate-400 hover:bg-rose-50 hover:text-rose-600 active:scale-95 transition-all duration-200"
+                    class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-slate-50/80 text-slate-400 hover:text-rose-600 hover:bg-rose-50/70 hover:border-rose-200 active:scale-95 transition-all duration-200 shadow-2xs group"
                     aria-label="Close menu"
                     @click="sidebarOpen = false">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12" />
+                    <svg class="h-5 w-5 text-slate-500 group-hover:text-rose-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
             </div>
@@ -178,18 +190,18 @@
                 <div class="flex items-center justify-between gap-2.5 px-0.5">
                     <button type="button"
                         @click="userMenuOpen = !userMenuOpen"
-                        class="flex items-center gap-2.5 min-w-0 flex-1 p-1 -m-1 rounded-xl hover:bg-slate-200/50 active:scale-[0.99] transition-all text-left group"
-                        :class="{ 'bg-slate-200/50': userMenuOpen }"
+                        class="flex items-center gap-3 min-w-0 flex-1 p-1.5 -m-1 rounded-xl hover:bg-slate-200/60 active:scale-[0.99] transition-all text-left group"
+                        :class="{ 'bg-slate-200/60': userMenuOpen }"
                         aria-label="Toggle user menu"
                         :aria-expanded="userMenuOpen">
-                        <div class="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 flex items-center justify-center text-white text-xs font-bold shadow-sm shadow-blue-200 shrink-0 group-hover:scale-105 transition-transform">
+                        <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 flex items-center justify-center text-white text-xs font-bold shadow-sm shadow-blue-200 shrink-0 group-hover:scale-105 transition-transform">
                             {{ strtoupper(mb_substr($initials, 0, 2)) }}
                         </div>
-                        <div class="min-w-0 flex-1">
-                            <p class="text-xs font-bold text-slate-900 truncate leading-tight group-hover:text-blue-600 transition-colors">{{ $user->name ?? 'User' }}</p>
-                            <p class="text-[10px] font-medium text-slate-400 truncate leading-tight mt-0.5">{{ $user->email ?? '' }}</p>
+                        <div class="min-w-0 flex-1 flex flex-col justify-center">
+                            <span class="block text-xs font-bold text-slate-900 truncate leading-tight group-hover:text-blue-600 transition-colors m-0 p-0">{{ $user->name ?? 'User' }}</span>
+                            <span class="block text-[11px] font-medium text-slate-400 truncate leading-tight mt-0.5 m-0 p-0">{{ $user->email ?? '' }}</span>
                         </div>
-                        <svg class="h-4 w-4 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 mr-1 shrink-0"
+                        <svg class="h-4 w-4 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 mr-0.5 shrink-0"
                             :class="userMenuOpen ? 'rotate-180 text-blue-600' : ''"
                             fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
