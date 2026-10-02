@@ -136,7 +136,7 @@
                             <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
                                 Full Name <span class="text-rose-500">*</span>
                             </label>
-                            <input type="text" wire:model.defer="name"
+                            <input type="text" wire:model="name"
                                 class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm text-slate-900 font-medium focus:bg-white focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 transition-all">
                             @error('name')
                                 <p class="mt-1.5 text-xs text-rose-600 font-medium">{{ $message }}</p>
@@ -149,7 +149,7 @@
                                 Email Address <span class="text-rose-500">*</span>
                             </label>
                             <div class="relative">
-                                <input type="email" wire:model.defer="email"
+                                <input type="email" wire:model="email"
                                     class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm text-slate-900 font-medium focus:bg-white focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 transition-all pr-24">
                                 <div class="absolute inset-y-0 right-3 flex items-center">
                                     @if ($user->email_verified_at && strtolower(trim($email)) === strtolower(trim($user->email)))
@@ -279,7 +279,7 @@
                         <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
                             Current Password <span class="text-rose-500">*</span>
                         </label>
-                        <input type="password" wire:model.defer="current_password"
+                        <input type="password" wire:model="current_password"
                             class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 transition-all">
                         @error('current_password')
                             <p class="mt-1.5 text-xs text-rose-600 font-medium">{{ $message }}</p>
@@ -292,7 +292,7 @@
                             <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
                                 New Password <span class="text-rose-500">*</span>
                             </label>
-                            <input type="password" wire:model.defer="password"
+                            <input type="password" wire:model="password"
                                 class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 transition-all">
                             @error('password')
                                 <p class="mt-1.5 text-xs text-rose-600 font-medium">{{ $message }}</p>
@@ -303,7 +303,7 @@
                             <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
                                 Confirm New Password <span class="text-rose-500">*</span>
                             </label>
-                            <input type="password" wire:model.defer="password_confirmation"
+                            <input type="password" wire:model="password_confirmation"
                                 class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm text-slate-900 focus:bg-white focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 transition-all">
                         </div>
                     </div>
@@ -574,7 +574,7 @@
                         </svg>
                     </div>
 
-                    <h3 class="text-lg font-black text-slate-900 tracking-tight">Verify Your New Email</h3>
+                    <h3 class="text-lg font-black text-slate-900 tracking-tight">{{ strtolower(trim($pendingEmail)) === strtolower(trim($user->email)) ? 'Verify Your Email Address' : 'Verify Your New Email' }}</h3>
                     <p class="text-xs text-slate-500 leading-relaxed">
                         We sent a 6-digit confirmation code to:
                         <br><strong class="font-mono text-slate-900 text-sm">{{ $pendingEmail }}</strong>
@@ -586,7 +586,7 @@
                         <label class="block text-center text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
                             Enter 6-Digit Code
                         </label>
-                        <input type="text" wire:model.defer="emailOtp" maxlength="6" autofocus
+                        <input type="text" wire:model="emailOtp" maxlength="6" autofocus
                             placeholder="123456"
                             class="w-full text-center text-2xl font-mono tracking-[0.5em] rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-3 focus:bg-white focus:border-slate-900 focus:outline-none focus:ring-4 focus:ring-slate-900/10 transition-all font-bold">
                         @error('emailOtp')
@@ -597,7 +597,7 @@
                     <div class="pt-2 space-y-2">
                         <button type="submit" wire:loading.attr="disabled"
                             class="w-full py-3 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold shadow-md shadow-slate-900/10 transition-all active:scale-98 disabled:opacity-50">
-                            <span wire:loading.remove wire:target="confirmEmailChange">Verify & Update Email</span>
+                            <span wire:loading.remove wire:target="confirmEmailChange">{{ strtolower(trim($pendingEmail)) === strtolower(trim($user->email)) ? 'Verify Email' : 'Verify & Update Email' }}</span>
                             <span wire:loading wire:target="confirmEmailChange">Verifying...</span>
                         </button>
 
