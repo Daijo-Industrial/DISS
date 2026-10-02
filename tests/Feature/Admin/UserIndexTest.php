@@ -8,6 +8,7 @@ use App\Livewire\Admin\Users\UserIndex;
 use App\Models\UserPageVisit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -169,6 +170,7 @@ class UserIndexTest extends TestCase
             ->test(UserEdit::class, ['userId' => $targetUser->id])
             ->assertStatus(200)
             ->assertSee('Edit User: Tracked User')
+            ->set('tab', 'activity')
             ->assertSee('Navigation & Usage', escape: false)
             ->assertSee('57 Total Page Visits')
             ->assertSee('vehicles.index')
@@ -176,5 +178,126 @@ class UserIndexTest extends TestCase
             ->assertSee('45x')
             ->assertSee('purchase.orders')
             ->assertSee('12x');
+    }
+
+    public function test_user_edit_tab_switching_works()
+    {
+        $targetUser = User::factory()->create([
+            'name' => 'Tab Switcher',
+            'email' => 'tab@example.com',
+        ]);
+
+        Livewire::actingAs($this->admin)
+            ->test(UserEdit::class, ['userId' => $targetUser->id])
+            ->assertSet('tab', 'profile')
+            ->call('setTab', 'roles')
+            ->assertSet('tab', 'roles')
+            ->assertSee('Role-Based Access Control')
+            ->call('setTab', 'activity')
+            ->assertSet('tab', 'activity')
+            ->assertSee('Navigation & Usage Profile', escape: false)
+            ->call('setTab', 'security')
+            ->assertSet('tab', 'security')
+            ->assertSee('Administrative Email Verification')
+            ->call('setTab', 'invalid_tab')
+            ->assertSet('tab', 'security');
+    }
+
+    public function test_user_edit_saves_profile_independently()
+    {
+        $targetUser = User::factory()->create([
+            'name' => 'Old Name',
+            'email' => 'old@example.com',
+        ]);
+
+        Livewire::actingAs($this->admin)
+            ->test(UserEdit::class, ['userId' => $targetUser->id])
+            ->set('name', 'New Updated Name')
+            ->set('email', 'newemail@example.com')
+            ->call('saveProfile')
+            ->assertHasNoErrors();
+
+        $targetUser->refresh();
+        $this->assertEquals('New Updated Name', $targetUser->name);
+        $this->assertEquals('newemail@example.com', $targetUser->email);
+    }
+
+    public function test_user_edit_saves_roles_independently()
+    {
+        Role::findOrCreate('purchaser', 'web');
+
+        $targetUser = User::factory()->create([
+            'name' => 'Role Candidate',
+            'email' => 'rolecandidate@example.com',
+        ]);
+
+        Livewire::actingAs($this->admin)
+            ->test(UserEdit::class, ['userId' => $targetUser->id])
+            ->set('tab', 'roles')
+            ->set('selectedRoles', ['purchaser'])
+            ->call('saveRoles')
+            ->assertHasNoErrors();
+
+        $targetUser->refresh();
+        $this->assertTrue($targetUser->hasRole('purchaser'));
+    }
+
+    public function test_user_edit_changes_password_independently()
+    {
+        $targetUser = User::factory()->create([
+            'name' => 'Password Reset User',
+            'email' => 'pwreset@example.com',
+            'password' => bcrypt('old-password-123'),
+        ]);
+
+        Livewire::actingAs($this->admin)
+            ->test(UserEdit::class, ['userId' => $targetUser->id])
+            ->set('tab', 'security')
+            ->set('password', 'new-secure-password-456')
+            ->set('password_confirmation', 'new-secure-password-456')
+            ->call('savePassword')
+            ->assertHasNoErrors()
+            ->assertSet('password', '')
+            ->assertSet('password_confirmation', '');
+
+        $targetUser->refresh();
+        $this->assertTrue(Hash::check('new-secure-password-456', $targetUser->password));
+    }
+
+    public function test_user_edit_admin_can_toggle_email_verification()
+    {
+        $unverifiedUser = User::factory()->unverified()->create([
+            'name' => 'Unverified Target',
+            'email' => 'unverifiedtarget@example.com',
+        ]);
+
+        $component = Livewire::actingAs($this->admin)
+            ->test(UserEdit::class, ['userId' => $unverifiedUser->id])
+            ->set('tab', 'security');
+
+        // Toggle to verified
+        $component->call('toggleEmailVerification');
+        $unverifiedUser->refresh();
+        $this->assertNotNull($unverifiedUser->email_verified_at);
+
+        // Toggle back to unverified
+        $component->call('toggleEmailVerification');
+        $unverifiedUser->refresh();
+        $this->assertNull($unverifiedUser->email_verified_at);
+    }
+
+    public function test_user_edit_page_renders_with_app_layout_and_no_double_sidebar()
+    {
+        $targetUser = User::factory()->create([
+            'name' => 'Page User',
+            'email' => 'pageuser@example.com',
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->get(route('admin.users.edit', $targetUser->id));
+
+        $response->assertStatus(200);
+        $response->assertSee('Edit User: Page User');
+        $response->assertSee('Back to Users');
     }
 }

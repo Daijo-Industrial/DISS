@@ -4,6 +4,7 @@ namespace App\Livewire\Admin\Users;
 
 use App\Application\Employee\UseCases\SearchEmployees;
 use App\Application\User\DTOs\UserData;
+use App\Application\User\UseCases\ChangeUserPassword;
 use App\Application\User\UseCases\UpdateUser;
 use App\Domain\Employee\Repositories\EmployeeRepository;
 use App\Domain\User\Repositories\UserRepository;
@@ -11,13 +12,19 @@ use App\Infrastructure\Common\PermissionRegistry;
 use App\Infrastructure\Persistence\Eloquent\Models\User as EloquentUser;
 use App\Models\UserPageVisit;
 use App\Presentation\Http\Requests\UserRequest;
+use Carbon\Carbon;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Spatie\Permission\Models\Role;
 
 class UserEdit extends Component
 {
     public int $editingId;
+
+    #[Url(history: true)]
+    public string $tab = 'profile';
 
     public string $name = '';
 
@@ -85,6 +92,14 @@ class UserEdit extends Component
             ? $eloquent->getDirectPermissions()->pluck('name')->toArray()
             : [];
         $this->selectedDirectPermissions = $this->originalDirectPermissions;
+    }
+
+    public function setTab(string $tab): void
+    {
+        $allowed = ['profile', 'roles', 'activity', 'security'];
+        if (in_array($tab, $allowed, true)) {
+            $this->tab = $tab;
+        }
     }
 
     public function getGroupedRolesProperty(): array
@@ -169,6 +184,103 @@ class UserEdit extends Component
         $this->employeeOptions = [];
     }
 
+    public function saveProfile(UpdateUser $updateUser): void
+    {
+        $this->authorize('user.update');
+        $this->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => [
+                'required',
+                'email',
+                Rule::unique('users', 'email')->ignore($this->editingId),
+            ],
+            'employeeId' => ['nullable', 'integer', 'exists:employees,id'],
+            'active' => ['boolean'],
+        ], UserRequest::messagesArray());
+
+        $dto = new UserData(
+            name: $this->name,
+            email: $this->email,
+            password: null,
+            roles: $this->selectedRoles,
+            active: $this->active,
+            employeeId: $this->employeeId
+        );
+
+        try {
+            $updateUser->execute($this->editingId, $dto);
+        } catch (\DomainException $e) {
+            $this->addError('email', $e->getMessage());
+
+            return;
+        }
+
+        session()->flash('status', 'User profile updated successfully.');
+    }
+
+    public function saveRoles(UpdateUser $updateUser): void
+    {
+        $this->authorize('user.update');
+        $this->validate([
+            'selectedRoles' => ['nullable', 'array'],
+            'selectedRoles.*' => ['string'],
+        ]);
+
+        $dto = new UserData(
+            name: $this->name,
+            email: $this->email,
+            password: null,
+            roles: $this->selectedRoles,
+            active: $this->active,
+            employeeId: $this->employeeId
+        );
+
+        $updateUser->execute($this->editingId, $dto);
+
+        $eloquent = EloquentUser::find($this->editingId);
+        if ($eloquent) {
+            $eloquent->syncPermissions($this->selectedDirectPermissions);
+        }
+
+        session()->flash('status', 'Roles and permissions updated successfully.');
+    }
+
+    public function savePassword(ChangeUserPassword $changeUserPassword): void
+    {
+        $this->authorize('user.update');
+        $this->validate([
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ], UserRequest::messagesArray());
+
+        $changeUserPassword->execute($this->editingId, $this->password);
+
+        $this->password = '';
+        $this->password_confirmation = '';
+
+        session()->flash('status', 'Password updated successfully.');
+    }
+
+    public function toggleEmailVerification(): void
+    {
+        $this->authorize('user.update');
+        $eloquent = EloquentUser::find($this->editingId);
+        if (! $eloquent) {
+            return;
+        }
+
+        if ($eloquent->email_verified_at) {
+            $eloquent->email_verified_at = null;
+            $eloquent->save();
+            $this->emailVerifiedAt = null;
+            session()->flash('status', 'Email marked as unverified.');
+        } else {
+            $eloquent->email_verified_at = now();
+            $eloquent->save();
+            $this->emailVerifiedAt = $eloquent->email_verified_at;
+            session()->flash('status', 'Email verified successfully.');
+        }
+    }
+
     public function save(UpdateUser $updateUser): void
     {
         $this->authorize('user.update');
@@ -198,6 +310,21 @@ class UserEdit extends Component
 
         session()->flash('success', 'User updated successfully.');
         $this->redirectRoute('admin.users.index');
+    }
+
+    #[Computed]
+    public function isDormant(): bool
+    {
+        if (! $this->active) {
+            return false;
+        }
+
+        $lastVisited = $this->visitStats['last_visited_at'];
+        if ($lastVisited) {
+            return Carbon::parse($lastVisited)->lt(now()->subDays(30));
+        }
+
+        return $this->createdAt ? Carbon::parse($this->createdAt)->lt(now()->subDays(30)) : false;
     }
 
     #[Computed]
@@ -241,6 +368,7 @@ class UserEdit extends Component
         return view('livewire.admin.users.user-edit', [
             'topVisitedPages' => $this->topVisitedPages,
             'visitStats' => $this->visitStats,
+            'isDormant' => $this->isDormant,
         ]);
     }
 }
