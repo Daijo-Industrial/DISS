@@ -18,7 +18,7 @@
                     placeholder="Search Employee (NIK or Name)" autocomplete="off">
                 <label for="employeeSearch"
                     class="absolute left-3 -top-2.5 bg-white px-1 text-xs font-medium text-slate-500 transition-all peer-placeholder-shown:top-2 peer-placeholder-shown:text-sm peer-focus:-top-2.5 peer-focus:text-xs peer-focus:text-slate-900">
-                    Search Employee (NIK or Name) <span class="text-red-500">*</span>
+                    Search Employee (NIK or Name) <span class="text-xs text-slate-400 font-normal">(Optional)</span>
                 </label>
             </div>
             @if ($selectedEmployeeLabel)
