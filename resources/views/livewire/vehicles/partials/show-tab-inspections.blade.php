@@ -88,8 +88,11 @@
                                     {{ $ins->severity_label }}
                                 </span>
 
-                                <span class="text-xs text-slate-600 truncate max-w-[140px] sm:max-w-none">
-                                    oleh <strong>{{ $ins->driver_name }}</strong>
+                                <span class="text-xs text-slate-600 truncate max-w-[200px] sm:max-w-none">
+                                    Driver: <strong>{{ $ins->driver_name }}</strong>
+                                    @if ($ins->created_by)
+                                        <span class="text-slate-400 font-normal">• Dibuat: <strong>{{ $ins->created_by }}</strong></span>
+                                    @endif
                                 </span>
 
                                 <span class="text-[11px] text-slate-400 shrink-0">

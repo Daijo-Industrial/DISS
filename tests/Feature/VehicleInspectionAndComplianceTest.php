@@ -106,6 +106,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
         // 1. Perform Check-out (Pre-trip)
         Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
             ->set('driver_name', 'Ahmad Supir')
+            ->set('created_by', 'Petugas GA')
             ->set('odometer', 50100)
             ->set('fuel_percentage', 100)
             ->set('trip_purpose', 'Kirim komponen ke pabrik Cikarang')
@@ -117,12 +118,14 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $this->assertEquals(50100, $this->vehicle->odometer);
         $this->assertTrue($this->vehicle->is_out_on_trip);
         $this->assertNotNull($this->vehicle->activeCheckOut);
+        $this->assertEquals('Petugas GA', $this->vehicle->activeCheckOut->created_by);
 
         $checkOutInspection = $this->vehicle->activeCheckOut;
 
         // 2. Perform Check-in (Post-trip)
         Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_in'])
             ->set('driver_name', 'Ahmad Supir')
+            ->set('created_by', 'Petugas Malam')
             ->set('odometer', 50250) // 150 km traveled
             ->set('fuel_percentage', 75)
             ->set('severity', 'none')
@@ -133,9 +136,10 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $this->assertEquals(50250, $this->vehicle->odometer);
         $this->assertFalse($this->vehicle->is_out_on_trip);
 
-        // Verify trip distance calculation
+        // Verify trip distance calculation and created_by
         $latestInspection = $this->vehicle->inspections()->latest()->first();
         $this->assertEquals('check_in', $latestInspection->inspection_type);
+        $this->assertEquals('Petugas Malam', $latestInspection->created_by);
         $this->assertEquals(150, $latestInspection->trip_distance);
         $this->assertEquals($checkOutInspection->id, $latestInspection->parent_inspection_id);
     }
@@ -144,6 +148,8 @@ class VehicleInspectionAndComplianceTest extends TestCase
     {
         Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
             ->set('driver_name', 'Ahmad Supir')
+            ->set('created_by', 'Petugas Bengkel')
+            ->set('trip_purpose', 'Uji kelayakan jalan')
             ->set('odometer', 50300)
             ->set('fuel_percentage', 100)
             ->set('checklist.brake_lights.status', 'issue')
@@ -167,6 +173,8 @@ class VehicleInspectionAndComplianceTest extends TestCase
 
         Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
             ->set('driver_name', 'Ahmad Supir')
+            ->set('created_by', 'Petugas Lapangan')
+            ->set('trip_purpose', 'Operasional antar divisi')
             ->set('odometer', 50400)
             ->set('fuel_percentage', 90)
             ->set('checklist.headlights.status', 'issue')
@@ -183,6 +191,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $inspection = $this->vehicle->inspections()->latest()->first();
         $this->assertNotNull($inspection);
         $this->assertEquals('minor', $inspection->severity);
+        $this->assertEquals('Petugas Lapangan', $inspection->created_by);
         $this->assertNull($inspection->defect_notes);
 
         $checklistResults = $inspection->checklist_results;
@@ -828,6 +837,8 @@ class VehicleInspectionAndComplianceTest extends TestCase
         Livewire::actingAs($inspector)
             ->test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
             ->set('driver_name', 'Inspector Budi')
+            ->set('created_by', 'Inspector Budi')
+            ->set('trip_purpose', 'Patroli area industri')
             ->set('odometer', 50600)
             ->set('fuel_percentage', 95)
             ->set('severity', 'none')
@@ -905,5 +916,69 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->assertSee('Rp 1.750.000')
             ->assertSee(__('fleet.show.btn_add_service'))
             ->assertSee(__('fleet.show.btn_edit_vehicle'));
+    }
+
+    public function test_p2h_validation_requires_trip_purpose_and_created_by(): void
+    {
+        // 1. Missing trip_purpose and created_by should fail step 1 validation
+        Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
+            ->set('driver_name', 'Bambang supriyanto')
+            ->set('created_by', '')
+            ->set('trip_purpose', '')
+            ->set('odometer', 50100)
+            ->set('fuel_percentage', 100)
+            ->call('nextStep')
+            ->assertHasErrors(['created_by', 'trip_purpose'])
+            ->assertSet('currentStep', 1);
+
+        // 2. Fails save if missing trip_purpose or created_by
+        Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
+            ->set('driver_name', 'Bambang supriyanto')
+            ->set('created_by', '')
+            ->set('trip_purpose', '')
+            ->set('odometer', 50100)
+            ->set('fuel_percentage', 100)
+            ->call('save')
+            ->assertHasErrors(['created_by', 'trip_purpose']);
+    }
+
+    public function test_driver_name_and_created_by_support_custom_and_configured_values(): void
+    {
+        $configuredDrivers = config('fleet.drivers');
+        $this->assertContains('Bambang supriyanto', $configuredDrivers);
+        $this->assertContains('Khumedi', $configuredDrivers);
+        $this->assertContains('Endang', $configuredDrivers);
+
+        // 1. Can submit using a configured driver name
+        Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
+            ->set('driver_name', 'Bambang supriyanto')
+            ->set('created_by', 'PIC Satpam')
+            ->set('trip_purpose', 'Antar barang divisi produksi ke Plant 2')
+            ->set('odometer', 50200)
+            ->set('fuel_percentage', 85)
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('vehicles.index'));
+
+        $inspection = $this->vehicle->inspections()->latest()->first();
+        $this->assertEquals('Bambang supriyanto', $inspection->driver_name);
+        $this->assertEquals('PIC Satpam', $inspection->created_by);
+        $this->assertEquals('Antar barang divisi produksi ke Plant 2', $inspection->trip_purpose);
+
+        // 2. Can submit with a custom typed driver name and custom created_by
+        Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_in'])
+            ->set('driver_name', 'Supir Rental Baru')
+            ->set('created_by', 'Inspektor Khusus')
+            ->set('trip_purpose', 'Kembali dari Plant 2')
+            ->set('odometer', 50350)
+            ->set('fuel_percentage', 60)
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('vehicles.index'));
+
+        $checkIn = $this->vehicle->inspections()->latest()->first();
+        $this->assertEquals('check_in', $checkIn->inspection_type);
+        $this->assertEquals('Supir Rental Baru', $checkIn->driver_name);
+        $this->assertEquals('Inspektor Khusus', $checkIn->created_by);
     }
 }

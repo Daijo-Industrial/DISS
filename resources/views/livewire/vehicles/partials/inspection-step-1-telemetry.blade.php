@@ -18,16 +18,41 @@
                 </label>
                 <div class="flex items-center rounded-2xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs focus-within:bg-white focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-100 transition">
                     <i class="bi bi-person text-slate-400 mr-2.5 text-base"></i>
-                    <input type="text" wire:model.defer="driver_name" placeholder="Masukkan nama supir / pengemudi"
+                    <input type="text" list="driver-suggestions" wire:model.defer="driver_name" placeholder="{{ __('fleet.inspection.driver_name_placeholder') }}" autocomplete="off"
                         class="w-full border-0 p-0 text-xs font-medium text-slate-900 bg-transparent focus:outline-none">
+                    <datalist id="driver-suggestions">
+                        @foreach ($drivers as $d)
+                            <option value="{{ $d }}"></option>
+                        @endforeach
+                    </datalist>
                 </div>
                 @error('driver_name')
                     <p class="mt-1 text-[11px] text-rose-600 font-semibold">{{ $message }}</p>
                 @enderror
             </div>
 
-            {{-- Odometer Input --}}
+            {{-- Created By (Inspector / PIC) --}}
             <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                    {{ __('fleet.inspection.created_by') }} <span class="text-rose-500">*</span>
+                </label>
+                <div class="flex items-center rounded-2xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs focus-within:bg-white focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-100 transition">
+                    <i class="bi bi-person-check text-slate-400 mr-2.5 text-base"></i>
+                    <input type="text" list="inspector-suggestions" wire:model.defer="created_by" placeholder="{{ __('fleet.inspection.created_by_placeholder') }}" autocomplete="off"
+                        class="w-full border-0 p-0 text-xs font-medium text-slate-900 bg-transparent focus:outline-none">
+                    <datalist id="inspector-suggestions">
+                        @foreach ($inspectors as $insp)
+                            <option value="{{ $insp }}"></option>
+                        @endforeach
+                    </datalist>
+                </div>
+                @error('created_by')
+                    <p class="mt-1 text-[11px] text-rose-600 font-semibold">{{ $message }}</p>
+                @enderror
+            </div>
+
+            {{-- Odometer Input --}}
+            <div class="sm:col-span-2">
                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">
                     {{ $type === 'check_in' ? __('fleet.inspection.return_odometer') : __('fleet.inspection.start_odometer') }} <span class="text-rose-500">*</span>
                 </label>
@@ -103,8 +128,7 @@
         {{-- Trip Purpose / Destination --}}
         <div>
             <label class="block text-xs font-semibold text-slate-700 mb-1.5">
-                {{ __('fleet.inspection.trip_purpose') }}
-                <span class="text-slate-400 font-normal">({{ __('fleet.common.optional') }})</span>
+                {{ __('fleet.inspection.trip_purpose') }} <span class="text-rose-500">*</span>
             </label>
             <div class="flex items-center rounded-2xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs focus-within:bg-white focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-100 transition">
                 <i class="bi bi-geo-alt text-slate-400 mr-2.5 text-base"></i>
