@@ -1,8 +1,8 @@
-<div class="relative" x-data="{ open: false }" @click.outside="open = false"
+<div class="relative shrink-0" x-data="{ open: false }" @click.outside="open = false"
     x-on:notifs-marked-all-read.window="window.__notifChannel?.postMessage({ type: 'MARK_ALL_READ' })">
     {{-- Bell button --}}
     <button type="button" @click="open = !open"
-        class="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100 transition-all duration-300 active:scale-95">
+        class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100 transition-all duration-300 active:scale-95">
 
         {{-- Bell icon --}}
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"
@@ -29,8 +29,8 @@
         x-transition:leave="transition ease-in duration-150"
         x-transition:leave-start="opacity-100 scale-100 translate-y-0"
         x-transition:leave-end="opacity-0 scale-95 translate-y-2"
-        class="absolute right-[-60px] sm:right-0 mt-3 w-[calc(100vw-48px)] sm:w-80 rounded-2xl bg-white/90 backdrop-blur-xl
-                border border-slate-200/60 shadow-2xl shadow-blue-900/10 p-2 z-[60] ring-1 ring-black/5 origin-top sm:origin-top-right">
+        class="absolute right-0 mt-3 w-[calc(100vw-24px)] sm:w-80 rounded-2xl bg-white/90 backdrop-blur-xl
+                border border-slate-200/60 shadow-2xl shadow-blue-900/10 p-2 z-[60] ring-1 ring-black/5 origin-top-right">
 
         {{-- Header --}}
         <div class="flex items-center justify-between px-3 py-3 border-b border-slate-100 mb-1">
