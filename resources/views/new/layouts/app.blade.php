@@ -96,7 +96,7 @@
 
 
     {{-- Mobile & Tablet sidebar drawer (< lg / < 1024px) --}}
-    <div class="relative z-[70] lg:hidden" x-show="sidebarOpen" role="dialog" aria-modal="true" x-cloak>
+    <div class="relative z-[140] lg:hidden" x-show="sidebarOpen" role="dialog" aria-modal="true" x-cloak>
         {{-- Snappy Backdrop Fade --}}
         <div class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"
             x-show="sidebarOpen"
@@ -108,9 +108,9 @@
             x-transition:leave-end="opacity-0"
             @click="sidebarOpen = false"></div>
 
-        {{-- Snappy & Fast Slide-over Drawer Panel (200ms) --}}
+        {{-- Mobile Fullscreen & Tablet Drawer Menu (exclusively < lg) --}}
         <aside
-            class="fixed inset-y-0 left-0 z-[80] flex w-[86vw] max-w-[340px] flex-col bg-white border-r border-slate-200/80 shadow-2xl will-change-transform"
+            class="fixed inset-y-0 left-0 z-[150] flex w-full sm:w-72 flex-col bg-white border-r border-slate-200/80 shadow-2xl will-change-transform"
             x-show="sidebarOpen"
             x-transition:enter="transform transition ease-out duration-200"
             x-transition:enter-start="-translate-x-full"
@@ -155,95 +155,95 @@
             <div class="border-t border-slate-200/80 p-3 bg-slate-50/80 shrink-0"
                 x-data="{ userMenuOpen: false }"
                 @click.outside="userMenuOpen = false">
-                {{-- Collapsible User Menu (Manage Signature, Security, Sign Out) --}}
-                <div x-show="userMenuOpen"
-                    x-transition:enter="transition ease-out duration-200"
-                    x-transition:enter-start="opacity-0 -translate-y-2 scale-98"
-                    x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                    x-transition:leave="transition ease-in duration-150"
-                    x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-                    x-transition:leave-end="opacity-0 -translate-y-2 scale-98"
-                    class="mb-2.5 p-1.5 bg-white rounded-2xl border border-slate-200/80 shadow-xl shadow-slate-900/10 space-y-1"
-                    x-cloak>
-                    <a href="{{ route('account.settings', ['tab' => 'profile']) }}"
-                        class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors">
-                        <span class="w-4 h-4 text-slate-400 flex items-center justify-center">@include('new.layouts.partials.nav-icon', ['name' => 'user'])</span>
-                        <span>Profile & Account</span>
-                    </a>
-                    <a href="{{ route('account.settings', ['tab' => 'security']) }}"
-                        class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors">
-                        <span class="w-4 h-4 text-slate-400 flex items-center justify-center">@include('new.layouts.partials.nav-icon', ['name' => 'lock'])</span>
-                        <span>Security & Password</span>
-                    </a>
-                    <a href="{{ route('account.settings', ['tab' => 'notifications']) }}"
-                        class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors">
-                        <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
-                        </svg>
-                        <span>Notifications</span>
-                    </a>
-                    <a href="{{ route('signatures.manage') }}"
-                        class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors">
-                        <span class="w-4 h-4 text-slate-400 flex items-center justify-center">@include('new.layouts.partials.nav-icon', ['name' => 'document-text'])</span>
-                        <span>Manage Signature</span>
-                    </a>
-                    @if ($user?->hasRole('super-admin'))
-                        <a href="{{ route('account.settings', ['tab' => 'abilities']) }}"
-                            class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-indigo-700 bg-indigo-50/70 hover:bg-indigo-100 transition-colors">
-                            <div class="flex items-center gap-2.5">
-                                <span class="w-4 h-4 text-indigo-600 flex items-center justify-center">@include('new.layouts.partials.nav-icon', ['name' => 'shield'])</span>
-                                <span>System Abilities</span>
+                    {{-- Collapsible User Menu (Manage Signature, Security, Sign Out) --}}
+                    <div x-show="userMenuOpen"
+                        x-transition:enter="transition ease-out duration-200"
+                        x-transition:enter-start="opacity-0 -translate-y-2 scale-98"
+                        x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                        x-transition:leave="transition ease-in duration-150"
+                        x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                        x-transition:leave-end="opacity-0 -translate-y-2 scale-98"
+                        class="mb-2.5 p-1.5 bg-white rounded-2xl border border-slate-200/80 shadow-xl shadow-slate-900/10 space-y-1"
+                        x-cloak>
+                        <a href="{{ route('account.settings', ['tab' => 'profile']) }}"
+                            class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors">
+                            <span class="w-4 h-4 text-slate-400 flex items-center justify-center">@include('new.layouts.partials.nav-icon', ['name' => 'user'])</span>
+                            <span>Profile & Account</span>
+                        </a>
+                        <a href="{{ route('account.settings', ['tab' => 'security']) }}"
+                            class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors">
+                            <span class="w-4 h-4 text-slate-400 flex items-center justify-center">@include('new.layouts.partials.nav-icon', ['name' => 'lock'])</span>
+                            <span>Security & Password</span>
+                        </a>
+                        <a href="{{ route('account.settings', ['tab' => 'notifications']) }}"
+                            class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors">
+                            <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+                            </svg>
+                            <span>Notifications</span>
+                        </a>
+                        <a href="{{ route('signatures.manage') }}"
+                            class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors">
+                            <span class="w-4 h-4 text-slate-400 flex items-center justify-center">@include('new.layouts.partials.nav-icon', ['name' => 'document-text'])</span>
+                            <span>Manage Signature</span>
+                        </a>
+                        @if ($user?->hasRole('super-admin'))
+                            <a href="{{ route('account.settings', ['tab' => 'abilities']) }}"
+                                class="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-indigo-700 bg-indigo-50/70 hover:bg-indigo-100 transition-colors">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="w-4 h-4 text-indigo-600 flex items-center justify-center">@include('new.layouts.partials.nav-icon', ['name' => 'shield'])</span>
+                                    <span>System Abilities</span>
+                                </div>
+                                <span class="text-[9px] font-black uppercase tracking-wider bg-indigo-200/80 text-indigo-900 px-1.5 py-0.5 rounded">Admin</span>
+                            </a>
+                        @endif
+                        <div class="h-[1px] bg-slate-100 my-1"></div>
+                        <form method="POST" action="{{ route('logout') }}" class="w-full">
+                            @csrf
+                            <button type="submit"
+                                class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors text-left">
+                                <span class="w-4 h-4 text-rose-500 flex items-center justify-center">@include('new.layouts.partials.nav-icon', ['name' => 'logout'])</span>
+                                <span>Sign out</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    {{-- User Profile Row (Clickable) + Language Selector --}}
+                    <div class="flex items-center justify-between gap-2.5 px-0.5">
+                        <button type="button"
+                            @click="userMenuOpen = !userMenuOpen"
+                            class="flex items-center gap-3 min-w-0 flex-1 p-1.5 -m-1 rounded-xl hover:bg-slate-200/60 active:scale-[0.99] transition-all text-left group"
+                            :class="{ 'bg-slate-200/60': userMenuOpen }"
+                            aria-label="Toggle user menu"
+                            :aria-expanded="userMenuOpen">
+                            <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 flex items-center justify-center text-white text-xs font-bold shadow-sm shadow-blue-200 shrink-0 group-hover:scale-105 transition-transform">
+                                {{ strtoupper(mb_substr($initials, 0, 2)) }}
                             </div>
-                            <span class="text-[9px] font-black uppercase tracking-wider bg-indigo-200/80 text-indigo-900 px-1.5 py-0.5 rounded">Admin</span>
-                        </a>
-                    @endif
-                    <div class="h-[1px] bg-slate-100 my-1"></div>
-                    <form method="POST" action="{{ route('logout') }}" class="w-full">
-                        @csrf
-                        <button type="submit"
-                            class="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors text-left">
-                            <span class="w-4 h-4 text-rose-500 flex items-center justify-center">@include('new.layouts.partials.nav-icon', ['name' => 'logout'])</span>
-                            <span>Sign out</span>
+                            <div class="min-w-0 flex-1 flex flex-col justify-center">
+                                <span class="block text-xs font-bold text-slate-900 truncate leading-tight group-hover:text-blue-600 transition-colors m-0 p-0">{{ $user->name ?? 'User' }}</span>
+                                <span class="block text-[11px] font-medium text-slate-400 truncate leading-tight mt-0.5 m-0 p-0">{{ $user->email ?? '' }}</span>
+                            </div>
+                            <svg class="h-4 w-4 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 mr-0.5 shrink-0"
+                                :class="userMenuOpen ? 'rotate-180 text-blue-600' : ''"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
                         </button>
-                    </form>
-                </div>
 
-                {{-- User Profile Row (Clickable) + Language Selector --}}
-                <div class="flex items-center justify-between gap-2.5 px-0.5">
-                    <button type="button"
-                        @click="userMenuOpen = !userMenuOpen"
-                        class="flex items-center gap-3 min-w-0 flex-1 p-1.5 -m-1 rounded-xl hover:bg-slate-200/60 active:scale-[0.99] transition-all text-left group"
-                        :class="{ 'bg-slate-200/60': userMenuOpen }"
-                        aria-label="Toggle user menu"
-                        :aria-expanded="userMenuOpen">
-                        <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 flex items-center justify-center text-white text-xs font-bold shadow-sm shadow-blue-200 shrink-0 group-hover:scale-105 transition-transform">
-                            {{ strtoupper(mb_substr($initials, 0, 2)) }}
+                        {{-- Segmented Language Pill (ID | EN) --}}
+                        <div class="flex items-center rounded-lg bg-slate-200/60 p-0.5 border border-slate-200/80 text-[10px] font-bold shrink-0">
+                            <a href="{{ route('locale.switch', 'id') }}"
+                                class="px-2 py-0.5 rounded-md transition-all {{ app()->getLocale() === 'id' ? 'bg-white text-blue-700 shadow-2xs font-extrabold' : 'text-slate-500 hover:text-slate-900' }}">
+                                ID
+                            </a>
+                            <a href="{{ route('locale.switch', 'en') }}"
+                                class="px-2 py-0.5 rounded-md transition-all {{ app()->getLocale() === 'en' ? 'bg-white text-blue-700 shadow-2xs font-extrabold' : 'text-slate-500 hover:text-slate-900' }}">
+                                EN
+                            </a>
                         </div>
-                        <div class="min-w-0 flex-1 flex flex-col justify-center">
-                            <span class="block text-xs font-bold text-slate-900 truncate leading-tight group-hover:text-blue-600 transition-colors m-0 p-0">{{ $user->name ?? 'User' }}</span>
-                            <span class="block text-[11px] font-medium text-slate-400 truncate leading-tight mt-0.5 m-0 p-0">{{ $user->email ?? '' }}</span>
-                        </div>
-                        <svg class="h-4 w-4 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 mr-0.5 shrink-0"
-                            :class="userMenuOpen ? 'rotate-180 text-blue-600' : ''"
-                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-
-                    {{-- Segmented Language Pill (ID | EN) --}}
-                    <div class="flex items-center rounded-lg bg-slate-200/60 p-0.5 border border-slate-200/80 text-[10px] font-bold shrink-0">
-                        <a href="{{ route('locale.switch', 'id') }}"
-                            class="px-2 py-0.5 rounded-md transition-all {{ app()->getLocale() === 'id' ? 'bg-white text-blue-700 shadow-2xs font-extrabold' : 'text-slate-500 hover:text-slate-900' }}">
-                            ID
-                        </a>
-                        <a href="{{ route('locale.switch', 'en') }}"
-                            class="px-2 py-0.5 rounded-md transition-all {{ app()->getLocale() === 'en' ? 'bg-white text-blue-700 shadow-2xs font-extrabold' : 'text-slate-500 hover:text-slate-900' }}">
-                            EN
-                        </a>
                     </div>
                 </div>
-            </div>
-        </aside>
+            </aside>
     </div>
 
     <div class="min-h-screen flex">
