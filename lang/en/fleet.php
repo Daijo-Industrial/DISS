@@ -356,7 +356,6 @@ return [
         'manual_heading' => 'QR Sticker Damaged or Camera Issue?',
         'manual_desc' => 'Type plate number or vehicle details (brand, model, driver name):',
         'manual_placeholder' => 'Search plate number or vehicle detail (e.g. B 1234 XYZ, Avanza)...',
-        'manual_submit' => 'Open P2H Form',
         'not_found_alert' => 'Vehicle not found or invalid QR code.',
         'not_found_code' => "Vehicle with code/plate ':code' not found in DISS system.",
         'uuid_not_allowed' => 'Searching by UUID is not supported. Please search using license plate or vehicle details.',

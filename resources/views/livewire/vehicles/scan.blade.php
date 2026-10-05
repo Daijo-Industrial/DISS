@@ -301,28 +301,21 @@
         </div>
 
         <div x-show="expanded" x-transition.duration.200ms x-cloak class="space-y-4 pt-2 border-t border-slate-100">
-            <form wire:submit="searchManual" class="flex gap-2">
-                <div class="relative flex-1">
-                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                        <i class="bi bi-search"></i>
-                    </div>
-                    <input type="text"
-                        wire:model.live.debounce.300ms="manualInput"
-                        placeholder="{{ __('fleet.scanner.manual_placeholder') }}"
-                        class="w-full rounded-xl border border-slate-300 py-2 pl-9 pr-8 text-xs text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                    @if (!empty($manualInput))
-                        <button type="button" wire:click="clearManualSearch"
-                            title="{{ __('fleet.scanner.clear_search') }}"
-                            class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
-                            <i class="bi bi-x-circle-fill text-xs"></i>
-                        </button>
-                    @endif
+            <form wire:submit="searchManual" class="relative">
+                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                    <i class="bi bi-search"></i>
                 </div>
-                <button type="submit"
-                    class="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-indigo-700 transition active:scale-95 flex items-center gap-1.5 shrink-0">
-                    <i class="bi bi-arrow-right"></i>
-                    <span>{{ __('fleet.scanner.manual_submit') }}</span>
-                </button>
+                <input type="text"
+                    wire:model.live.debounce.300ms="manualInput"
+                    placeholder="{{ __('fleet.scanner.manual_placeholder') }}"
+                    class="w-full rounded-xl border border-slate-300 py-2 pl-9 pr-8 text-xs text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                @if (!empty($manualInput))
+                    <button type="button" wire:click="clearManualSearch"
+                        title="{{ __('fleet.scanner.clear_search') }}"
+                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                        <i class="bi bi-x-circle-fill text-xs"></i>
+                    </button>
+                @endif
             </form>
 
             <div class="space-y-2">
