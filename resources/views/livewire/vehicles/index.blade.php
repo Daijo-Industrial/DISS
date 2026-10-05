@@ -329,7 +329,7 @@
                             <div class="mt-3 rounded-xl bg-amber-50/70 border border-amber-200/50 p-2 text-xs text-amber-950">
                                 <div class="flex items-center justify-between">
                                     <span class="font-semibold text-amber-900 truncate">Driver: {{ $v->activeCheckOut->driver_name }}</span>
-                                    <span class="text-[10px] text-amber-700 shrink-0">{{ $v->activeCheckOut->created_at->format('H:i') }} WIB</span>
+                                    <span class="text-[10px] text-amber-700 shrink-0">{{ ($v->activeCheckOut->checked_at ?? $v->activeCheckOut->created_at)->format('H:i') }} WIB</span>
                                 </div>
                                 @if ($v->activeCheckOut->trip_purpose)
                                     <p class="text-[11px] text-amber-800 truncate mt-0.5 font-normal">"{{ $v->activeCheckOut->trip_purpose }}"</p>

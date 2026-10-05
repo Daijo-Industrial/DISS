@@ -94,7 +94,7 @@
                 </div>
                 <div class="text-[11px] text-amber-800 pl-4 space-y-0.5 min-w-0">
                     <div>{{ __('fleet.common.driver') }}: <strong>{{ $vehicle->activeCheckOut->driver_name }}</strong></div>
-                    <div>{{ __('fleet.show.departed_at') }} <strong>{{ $vehicle->activeCheckOut->created_at->isoFormat('HH:mm') }} WIB</strong> ({{ number_format($vehicle->activeCheckOut->odometer) }} km)</div>
+                    <div>{{ __('fleet.show.departed_at') }} <strong>{{ ($vehicle->activeCheckOut->checked_at ?? $vehicle->activeCheckOut->created_at)->isoFormat('HH:mm') }} WIB</strong> ({{ number_format($vehicle->activeCheckOut->odometer) }} km)</div>
                     @if ($vehicle->activeCheckOut->trip_purpose)
                         <div class="italic break-words">"{{ $vehicle->activeCheckOut->trip_purpose }}"</div>
                     @endif

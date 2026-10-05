@@ -87,7 +87,7 @@ class Vehicle extends Model
 
     public function inspections()
     {
-        return $this->hasMany(VehicleInspection::class)->orderByDesc('created_at')->orderByDesc('id');
+        return $this->hasMany(VehicleInspection::class)->orderByDesc('checked_at')->orderByDesc('id');
     }
 
     public function activeCheckOut()

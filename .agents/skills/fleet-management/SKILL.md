@@ -49,8 +49,10 @@ The fleet module integrates directly with the existing `Vehicle` system rather t
      - `deleteStnk()` cleans up both records and storage file; `deleteDocument()` checks sibling references before unlinking shared attachments.
 
 4. **`vehicle_inspections`** (Inspeksi Harian P2H - Pemeliharaan Pemeriksaan Harian)
-   - Columns: `vehicle_id` (foreign UUID), `parent_inspection_id`, `inspection_type` (`check_out` | `check_in`), `driver_name`, `odometer`, `fuel_percentage`, `trip_distance`, `checklist_results` (`json`), `severity` (`none` | `minor` | `critical_grounded`), `defect_notes`, `defect_photo_path`, `inspected_by_user_id`.
+   - Columns: `vehicle_id` (foreign UUID), `parent_inspection_id`, `inspection_type` (`check_out` | `check_in`), `checked_at` (`timestamp`, explicit departure/return time), `driver_name`, `created_by`, `odometer`, `fuel_percentage`, `trip_distance`, `checklist_results` (`json`), `severity` (`none` | `minor` | `critical_grounded`), `defect_notes`, `defect_photos` (`json`), `inspector_id`.
    - Model: `App\Models\VehicleInspection`.
+   - Accessor fallback: `$inspection->checked_at` automatically defaults to `created_at` if null.
+   - Relationship sorting: `$vehicle->inspections()` ordered deterministically by `orderByDesc('checked_at')->orderByDesc('id')`.
 
 ---
 
@@ -127,10 +129,12 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
 2. **Operational Driver Selection (TomSelect)**:
    - Configurable roster in `config('fleet.drivers')`.
    - UI uses TomSelect with `create: true`, allowing one-tap selection from the preset roster or typing custom driver names.
+   - **Persisted Default Driver**: `$vehicle->driver_name` stores the master designated driver (assigned/edited exclusively by users with `fleet.manage`). P2H inspection submissions record the trip driver into `vehicle_inspections.driver_name` and NEVER overwrite `$vehicle->driver_name`.
    - Scoped styling in `resources/css/app.css` (`.ts-fleet-driver`).
 3. **Mandatory Header Fields**:
    - `created_by`: Required string for the inspector/creator name.
    - `trip_purpose`: Required string for route and business trip purpose.
+   - `checked_at`: Required datetime (`Y-m-d\TH:i`, initial default: `now()`). Allows inspectors to explicitly specify departure time (for check-out) or return time (for check-in) instead of relying solely on system `created_at`.
 4. **Auto-Detect & Switching**:
    - On load, automatically detects if the vehicle is currently on a trip (`$vehicle->is_out_on_trip`). If out, defaults to `check_in`; otherwise `check_out`.
    - One-tap switch buttons (`switchType('check_out')` / `switchType('check_in')`) allow instant mode changes without re-entering form data.
@@ -232,7 +236,7 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
 All tests and tools run inside the Docker Sail container (`diss-laravel.test-1`):
 
 ```bash
-# Run fleet inspection and compliance test suite (29 tests, 294 assertions)
+# Run fleet inspection and compliance test suite (30 tests, 320 assertions)
 docker exec diss-laravel.test-1 php artisan test --filter=VehicleInspectionAndComplianceTest
 
 # Check document reminders manually

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\VehicleStatus;
 use App\Infrastructure\Persistence\Eloquent\Models\Vehicle;
+use App\Livewire\Vehicles\Form;
 use App\Livewire\Vehicles\Form as VehicleForm;
 use App\Livewire\Vehicles\Index as VehiclesIndex;
 use App\Livewire\Vehicles\InspectionForm;
@@ -989,6 +990,10 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $this->assertEquals('PIC Satpam', $inspection->created_by);
         $this->assertEquals('Antar barang divisi produksi ke Plant 2', $inspection->trip_purpose);
 
+        // Verify master vehicle driver_name was NOT overwritten by inspection
+        $this->vehicle->refresh();
+        $this->assertEquals('Ahmad Supir', $this->vehicle->driver_name);
+
         // 2. Can submit with a custom typed driver name and custom created_by
         Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_in'])
             ->set('driver_name', 'Supir Rental Baru')
@@ -1004,6 +1009,22 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $this->assertEquals('check_in', $checkIn->inspection_type);
         $this->assertEquals('Supir Rental Baru', $checkIn->driver_name);
         $this->assertEquals('Inspektor Khusus', $checkIn->created_by);
+
+        // Verify master vehicle driver_name remains intact and is the default fallback
+        $this->vehicle->refresh();
+        $this->assertEquals('Ahmad Supir', $this->vehicle->driver_name);
+
+        Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
+            ->assertSet('driver_name', 'Ahmad Supir');
+
+        // 3. User with fleet.manage CAN alter master vehicle driver_name via Vehicle Form
+        Livewire::test(Form::class, ['vehicle' => $this->vehicle])
+            ->set('driver_name', 'Driver Resmi Baru')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->vehicle->refresh();
+        $this->assertEquals('Driver Resmi Baru', $this->vehicle->driver_name);
     }
 
     public function test_p2h_inspection_strictly_restricted_to_passenger_category(): void
@@ -1129,5 +1150,81 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->assertSee('Purnatugas')
             // Sold units never show P2H inspection button
             ->assertDontSeeHtml(route('vehicles.inspect', ['vehicle' => $soldVehicle, 'type' => 'check_out']));
+    }
+
+    public function test_inspector_can_explicitly_specify_p2h_checked_at_timestamp_with_initial_now(): void
+    {
+        $nowFormatted = now()->format('Y-m-d\TH:i');
+
+        // 1. Initial value is now() and requires checked_at
+        $component = Livewire::actingAs($this->user)
+            ->test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
+            ->assertSet('checked_at', $nowFormatted);
+
+        $component->set('checked_at', '')
+            ->call('nextStep')
+            ->assertHasErrors(['checked_at' => 'required']);
+
+        // 2. Inspector explicitly specifies check-out timestamp (e.g. 08:30 morning trip)
+        $explicitCheckOutTime = '2026-10-05T08:30';
+        $component->set('driver_name', 'Ahmad Supir')
+            ->set('created_by', 'Inspektor GA Pagi')
+            ->set('checked_at', $explicitCheckOutTime)
+            ->set('odometer', 50120)
+            ->set('fuel_percentage', 90)
+            ->set('trip_purpose', 'Kunjungan supplier di Kawasan KIIC Karawang')
+            ->set('severity', 'none')
+            ->call('save')
+            ->assertRedirect(route('vehicles.index'));
+
+        $this->vehicle->refresh();
+        $this->assertTrue($this->vehicle->is_out_on_trip);
+        $checkOut = $this->vehicle->activeCheckOut;
+        $this->assertNotNull($checkOut);
+        $this->assertEquals('2026-10-05 08:30:00', $checkOut->checked_at->format('Y-m-d H:i:s'));
+
+        // 3. Views show the explicit check-out timestamp instead of created_at
+        Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle])
+            ->assertSeeHtml('08:30 WIB');
+
+        Livewire::actingAs($this->user)
+            ->test(VehiclesIndex::class)
+            ->assertSeeHtml('08:30 WIB');
+
+        // 4. Check-in stepper displays parent explicit checkout time
+        $checkInComponent = Livewire::actingAs($this->user)
+            ->test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_in'])
+            ->assertSeeHtml('08:30');
+
+        // 5. Inspector explicitly specifies check-in timestamp (e.g. 17:45 sore)
+        $explicitCheckInTime = '2026-10-05T17:45';
+        $checkInComponent->set('driver_name', 'Ahmad Supir')
+            ->set('created_by', 'Satpam Pos 1')
+            ->set('checked_at', $explicitCheckInTime)
+            ->set('odometer', 50280)
+            ->set('fuel_percentage', 70)
+            ->set('severity', 'none')
+            ->call('save')
+            ->assertRedirect(route('vehicles.index'));
+
+        $this->vehicle->refresh();
+        $this->assertFalse($this->vehicle->is_out_on_trip);
+
+        $checkIn = $this->vehicle->inspections()->where('inspection_type', 'check_in')->first();
+        $this->assertNotNull($checkIn);
+        $this->assertEquals('2026-10-05 17:45:00', $checkIn->checked_at->format('Y-m-d H:i:s'));
+        $this->assertEquals(160, $checkIn->trip_distance);
+
+        // 6. Inspections tab displays both explicit timestamps
+        Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'inspections'])
+            ->assertSeeHtml('08:30')
+            ->assertSeeHtml('17:45');
+
+        // 7. Fallback behavior: if checked_at is null, access safely falls back to created_at
+        $legacy = new VehicleInspection;
+        $legacy->created_at = now()->subDays(2);
+        $this->assertEquals($legacy->created_at->toDateTimeString(), $legacy->checked_at->toDateTimeString());
     }
 }

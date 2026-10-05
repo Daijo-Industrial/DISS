@@ -78,6 +78,9 @@
             <div class="ts-fleet-driver">
                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">
                     {{ __('fleet.inspection.driver_name') }} <span class="text-rose-500">*</span>
+                    @if ($vehicle->driver_name)
+                        <span class="text-[10px] text-slate-400 font-normal ml-1">({{ __('fleet.inspection.driver_default_hint', ['driver' => $vehicle->driver_name]) }})</span>
+                    @endif
                 </label>
                 <div wire:ignore x-data="window.p2hDriverSelect(@js($driver_name))" class="relative">
                     <i class="bi bi-person absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base pointer-events-none z-10"></i>
@@ -117,7 +120,7 @@
             </div>
 
             {{-- Odometer Input --}}
-            <div class="sm:col-span-2">
+            <div>
                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">
                     {{ $type === 'check_in' ? __('fleet.inspection.return_odometer') : __('fleet.inspection.start_odometer') }} <span class="text-rose-500">*</span>
                 </label>
@@ -128,6 +131,21 @@
                     <span class="text-xs font-bold text-slate-400 font-mono">KM</span>
                 </div>
                 @error('odometer')
+                    <p class="mt-1 text-[11px] text-rose-600 font-semibold">{{ $message }}</p>
+                @enderror
+            </div>
+
+            {{-- Timestamp Input (Check-out Departure / Check-in Return) --}}
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">
+                    {{ $type === 'check_in' ? __('fleet.inspection.return_time') : __('fleet.inspection.departure_time') }} <span class="text-rose-500">*</span>
+                </label>
+                <div class="flex items-center rounded-2xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs focus-within:bg-white focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-100 transition">
+                    <i class="bi bi-clock-history text-slate-400 mr-2.5 text-base"></i>
+                    <input type="datetime-local" wire:model.defer="checked_at"
+                        class="w-full border-0 p-0 text-xs font-medium text-slate-900 bg-transparent focus:outline-none">
+                </div>
+                @error('checked_at')
                     <p class="mt-1 text-[11px] text-rose-600 font-semibold">{{ $message }}</p>
                 @enderror
             </div>
