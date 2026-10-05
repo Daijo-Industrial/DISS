@@ -208,12 +208,6 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
   - **Document Archive (`Arsip Dokumen`)**: Complete historical renewal audit trail table.
 - **Unified Modal (`show-modals.blade.php`)**:
   - Dynamically switches to dual expiration date pickers (`stnk_annual_expired_date` & `stnk_five_year_expired_date`) when `stnk` is selected, pre-populating existing dates and sharing a single file attachment.
-
-### Layout Navigation Drawer (`resources/views/new/layouts/app.blade.php`)
-- **Breakpoint**: Drawer active on `< 1024px` (`lg:hidden`), providing full-width screen real estate for tablets in portrait mode.
-- **Auto-Close Behavior**: Closes on link click (`@click="if ($event.target.closest('a')) sidebarOpen = false"`), backdrop click, or Escape key.
-- **Thumb Ergonomics**: Mobile topbar hamburger button is aligned on the **right** for comfortable one-handed thumb reach on tall screens (iPhone XR).
-
 ### Universal Photo Lightbox (`resources/views/components/universal-lightbox.blade.php`)
 - **Reactive 0ms Alpine.js Modal**: Replaces direct storage URLs (`target="_blank"`) across all vehicle views.
 - **Trigger**: Dispatched anywhere via `@click="$dispatch('open-lightbox', { src: url, title: caption, subtitle: sub })"`.
@@ -238,7 +232,7 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
 All tests and tools run inside the Docker Sail container (`diss-laravel.test-1`):
 
 ```bash
-# Run fleet inspection and compliance test suite (25 tests, 219 assertions)
+# Run fleet inspection and compliance test suite (29 tests, 294 assertions)
 docker exec diss-laravel.test-1 php artisan test --filter=VehicleInspectionAndComplianceTest
 
 # Check document reminders manually
