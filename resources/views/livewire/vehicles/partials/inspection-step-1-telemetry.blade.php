@@ -2,6 +2,69 @@
 {{-- P2H WIZARD: STEP 1 - TELEMETRI, DRIVER & BAHAN BAKAR                      --}}
 {{-- ========================================================================= --}}
 <div class="space-y-5">
+    <script>
+        if (typeof window.p2hDriverSelect !== 'function') {
+            window.p2hDriverSelect = function(initialVal) {
+                return {
+                    tomSelect: null,
+                    init() {
+                        if (typeof window.TomSelect === 'undefined') {
+                            return;
+                        }
+                        const selectEl = this.$refs.driverSelect;
+
+                        this.tomSelect = new window.TomSelect(selectEl, {
+                            create: true,
+                            createOnBlur: true,
+                            persist: false,
+                            maxItems: 1,
+                            placeholder: @js(__('fleet.inspection.driver_name_placeholder')),
+                            allowEmptyOption: true,
+                            searchField: ['text', 'value'],
+                            render: {
+                                option_create: function(data, escape) {
+                                    return '<div class="create cursor-pointer py-1.5 px-3 text-xs text-indigo-600 font-semibold bg-indigo-50/60 hover:bg-indigo-100/70 border-t border-slate-100 flex items-center gap-1.5"><i class="bi bi-plus-circle"></i> Tambahkan supir baru: <strong>' + escape(data.input) + '</strong></div>';
+                                },
+                                no_results: function(data, escape) {
+                                    return '<div class="no-results py-2 px-3 text-xs text-slate-400 italic">Tekan Enter untuk menambahkan "' + escape(data.input) + '"</div>';
+                                }
+                            },
+                            onChange: (value) => {
+                                this.$wire.set('driver_name', value || '');
+                            }
+                        });
+
+                        if (initialVal) {
+                            if (!this.tomSelect.options[initialVal]) {
+                                this.tomSelect.addOption({ value: initialVal, text: initialVal });
+                            }
+                            this.tomSelect.setValue(initialVal, true);
+                        }
+
+                        this.$watch('$wire.driver_name', (newVal) => {
+                            if (!this.tomSelect) return;
+                            const current = this.tomSelect.getValue();
+                            if (current !== (newVal || '')) {
+                                if (newVal && !this.tomSelect.options[newVal]) {
+                                    this.tomSelect.addOption({ value: newVal, text: newVal });
+                                }
+                                this.tomSelect.setValue(newVal || '', true);
+                            }
+                        });
+
+                        if (typeof this.$cleanup === 'function') {
+                            this.$cleanup(() => {
+                                if (this.tomSelect) {
+                                    this.tomSelect.destroy();
+                                    this.tomSelect = null;
+                                }
+                            });
+                        }
+                    }
+                };
+            };
+        }
+    </script>
     <div class="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-xs space-y-5">
         <div>
             <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -11,20 +74,22 @@
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2">
-            {{-- Driver Name --}}
-            <div>
+            {{-- Driver Name (TomSelect with Custom Creation & Presets) --}}
+            <div class="ts-fleet-driver">
                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">
                     {{ __('fleet.inspection.driver_name') }} <span class="text-rose-500">*</span>
                 </label>
-                <div class="flex items-center rounded-2xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs focus-within:bg-white focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-100 transition">
-                    <i class="bi bi-person text-slate-400 mr-2.5 text-base"></i>
-                    <input type="text" list="driver-suggestions" wire:model.defer="driver_name" placeholder="{{ __('fleet.inspection.driver_name_placeholder') }}" autocomplete="off"
-                        class="w-full border-0 p-0 text-xs font-medium text-slate-900 bg-transparent focus:outline-none">
-                    <datalist id="driver-suggestions">
+                <div wire:ignore x-data="window.p2hDriverSelect(@js($driver_name))" class="relative">
+                    <i class="bi bi-person absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base pointer-events-none z-10"></i>
+                    <select x-ref="driverSelect" class="w-full">
+                        <option value="">{{ __('fleet.inspection.driver_name_placeholder') }}</option>
                         @foreach ($drivers as $d)
-                            <option value="{{ $d }}"></option>
+                            <option value="{{ $d }}" @selected($driver_name === $d)>{{ $d }}</option>
                         @endforeach
-                    </datalist>
+                        @if ($driver_name && !in_array($driver_name, $drivers, true))
+                            <option value="{{ $driver_name }}" selected>{{ $driver_name }}</option>
+                        @endif
+                    </select>
                 </div>
                 @error('driver_name')
                     <p class="mt-1 text-[11px] text-rose-600 font-semibold">{{ $message }}</p>
