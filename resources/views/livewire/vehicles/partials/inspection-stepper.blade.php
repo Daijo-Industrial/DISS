@@ -93,7 +93,7 @@
                 <div class="flex items-center gap-2">
                     <i class="bi bi-clock-history text-amber-600 text-sm"></i>
                     <span>
-                        {{ __('fleet.inspection.type_checkout') }}: <strong>{{ $parentInspection->created_at->isoFormat('DD MMM YYYY, HH:mm') }}</strong>
+                        {{ __('fleet.inspection.type_checkout') }}: <strong>{{ ($parentInspection->checked_at ?? $parentInspection->created_at)->isoFormat('DD MMM YYYY, HH:mm') }}</strong>
                         oleh Driver <strong>{{ $parentInspection->driver_name }}</strong> (KM Awal: <strong>{{ number_format($parentInspection->odometer) }} km</strong>)
                     </span>
                 </div>

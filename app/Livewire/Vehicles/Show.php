@@ -26,6 +26,8 @@ class Show extends Component
     #[Url]
     public string $tab = 'inspections'; // 'services', 'inspections', 'documents'
 
+    public bool $showRightLayout = false;
+
     // Service filters
     public string $year = 'all';
 
@@ -101,7 +103,7 @@ class Show extends Component
 
     public $new_photo = null;
 
-    public function mount(Vehicle $vehicle): void
+    public function mount(Vehicle $vehicle, ?string $tab = null): void
     {
         $user = auth()->user();
         if (! ($user?->can('fleet.view') || $user?->can('fleet.manage') || $user?->can('fleet.inspect'))) {
@@ -118,18 +120,17 @@ class Show extends Component
         $this->canViewDocuments = $this->canManage || ($user?->can('fleet.documents') ?? false);
         $this->canViewCosts = $this->canManage || ($user?->can('fleet.view-costs') ?? false);
 
-        if ($this->tab === 'documents' && ! $this->canViewDocuments) {
-            $this->tab = 'inspections';
+        if ($tab !== null && in_array($tab, ['services', 'inspections', 'documents'], true)) {
+            $this->tab = ($tab === 'documents' && ! $this->canViewDocuments) ? 'inspections' : $tab;
+            $this->showRightLayout = true;
+        } elseif (request()->has('tab') && in_array(request('tab'), ['services', 'inspections', 'documents'], true)) {
+            $requestedTab = request('tab');
+            $this->tab = ($requestedTab === 'documents' && ! $this->canViewDocuments) ? 'inspections' : $requestedTab;
+            $this->showRightLayout = true;
         }
 
-        // Check if tab is requested via query param
-        if (request()->has('tab') && in_array(request('tab'), ['services', 'inspections', 'documents'], true)) {
-            $requestedTab = request('tab');
-            if ($requestedTab === 'documents' && ! $this->canViewDocuments) {
-                $this->tab = 'inspections';
-            } else {
-                $this->tab = $requestedTab;
-            }
+        if ($this->tab === 'documents' && ! $this->canViewDocuments) {
+            $this->tab = 'inspections';
         }
 
         $this->generateQrCode();
@@ -164,8 +165,15 @@ class Show extends Component
         $this->dispatch('print-qr-sticker', qrBase64: $qr);
     }
 
+    public function toggleRightLayout(): void
+    {
+        $this->showRightLayout = ! $this->showRightLayout;
+    }
+
     public function setTab(string $tab): void
     {
+        $this->showRightLayout = true;
+
         if ($tab === 'documents' && ! $this->canViewDocuments) {
             $this->tab = 'inspections';
 

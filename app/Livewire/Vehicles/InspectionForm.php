@@ -5,6 +5,7 @@ namespace App\Livewire\Vehicles;
 use App\Enums\VehicleStatus;
 use App\Infrastructure\Persistence\Eloquent\Models\Vehicle;
 use App\Models\VehicleInspection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -18,6 +19,8 @@ class InspectionForm extends Component
     public int $currentStep = 1;
 
     public string $type = VehicleInspection::TYPE_CHECK_OUT;
+
+    public string $checked_at = '';
 
     public ?int $parent_inspection_id = null;
 
@@ -126,6 +129,7 @@ class InspectionForm extends Component
             $this->fuel_percentage = 100;
         }
 
+        $this->checked_at = now()->format('Y-m-d\TH:i');
         $this->point_photos = array_fill_keys(array_keys($this->checklist), []);
     }
 
@@ -133,6 +137,7 @@ class InspectionForm extends Component
     {
         if (in_array($newType, [VehicleInspection::TYPE_CHECK_OUT, VehicleInspection::TYPE_CHECK_IN], true)) {
             $this->type = $newType;
+            $this->checked_at = now()->format('Y-m-d\TH:i');
             if ($this->type === VehicleInspection::TYPE_CHECK_IN) {
                 $this->parentInspection = $this->vehicle->activeCheckOut;
                 if ($this->parentInspection) {
@@ -228,12 +233,14 @@ class InspectionForm extends Component
         $this->validate([
             'driver_name' => ['required', 'string', 'max:255'],
             'created_by' => ['required', 'string', 'max:255'],
+            'checked_at' => ['required', 'date'],
             'odometer' => ['required', 'integer', 'min:' . $minKm],
             'fuel_percentage' => ['required', 'integer', 'min:0', 'max:100'],
             'trip_purpose' => ['required', 'string', 'max:500'],
         ], [
             'driver_name.required' => __('fleet.inspection.driver_name_required'),
             'created_by.required' => __('fleet.inspection.created_by_required'),
+            'checked_at.required' => __('fleet.inspection.checked_at_required'),
             'trip_purpose.required' => __('fleet.inspection.trip_purpose_required'),
             'odometer.required' => 'Nilai KM Odometer wajib diisi.',
             'odometer.min' => 'KM Odometer tidak boleh lebih kecil dari KM sebelumnya (:min km).',
@@ -334,6 +341,7 @@ class InspectionForm extends Component
         return [
             'driver_name' => ['required', 'string', 'max:255'],
             'created_by' => ['required', 'string', 'max:255'],
+            'checked_at' => ['required', 'date'],
             'odometer' => ['required', 'integer', 'min:' . $minKm],
             'fuel_percentage' => ['required', 'integer', 'min:0', 'max:100'],
             'trip_purpose' => ['required', 'string', 'max:500'],
@@ -350,6 +358,7 @@ class InspectionForm extends Component
         return [
             'driver_name.required' => __('fleet.inspection.driver_name_required'),
             'created_by.required' => __('fleet.inspection.created_by_required'),
+            'checked_at.required' => __('fleet.inspection.checked_at_required'),
             'trip_purpose.required' => __('fleet.inspection.trip_purpose_required'),
             'odometer.required' => 'Nilai KM Odometer wajib diisi.',
             'odometer.min' => 'KM Odometer tidak boleh lebih kecil dari KM sebelumnya (:min km).',
@@ -386,6 +395,7 @@ class InspectionForm extends Component
                 'vehicle_id' => $this->vehicle->id,
                 'parent_inspection_id' => $this->parent_inspection_id,
                 'inspection_type' => $this->type,
+                'checked_at' => $this->checked_at ? Carbon::parse($this->checked_at) : now(),
                 'driver_name' => $this->driver_name,
                 'created_by' => $this->created_by,
                 'inspector_id' => auth()->id() ?? 1,
@@ -398,11 +408,8 @@ class InspectionForm extends Component
                 'trip_purpose' => $this->trip_purpose,
             ]);
 
-            // Update master vehicle
+            // Update master vehicle (odometer and status only; master driver_name is persisted)
             $this->vehicle->odometer = $this->odometer;
-            if ($this->driver_name) {
-                $this->vehicle->driver_name = $this->driver_name;
-            }
 
             // Atur status kendaraan jika kritis (grounded)
             if ($this->severity === VehicleInspection::SEVERITY_CRITICAL) {

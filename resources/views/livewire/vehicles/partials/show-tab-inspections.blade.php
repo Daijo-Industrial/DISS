@@ -96,7 +96,7 @@
                                 </span>
 
                                 <span class="text-[11px] text-slate-400 shrink-0">
-                                    • {{ $ins->created_at->isoFormat('DD MMM YYYY, HH:mm') }}
+                                    • {{ ($ins->checked_at ?? $ins->created_at)->isoFormat('DD MMM YYYY, HH:mm') }}
                                 </span>
                             </div>
 
@@ -182,7 +182,7 @@
                                             @if (!empty($pointPhotos))
                                                 <div class="mt-2 flex flex-wrap gap-1.5">
                                                     @foreach ($pointPhotos as $pPath)
-                                                        <button type="button" @click.prevent="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $pPath) }}', title: 'Foto Temuan P2H: {{ addslashes($item['label'] ?? ucfirst($itemKey)) }}', subtitle: '{{ $vehicle->plate_number }} • {{ $ins->created_at->format('d M Y H:i') }}' })"
+                                                        <button type="button" @click.prevent="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $pPath) }}', title: 'Foto Temuan P2H: {{ addslashes($item['label'] ?? ucfirst($itemKey)) }}', subtitle: '{{ $vehicle->plate_number }} • {{ ($ins->checked_at ?? $ins->created_at)->format('d M Y H:i') }}' })"
                                                             class="group relative block cursor-pointer" title="Perbesar foto">
                                                             <img src="{{ asset('storage/' . $pPath) }}" class="h-10 w-10 object-cover rounded-md border border-slate-200 group-hover:opacity-80 group-hover:ring-2 group-hover:ring-slate-400 transition shadow-2xs">
                                                         </button>
@@ -199,7 +199,7 @@
                                     <span class="text-[11px] font-bold text-slate-700 block mb-1">{{ __('fleet.show.additional_defect_photos') }}</span>
                                     <div class="flex flex-wrap gap-2">
                                         @foreach ($ins->defect_photos as $dPhoto)
-                                            <button type="button" @click.prevent="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $dPhoto) }}', title: 'Foto Bukti Kerusakan Utama P2H', subtitle: '{{ $vehicle->plate_number }} • {{ $ins->created_at->format('d M Y H:i') }}' })"
+                                            <button type="button" @click.prevent="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $dPhoto) }}', title: 'Foto Bukti Kerusakan Utama P2H', subtitle: '{{ $vehicle->plate_number }} • {{ ($ins->checked_at ?? $ins->created_at)->format('d M Y H:i') }}' })"
                                                 class="group relative block cursor-pointer" title="Perbesar foto">
                                                 <img src="{{ asset('storage/' . $dPhoto) }}" class="h-12 w-12 object-cover rounded-lg border border-slate-200 group-hover:opacity-80 group-hover:ring-2 group-hover:ring-slate-400 transition shadow-xs">
                                             </button>

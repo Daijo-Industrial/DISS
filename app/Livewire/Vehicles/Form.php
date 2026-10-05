@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -16,6 +17,10 @@ class Form extends Component
     use WithFileUploads;
 
     public ?Vehicle $vehicle = null;
+
+    public int $currentStep = 1;
+
+    public int $totalSteps = 3;
 
     public string $driver_name = '';
 
@@ -63,6 +68,13 @@ class Form extends Component
     public function updatedPlateNumber(string $value): void
     {
         $this->plate_number = $this->normalizePlateNumber($value);
+
+        $plateRegex = config('fleet.plate.regex', '^[A-Z]{1,2}\s[1-9][0-9]{0,3}\s[A-Z]{1,4}$');
+        if (preg_match('/' . $plateRegex . '/', $this->plate_number)) {
+            $this->validateOnly('plate_number');
+        } else {
+            $this->resetErrorBag('plate_number');
+        }
     }
 
     protected function rules(): array
@@ -77,8 +89,7 @@ class Form extends Component
                 'max:20',
                 'regex:/' . $plateRegex . '/',
                 Rule::unique('vehicles', 'plate_number')
-                    ->ignore($this->vehicle?->id)
-                    ->whereNull('deleted_at'),
+                    ->ignore($this->vehicle?->id),
             ],
         ];
 
@@ -107,6 +118,9 @@ class Form extends Component
             'plate_number.required' => 'Plat nomor kendaraan wajib diisi.',
             'plate_number.regex' => 'Format plat nomor harus sesuai standar Indonesia (contoh: B 1234 XYZ). Terdiri dari 1-2 huruf wilayah, 1-4 digit angka, dan 1-4 huruf seri.',
             'plate_number.unique' => 'Plat nomor ini sudah terdaftar pada armada lain.',
+            'sold_at.required' => 'Tanggal pelepasan/terjual wajib diisi.',
+            'sold_at.required_if' => 'Tanggal pelepasan/terjual wajib diisi jika status armada terjual.',
+            'sold_at.before_or_equal' => 'Tanggal terjual tidak boleh melebihi hari ini.',
         ];
     }
 
@@ -114,6 +128,7 @@ class Form extends Component
     {
         $user = auth()->user();
         $this->canManage = $user?->can('fleet.manage') ?? false;
+        $this->totalSteps = $this->canManage ? 3 : 1;
 
         // If user cannot manage fleet and trying to create a new vehicle, abort 403
         if (! $this->canManage && ! $vehicle?->exists) {
@@ -135,11 +150,133 @@ class Form extends Component
         }
     }
 
+    public function goToStep(int $step): void
+    {
+        if ($step < 1 || $step > $this->totalSteps) {
+            return;
+        }
+
+        if (! $this->canManage && $step > 1) {
+            return;
+        }
+
+        if ($step > $this->currentStep) {
+            if ($this->currentStep === 1) {
+                $this->validateStep1();
+            }
+            if ($this->currentStep <= 2 && $step === 3) {
+                $this->validateStep2();
+            }
+        }
+
+        $this->currentStep = $step;
+    }
+
+    public function nextStep(): void
+    {
+        if (! $this->canManage) {
+            return;
+        }
+
+        if ($this->currentStep === 1) {
+            $this->validateStep1();
+            $this->currentStep = 2;
+        } elseif ($this->currentStep === 2) {
+            $this->validateStep2();
+            $this->currentStep = 3;
+        }
+    }
+
+    public function previousStep(): void
+    {
+        if ($this->currentStep > 1) {
+            $this->currentStep--;
+        }
+    }
+
+    public function validateStep1(): void
+    {
+        $this->plate_number = $this->normalizePlateNumber($this->plate_number);
+
+        $plateRegex = config('fleet.plate.regex', '^[A-Z]{1,2}\s[1-9][0-9]{0,3}\s[A-Z]{1,4}$');
+
+        $rules = [
+            'driver_name' => ['nullable', 'string', 'max:255'],
+            'plate_number' => [
+                'required',
+                'string',
+                'max:20',
+                'regex:/' . $plateRegex . '/',
+                Rule::unique('vehicles', 'plate_number')
+                    ->ignore($this->vehicle?->id),
+            ],
+        ];
+
+        if ($this->canManage) {
+            $rules['status'] = ['required', Rule::in(array_column(VehicleStatus::cases(), 'value'))];
+            $rules['photo'] = ['nullable', 'image', 'max:5120'];
+            if ($this->status === 'sold') {
+                $rules['sold_at'] = ['required', 'date', 'before_or_equal:today'];
+            }
+        }
+
+        $this->validate($rules, $this->messages());
+    }
+
+    public function validateStep2(): void
+    {
+        if (! $this->canManage) {
+            return;
+        }
+
+        $rules = [
+            'category' => ['required', 'string', 'in:passenger,commercial_truck,pickup,other'],
+            'fuel_type' => ['required', 'string', 'in:petrol,diesel,ev'],
+            'requires_kir' => ['boolean'],
+        ];
+
+        $this->validate($rules, $this->messages());
+    }
+
+    public function validateStep3(): void
+    {
+        if (! $this->canManage) {
+            return;
+        }
+
+        $rules = [
+            'brand' => ['nullable', 'string', 'max:80'],
+            'model' => ['nullable', 'string', 'max:120'],
+            'year' => ['nullable', 'integer', 'min:1900', 'max:' . (now()->year + 1)],
+            'vin' => ['nullable', 'string', 'max:50'],
+            'odometer' => ['nullable', 'integer', 'min:0'],
+        ];
+
+        $this->validate($rules, $this->messages());
+    }
+
     public function save(): void
     {
         $this->plate_number = $this->normalizePlateNumber($this->plate_number);
 
-        $this->validate();
+        try {
+            $this->validate();
+        } catch (ValidationException $e) {
+            // Automatically navigate to the step where validation failed
+            $failedFields = array_keys($e->validator->failed());
+            $step1Fields = ['plate_number', 'driver_name', 'status', 'photo', 'sold_at'];
+            $step2Fields = ['category', 'fuel_type', 'requires_kir'];
+
+            if (! empty(array_intersect($failedFields, $step1Fields))) {
+                $this->currentStep = 1;
+            } elseif (! empty(array_intersect($failedFields, $step2Fields))) {
+                $this->currentStep = 2;
+            } else {
+                $this->currentStep = 3;
+            }
+
+            throw $e;
+        }
 
         $imagePath = $this->current_image_path;
         if ($this->photo) {
@@ -211,6 +348,8 @@ class Form extends Component
         return view('livewire.vehicles.form', [
             'canManage' => $this->canManage,
             'fullFeature' => $this->canManage,
+            'currentStep' => $this->currentStep,
+            'totalSteps' => $this->totalSteps,
         ]);
     }
 

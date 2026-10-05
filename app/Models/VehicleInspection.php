@@ -14,6 +14,7 @@ class VehicleInspection extends Model
         'vehicle_id',
         'parent_inspection_id',
         'inspection_type',
+        'checked_at',
         'driver_name',
         'created_by',
         'inspector_id',
@@ -27,11 +28,21 @@ class VehicleInspection extends Model
     ];
 
     protected $casts = [
+        'checked_at' => 'datetime',
         'odometer' => 'integer',
         'fuel_percentage' => 'integer',
         'checklist_results' => 'array',
         'defect_photos' => 'array',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $inspection) {
+            if (empty($inspection->checked_at)) {
+                $inspection->checked_at = now();
+            }
+        });
+    }
 
     public const TYPE_CHECK_OUT = 'check_out';
 
@@ -124,5 +135,10 @@ class VehicleInspection extends Model
             self::SEVERITY_CRITICAL => 'bg-rose-100 text-rose-800 ring-1 ring-rose-200',
             default => 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200',
         };
+    }
+
+    public function getCheckedAtAttribute($value)
+    {
+        return $value ? $this->asDateTime($value) : $this->created_at;
     }
 }
