@@ -51,6 +51,9 @@ class InspectionForm extends Component
         }
 
         $this->vehicle = $vehicle;
+        if ($this->vehicle->category !== 'passenger') {
+            abort(403, __('fleet.inspection.passenger_only'));
+        }
         if ($type && in_array($type, [VehicleInspection::TYPE_CHECK_OUT, VehicleInspection::TYPE_CHECK_IN], true)) {
             $this->type = $type;
         } else {

@@ -43,6 +43,13 @@ class Scan extends Component
             $uuid = strtolower($matches[0]);
             $vehicle = Vehicle::where('id', $uuid)->first();
             if ($vehicle) {
+                if ($vehicle->category !== 'passenger') {
+                    $this->errorMessage = __('fleet.scanner.passenger_only');
+                    $this->dispatch('scan-failed');
+
+                    return;
+                }
+
                 return $this->redirect(route('vehicles.inspect', ['vehicle' => $vehicle->id]), navigate: true);
             }
         }
@@ -86,11 +93,18 @@ class Scan extends Component
             })->first();
 
         if ($vehicle) {
+            if ($vehicle->category !== 'passenger') {
+                $this->errorMessage = __('fleet.scanner.passenger_only');
+
+                return;
+            }
+
             return $this->redirect(route('vehicles.inspect', ['vehicle' => $vehicle->id]), navigate: true);
         }
 
         // 2. Partial match on plate number or vehicle details (brand, model, driver_name)
         $matches = Vehicle::whereNotIn('status', ['sold', 'retired'])
+            ->where('category', 'passenger')
             ->where(function ($q) use ($searchTerm, $normalizedSearch) {
                 if (! empty($normalizedSearch)) {
                     $q->whereRaw("REPLACE(UPPER(plate_number), ' ', '') LIKE ?", ['%' . $normalizedSearch . '%']);
@@ -116,6 +130,13 @@ class Scan extends Component
      */
     public function selectVehicle(string $id)
     {
+        $vehicle = Vehicle::find($id);
+        if (! $vehicle || $vehicle->category !== 'passenger') {
+            $this->errorMessage = __('fleet.scanner.passenger_only');
+
+            return;
+        }
+
         return $this->redirect(route('vehicles.inspect', ['vehicle' => $id]), navigate: true);
     }
 
@@ -131,6 +152,7 @@ class Scan extends Component
         $normalizedSearch = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $searchTerm));
 
         $query = Vehicle::query()
+            ->where('category', 'passenger')
             ->whereNotIn('status', ['sold', 'retired'])
             ->orderBy('plate_number');
 

@@ -33,6 +33,20 @@
         }
     }"
     @resize.window.debounce.150ms="handleResize()">
+    {{-- Breadcrumb Navigation --}}
+    <nav class="flex items-center gap-1.5 text-xs font-medium text-slate-500 -mb-1" aria-label="Breadcrumb">
+        <a href="{{ route('home') }}" class="inline-flex items-center gap-1 text-slate-400 hover:text-blue-600 transition-colors">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+            </svg>
+            <span>Home</span>
+        </a>
+        <svg class="h-3.5 w-3.5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+        </svg>
+        <span class="text-slate-700 font-semibold truncate" aria-current="page">{{ __('fleet.index.title') }}</span>
+    </nav>
+
     {{-- Page Header (Apple Clean Typography & Sleek Action Pills) --}}
     <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-2.5 sm:gap-3">
@@ -120,6 +134,18 @@
                     {{ $metrics['maintenance'] ?? 0 }}
                 </span>
             </button>
+
+            {{-- Terjual (Sold / Archived) - Visible for managers only --}}
+            @if ($canManage)
+                <button type="button" wire:click="setOperationalTab('sold')"
+                    class="flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-xs transition cursor-pointer flex-1 sm:flex-initial {{ $operationalTab === 'sold' ? 'bg-white text-slate-900 font-bold shadow-xs' : 'text-slate-500 hover:text-slate-800 font-medium' }}">
+                    <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
+                    <span>Terjual</span>
+                    <span class="rounded-full px-1.5 py-0.2 text-[11px] {{ $operationalTab === 'sold' ? 'bg-rose-50 text-rose-700 font-bold' : 'text-slate-400 font-medium' }}">
+                        {{ $metrics['sold'] ?? 0 }}
+                    </span>
+                </button>
+            @endif
         </div>
     </div>
 
@@ -147,17 +173,38 @@
 
     {{-- Search & Control Bar --}}
     <div class="rounded-2xl border border-slate-200/80 bg-white p-2.5 sm:p-3 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-        {{-- Search Input (Stays Visible) --}}
-        <div class="relative w-full sm:max-w-md">
-            <i class="bi bi-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
-            <input type="text" placeholder="{{ __('fleet.index.search_placeholder') }}"
-                wire:model.live.debounce.300ms="q"
-                class="w-full rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 sm:py-1.5 pl-8 pr-8 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition">
-            @if ($q !== '')
-                <button type="button" wire:click="$set('q','')" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600">
-                    <i class="bi bi-x-circle text-xs"></i>
-                </button>
-            @endif
+        {{-- Left: Search Input & Fleet Type Filter --}}
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5 flex-1">
+            {{-- Search Input (Stays Visible) --}}
+            <div class="relative w-full sm:max-w-xs">
+                <i class="bi bi-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                <input type="text" placeholder="{{ __('fleet.index.search_placeholder') }}"
+                    wire:model.live.debounce.300ms="q"
+                    class="w-full rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 sm:py-1.5 pl-8 pr-8 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition">
+                @if ($q !== '')
+                    <button type="button" wire:click="$set('q','')" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600">
+                        <i class="bi bi-x-circle text-xs"></i>
+                    </button>
+                @endif
+            </div>
+
+            {{-- Fleet Type Filter --}}
+            <div class="flex items-center gap-1.5 shrink-0">
+                <label for="fleet-category-filter" class="text-[11px] font-medium text-slate-400 shrink-0 hidden sm:inline">
+                    {{ __('fleet.index.filter_category') }}:
+                </label>
+                <div class="relative w-full sm:w-auto">
+                    <select id="fleet-category-filter" wire:model.live="category"
+                        class="w-full sm:w-auto appearance-none rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 sm:py-1.5 pl-3 pr-8 text-xs font-semibold text-slate-700 hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition cursor-pointer">
+                        <option value="passenger">{{ __('fleet.categories.passenger') }}</option>
+                        <option value="commercial_truck">{{ __('fleet.categories.commercial_truck') }}</option>
+                        <option value="pickup">{{ __('fleet.categories.pickup') }}</option>
+                        <option value="other">{{ __('fleet.categories.other') }}</option>
+                        <option value="all">{{ __('fleet.index.all_categories') }}</option>
+                    </select>
+                    <i class="bi bi-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none"></i>
+                </div>
+            </div>
         </div>
 
         {{-- View Mode Switcher (Grid vs Table) & PerPage --}}
@@ -217,7 +264,7 @@
 
                 <div wire:key="veh-card-{{ $v->id }}"
                     @click="window.location.href = '{{ route('vehicles.show', $v) }}'"
-                    class="group relative flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-4.5 shadow-xs hover:border-slate-300 hover:shadow-md transition cursor-pointer">
+                    class="group relative flex flex-col justify-between rounded-2xl border border-slate-200/80 p-4 sm:p-4.5 shadow-xs hover:border-slate-300 hover:shadow-md transition cursor-pointer {{ ($v->is_sold || $v->status === \App\Enums\VehicleStatus::RETIRED || $v->status === 'retired') ? 'bg-slate-50/70 opacity-85 hover:opacity-100' : 'bg-white' }}">
                     
                     <div>
                         {{-- Top Row: Photo/Icon, Plate Number, Model & Operational Badge --}}
@@ -249,15 +296,30 @@
                             </div>
 
                             {{-- Operational Status Badge --}}
-                            @if ($isOut)
+                            @if ($v->is_sold)
+                                <span class="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 border border-rose-200/60 shrink-0" title="{{ $v->sold_at ? 'Terjual: ' . $v->sold_at->format('d/m/Y') : 'Unit Terjual' }}">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
+                                    <span>Terjual{{ $v->sold_at ? ' ' . $v->sold_at->format('d/m/y') : '' }}</span>
+                                </span>
+                            @elseif ($v->status === \App\Enums\VehicleStatus::RETIRED || $v->status === 'retired')
+                                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200/60 shrink-0">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-slate-500"></span>
+                                    <span>Purnatugas</span>
+                                </span>
+                            @elseif ($v->status === \App\Enums\VehicleStatus::MAINTENANCE || $v->status === 'maintenance')
+                                <span class="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 border border-rose-200/60 shrink-0">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
+                                    <span>Perawatan</span>
+                                </span>
+                            @elseif ($isOut)
                                 <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 border border-amber-200/60 shrink-0">
                                     <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-                                    On-Trip
+                                    <span>On-Trip</span>
                                 </span>
                             @else
                                 <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200/60 shrink-0">
                                     <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                                    Di Pool
+                                    <span>Di Pool</span>
                                 </span>
                             @endif
                         </div>
@@ -300,8 +362,8 @@
                     </div>
 
                     {{-- Card Footer: Single Primary Action Button --}}
-                    <div class="mt-3 pt-3 border-t border-slate-100" @click.stop>
-                        @if (!$v->is_sold)
+                    @if (!$v->is_sold && $v->category === 'passenger')
+                        <div class="mt-3 pt-3 border-t border-slate-100" @click.stop>
                             @if ($isOut)
                                 <a href="{{ route('vehicles.inspect', ['vehicle' => $v, 'type' => 'check_in']) }}"
                                     class="w-full flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 py-2 px-3 text-xs font-bold text-white shadow-2xs hover:bg-amber-600 transition active:scale-[0.98]">
@@ -315,8 +377,8 @@
                                     <span>P2H Check-out →</span>
                                 </a>
                             @endif
-                        @endif
-                    </div>
+                        </div>
+                    @endif
                 </div>
             @empty
                 <div class="col-span-full rounded-2xl border border-dashed border-slate-300 p-8 sm:p-12 text-center">
@@ -351,7 +413,7 @@
                         @endphp
                         <tr wire:key="veh-table-{{ $v->id }}"
                             onclick="window.location.href = '{{ route('vehicles.show', $v) }}'"
-                            class="hover:bg-slate-50/80 cursor-pointer transition">
+                            class="hover:bg-slate-50/80 cursor-pointer transition {{ ($v->is_sold || $v->status === \App\Enums\VehicleStatus::RETIRED || $v->status === 'retired') ? 'bg-slate-50/60 opacity-85 hover:opacity-100' : '' }}">
                             <td class="px-4 py-3.5">
                                 <div class="flex items-center gap-3">
                                     @if ($v->image_path)
@@ -387,7 +449,22 @@
                                 {{ number_format($v->odometer) }} km
                             </td>
                             <td class="px-4 py-3.5 whitespace-nowrap">
-                                @if ($isOut)
+                                @if ($v->is_sold)
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-[10px] font-bold text-rose-700 ring-1 ring-inset ring-rose-200" title="{{ $v->sold_at ? 'Terjual: ' . $v->sold_at->format('d/m/Y') : 'Unit Terjual' }}">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
+                                        <span>Terjual{{ $v->sold_at ? ' ' . $v->sold_at->format('d/m/y') : '' }}</span>
+                                    </span>
+                                @elseif ($v->status === \App\Enums\VehicleStatus::RETIRED || $v->status === 'retired')
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-700 ring-1 ring-inset ring-slate-200">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-slate-500"></span>
+                                        <span>Purnatugas</span>
+                                    </span>
+                                @elseif ($v->status === \App\Enums\VehicleStatus::MAINTENANCE || $v->status === 'maintenance')
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-[10px] font-bold text-rose-700 ring-1 ring-inset ring-rose-200">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
+                                        <span>Perawatan</span>
+                                    </span>
+                                @elseif ($isOut)
                                     <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-200">
                                         On-Trip
                                     </span>
@@ -407,7 +484,7 @@
                             </td>
                             <td class="px-4 py-3.5 text-right whitespace-nowrap" onclick="event.stopPropagation()">
                                 <div class="inline-flex items-center gap-1.5">
-                                    @if (!$v->is_sold)
+                                    @if (!$v->is_sold && $v->category === 'passenger')
                                         @if ($isOut)
                                             <a href="{{ route('vehicles.inspect', ['vehicle' => $v, 'type' => 'check_in']) }}"
                                                 class="rounded-xl bg-amber-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-600 shadow-2xs transition active:scale-[0.98]">
