@@ -182,10 +182,15 @@
             </button>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
             <div class="rounded-xl bg-slate-50 p-3">
                 <span class="text-[10px] text-slate-400 block font-semibold">Pengemudi / Driver</span>
                 <span class="font-bold text-slate-900 mt-0.5 block truncate">{{ $driver_name ?: '-' }}</span>
+            </div>
+
+            <div class="rounded-xl bg-slate-50 p-3">
+                <span class="text-[10px] text-slate-400 block font-semibold">Dibuat Oleh</span>
+                <span class="font-bold text-slate-900 mt-0.5 block truncate">{{ $created_by ?: '-' }}</span>
             </div>
 
             <div class="rounded-xl bg-slate-50 p-3">
@@ -203,7 +208,7 @@
                 <span class="font-bold text-slate-900 mt-0.5 block">{{ $fuel_percentage }}%</span>
             </div>
 
-            <div class="rounded-xl bg-slate-50 p-3">
+            <div class="rounded-xl bg-slate-50 p-3 col-span-2 sm:col-span-1">
                 <span class="text-[10px] text-slate-400 block font-semibold">Checklist Fisik</span>
                 <span class="font-bold mt-0.5 block {{ $this->okCount === $this->totalItems ? 'text-emerald-700' : 'text-amber-700' }}">
                     {{ $this->okCount }}/{{ $this->totalItems }} Poin OK

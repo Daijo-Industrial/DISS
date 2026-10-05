@@ -83,4 +83,38 @@ return [
     |
     */
     'reminder_threshold_days' => [30, 14, 7],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Daftar Pengemudi / Driver Default Armada (P2H)
+    |--------------------------------------------------------------------------
+    |
+    | Daftar nama supir operasional yang dapat dipilih langsung atau diketik
+    | manual pada form pemeriksaan P2H.
+    |
+    */
+    'drivers' => [
+        'Bambang supriyanto',
+        'Khumedi',
+        'Ismail',
+        'Eka',
+        'Andrico',
+        'Azis',
+        'Hansel',
+        'Rendi',
+        'Endang',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Daftar Pembuat / Inspektor P2H Default (Future Config)
+    |--------------------------------------------------------------------------
+    |
+    | Daftar nama pembuat / pemeriksa default. Jika kosong, user mengetik
+    | nama secara manual atau dapat ditambahkan di kemudian hari.
+    |
+    */
+    'inspectors' => [
+        // Dapat dikonfigurasi / ditambahkan nama-nama pemeriksa default
+    ],
 ];
