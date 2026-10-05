@@ -113,6 +113,15 @@ php artisan sap:sync --endpoint=sap_fct_inventory_mtr
 - **18:00 WIB**: `php artisan sap:sync --endpoint=all`
 Output logged to `storage/logs/sap-sync.log`.
 
+### Automated Verification Tests
+```bash
+# Test SAP sync vendor code preservation and BOM WIP union (3 tests, 15 assertions)
+docker exec diss-laravel.test-1 php artisan test --filter=SapSyncServiceTest
+
+# Test forecast data explosion and prediction pipeline (1 test, 10 assertions)
+docker exec diss-laravel.test-1 php artisan test --filter=ForecastPipelineTest
+```
+
 ---
 
 ## 6. Common Troubleshooting & Runbooks

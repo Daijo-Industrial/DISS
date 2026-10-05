@@ -32,3 +32,9 @@ description: Domain knowledge, user repository architecture, page visit telemetr
   2. `roles`: Module-grouped role chips, legacy direct permissions notice, `saveRoles()`.
   3. `activity`: Telemetry metrics (Last Active, Total Hits, Distinct Routes), Dormant notice, Top 10 routes.
   4. `security`: Password reset form (`savePassword()`), direct administrative email verification override (`toggleEmailVerification()`).
+
+## 4. Development & Testing Runbooks
+```bash
+# Run user administration & telemetry test suite (11 tests, 48 assertions)
+docker exec diss-laravel.test-1 php artisan test --filter=UserIndexTest
+```
