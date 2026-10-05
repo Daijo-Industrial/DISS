@@ -606,6 +606,7 @@ class NavigationService
     public static function getQuickAccessItems($user): array
     {
         $menu = self::applyRoleBasedFiltering(self::getBaseMenuStructure(), $user);
+        $menu = self::applySmartDefaults($menu, $user);
 
         return self::buildQuickAccessItems($menu, $user);
     }
@@ -675,6 +676,21 @@ class NavigationService
             $item = $allowedRoutes[$visit->route_name];
             $item['pinned'] = false;
             $quickItems[] = $item;
+        }
+
+        // ── 3. Role-based cold-start fallback (fill up to 6 total) ───────────
+        if (count($quickItems) < 6) {
+            $existingRoutes = array_column($quickItems, 'route');
+            foreach ($allowedRoutes as $routeName => $item) {
+                if (count($quickItems) >= 6) {
+                    break;
+                }
+                if ($routeName === 'home' || in_array($routeName, $existingRoutes, true)) {
+                    continue;
+                }
+                $item['pinned'] = false;
+                $quickItems[] = $item;
+            }
         }
 
         return $quickItems;

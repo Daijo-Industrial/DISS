@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Navigation;
 
+use App\Http\Controllers\NavPinController;
 use App\Models\UserPageVisit;
 use App\Models\UserPinnedRoute;
 use App\Services\NavigationService;
@@ -28,8 +29,8 @@ class QuickAccess extends Component
 
         $count = UserPinnedRoute::where('user_id', $userId)->count();
 
-        if ($count >= 8) {
-            $this->dispatch('toast', type: 'warning', message: 'Maximum 8 pinned items allowed.');
+        if ($count >= NavPinController::MAX_PINS) {
+            $this->dispatch('toast', type: 'warning', message: 'Maximum ' . NavPinController::MAX_PINS . ' pinned items allowed.');
 
             return;
         }
