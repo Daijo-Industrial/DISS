@@ -47,7 +47,7 @@ class Vehicle extends Model
 
     public function getIsSoldAttribute(): bool
     {
-        return (bool) $this->sold_at || $this->status === 'sold';
+        return (bool) $this->sold_at || $this->status === VehicleStatus::SOLD || $this->status === 'sold';
     }
 
     public function setPlateNumberAttribute($value)

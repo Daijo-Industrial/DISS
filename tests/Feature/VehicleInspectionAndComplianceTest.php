@@ -75,7 +75,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
 
     public function test_vehicle_model_attributes_and_relationships()
     {
-        $this->assertEquals('Mobil Penumpang', $this->vehicle->category_label);
+        $this->assertEquals('Mobil Penumpang / Kecil', $this->vehicle->category_label);
         $this->assertEquals('Bensin', $this->vehicle->fuel_type_label);
         $this->assertFalse($this->vehicle->requires_kir);
         $this->assertFalse($this->vehicle->is_out_on_trip);
@@ -631,7 +631,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
     {
         // Indonesian (Default)
         app()->setLocale('id');
-        $this->assertEquals('Mobil Penumpang', $this->vehicle->category_label);
+        $this->assertEquals('Mobil Penumpang / Kecil', $this->vehicle->category_label);
         $this->assertEquals('Bensin', $this->vehicle->fuel_type_label);
         $this->assertEquals('Truk / Mobil Gede', $this->truck->category_label);
         $this->assertEquals('Solar / Diesel', $this->truck->fuel_type_label);
@@ -650,8 +650,8 @@ class VehicleInspectionAndComplianceTest extends TestCase
 
         // English (Switched)
         app()->setLocale('en');
-        $this->assertEquals('Passenger Vehicle', $this->vehicle->category_label);
-        $this->assertEquals('Petrol', $this->vehicle->fuel_type_label);
+        $this->assertEquals('Passenger Car / Small', $this->vehicle->category_label);
+        $this->assertEquals('Petrol / Gasoline', $this->vehicle->fuel_type_label);
         $this->assertEquals('Commercial Truck / Heavy', $this->truck->category_label);
         $this->assertEquals('Diesel', $this->truck->fuel_type_label);
         $this->assertEquals('Periodic KIR Inspection', $doc->type_label);
@@ -1059,5 +1059,75 @@ class VehicleInspectionAndComplianceTest extends TestCase
         // But shows P2H button for passenger vehicle
         Livewire::test(VehicleShow::class, ['vehicle' => $this->vehicle])
             ->assertSeeHtml(route('vehicles.inspect', ['vehicle' => $this->vehicle, 'type' => 'check_out']));
+    }
+
+    public function test_sold_and_retired_vehicles_are_excluded_from_active_index_and_available_in_sold_tab(): void
+    {
+        // 1. Create a sold vehicle and a retired vehicle
+        $soldVehicle = Vehicle::create([
+            'plate_number' => 'B 1111 SOLD',
+            'driver_name' => 'Eks Supir',
+            'brand' => 'Daihatsu',
+            'model' => 'Xenia',
+            'category' => 'passenger',
+            'fuel_type' => 'petrol',
+            'requires_kir' => false,
+            'odometer' => 120000,
+            'status' => VehicleStatus::SOLD,
+            'sold_at' => now()->subMonths(2)->toDateString(),
+        ]);
+
+        $retiredVehicle = Vehicle::create([
+            'plate_number' => 'B 2222 RET',
+            'driver_name' => 'Eks Supir 2',
+            'brand' => 'Suzuki',
+            'model' => 'APV',
+            'category' => 'passenger',
+            'fuel_type' => 'petrol',
+            'requires_kir' => false,
+            'odometer' => 180000,
+            'status' => VehicleStatus::RETIRED,
+        ]);
+
+        $this->assertTrue($soldVehicle->is_sold);
+
+        // 2. Active index view (operationalTab = 'all') does NOT show sold or retired vehicles
+        Livewire::test(VehiclesIndex::class)
+            ->assertSet('operationalTab', 'all')
+            ->assertSee($this->vehicle->plate_number)
+            ->assertDontSee($soldVehicle->plate_number)
+            ->assertDontSee($retiredVehicle->plate_number);
+
+        // 3. In-pool tab does NOT show sold or retired vehicles
+        Livewire::test(VehiclesIndex::class)
+            ->call('setOperationalTab', 'in_pool')
+            ->assertSee($this->vehicle->plate_number)
+            ->assertDontSee($soldVehicle->plate_number)
+            ->assertDontSee($retiredVehicle->plate_number);
+
+        // 4. Viewer without canManage cannot access sold tab
+        $viewerUser = User::factory()->create();
+        $viewerUser->givePermissionTo('fleet.view');
+
+        Livewire::actingAs($viewerUser)
+            ->test(VehiclesIndex::class)
+            ->assertDontSeeHtml('wire:click="setOperationalTab(\'sold\')"')
+            ->call('setOperationalTab', 'sold')
+            ->assertSet('operationalTab', 'all') // Rejected from setting sold tab
+            ->assertDontSee($soldVehicle->plate_number);
+
+        // 5. Manager with canManage can see sold tab with counter and access sold/retired units
+        Livewire::actingAs($this->user)
+            ->test(VehiclesIndex::class)
+            ->assertSeeHtml('wire:click="setOperationalTab(\'sold\')"')
+            ->call('setOperationalTab', 'sold')
+            ->assertSet('operationalTab', 'sold')
+            ->assertSee($soldVehicle->plate_number)
+            ->assertSee($retiredVehicle->plate_number)
+            ->assertDontSee($this->vehicle->plate_number) // Active unit not in sold tab
+            ->assertSee('Terjual')
+            ->assertSee('Purnatugas')
+            // Sold units never show P2H inspection button
+            ->assertDontSeeHtml(route('vehicles.inspect', ['vehicle' => $soldVehicle, 'type' => 'check_out']));
     }
 }

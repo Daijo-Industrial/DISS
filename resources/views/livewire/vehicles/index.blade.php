@@ -120,6 +120,18 @@
                     {{ $metrics['maintenance'] ?? 0 }}
                 </span>
             </button>
+
+            {{-- Terjual (Sold / Archived) - Visible for managers only --}}
+            @if ($canManage)
+                <button type="button" wire:click="setOperationalTab('sold')"
+                    class="flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-xs transition cursor-pointer flex-1 sm:flex-initial {{ $operationalTab === 'sold' ? 'bg-white text-slate-900 font-bold shadow-xs' : 'text-slate-500 hover:text-slate-800 font-medium' }}">
+                    <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
+                    <span>Terjual</span>
+                    <span class="rounded-full px-1.5 py-0.2 text-[11px] {{ $operationalTab === 'sold' ? 'bg-rose-50 text-rose-700 font-bold' : 'text-slate-400 font-medium' }}">
+                        {{ $metrics['sold'] ?? 0 }}
+                    </span>
+                </button>
+            @endif
         </div>
     </div>
 
@@ -238,7 +250,7 @@
 
                 <div wire:key="veh-card-{{ $v->id }}"
                     @click="window.location.href = '{{ route('vehicles.show', $v) }}'"
-                    class="group relative flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-4.5 shadow-xs hover:border-slate-300 hover:shadow-md transition cursor-pointer">
+                    class="group relative flex flex-col justify-between rounded-2xl border border-slate-200/80 p-4 sm:p-4.5 shadow-xs hover:border-slate-300 hover:shadow-md transition cursor-pointer {{ ($v->is_sold || $v->status === \App\Enums\VehicleStatus::RETIRED || $v->status === 'retired') ? 'bg-slate-50/70 opacity-85 hover:opacity-100' : 'bg-white' }}">
                     
                     <div>
                         {{-- Top Row: Photo/Icon, Plate Number, Model & Operational Badge --}}
@@ -270,15 +282,30 @@
                             </div>
 
                             {{-- Operational Status Badge --}}
-                            @if ($isOut)
+                            @if ($v->is_sold)
+                                <span class="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 border border-rose-200/60 shrink-0" title="{{ $v->sold_at ? 'Terjual: ' . $v->sold_at->format('d/m/Y') : 'Unit Terjual' }}">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
+                                    <span>Terjual{{ $v->sold_at ? ' ' . $v->sold_at->format('d/m/y') : '' }}</span>
+                                </span>
+                            @elseif ($v->status === \App\Enums\VehicleStatus::RETIRED || $v->status === 'retired')
+                                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200/60 shrink-0">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-slate-500"></span>
+                                    <span>Purnatugas</span>
+                                </span>
+                            @elseif ($v->status === \App\Enums\VehicleStatus::MAINTENANCE || $v->status === 'maintenance')
+                                <span class="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 border border-rose-200/60 shrink-0">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
+                                    <span>Perawatan</span>
+                                </span>
+                            @elseif ($isOut)
                                 <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 border border-amber-200/60 shrink-0">
                                     <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-                                    On-Trip
+                                    <span>On-Trip</span>
                                 </span>
                             @else
                                 <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200/60 shrink-0">
                                     <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                                    Di Pool
+                                    <span>Di Pool</span>
                                 </span>
                             @endif
                         </div>
@@ -372,7 +399,7 @@
                         @endphp
                         <tr wire:key="veh-table-{{ $v->id }}"
                             onclick="window.location.href = '{{ route('vehicles.show', $v) }}'"
-                            class="hover:bg-slate-50/80 cursor-pointer transition">
+                            class="hover:bg-slate-50/80 cursor-pointer transition {{ ($v->is_sold || $v->status === \App\Enums\VehicleStatus::RETIRED || $v->status === 'retired') ? 'bg-slate-50/60 opacity-85 hover:opacity-100' : '' }}">
                             <td class="px-4 py-3.5">
                                 <div class="flex items-center gap-3">
                                     @if ($v->image_path)
@@ -408,7 +435,22 @@
                                 {{ number_format($v->odometer) }} km
                             </td>
                             <td class="px-4 py-3.5 whitespace-nowrap">
-                                @if ($isOut)
+                                @if ($v->is_sold)
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-[10px] font-bold text-rose-700 ring-1 ring-inset ring-rose-200" title="{{ $v->sold_at ? 'Terjual: ' . $v->sold_at->format('d/m/Y') : 'Unit Terjual' }}">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
+                                        <span>Terjual{{ $v->sold_at ? ' ' . $v->sold_at->format('d/m/y') : '' }}</span>
+                                    </span>
+                                @elseif ($v->status === \App\Enums\VehicleStatus::RETIRED || $v->status === 'retired')
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-700 ring-1 ring-inset ring-slate-200">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-slate-500"></span>
+                                        <span>Purnatugas</span>
+                                    </span>
+                                @elseif ($v->status === \App\Enums\VehicleStatus::MAINTENANCE || $v->status === 'maintenance')
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-[10px] font-bold text-rose-700 ring-1 ring-inset ring-rose-200">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
+                                        <span>Perawatan</span>
+                                    </span>
+                                @elseif ($isOut)
                                     <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-200">
                                         On-Trip
                                     </span>

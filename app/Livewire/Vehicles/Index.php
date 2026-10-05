@@ -127,7 +127,11 @@ class Index extends Component
 
     public function setOperationalTab(string $tab): void
     {
-        if (in_array($tab, ['all', 'in_pool', 'on_trip', 'maintenance'], true)) {
+        $allowed = $this->canManage
+            ? ['all', 'in_pool', 'on_trip', 'maintenance', 'sold']
+            : ['all', 'in_pool', 'on_trip', 'maintenance'];
+
+        if (in_array($tab, $allowed, true)) {
             $this->operationalTab = $tab;
             $this->resetPage();
         }
@@ -163,6 +167,8 @@ class Index extends Component
                 ]);
         }
 
+        $tab = ($this->operationalTab === 'sold' && ! $this->canManage) ? 'all' : $this->operationalTab;
+
         $query
             ->when(
                 $this->q,
@@ -176,33 +182,56 @@ class Index extends Component
             ->when($this->category !== 'all', function ($q) {
                 $q->where('category', $this->category);
             })
-            ->when($this->operationalTab === 'in_pool', function ($q) {
-                $q->whereDoesntHave('activeCheckOut')->whereNotIn('status', ['sold', 'retired', 'maintenance']);
-            })
-            ->when($this->operationalTab === 'on_trip', function ($q) {
-                $q->whereHas('activeCheckOut');
-            })
-            ->when($this->operationalTab === 'maintenance', function ($q) {
-                $q->where('status', 'maintenance');
+            ->when($tab === 'sold', function ($q) {
+                $q->where(function ($w) {
+                    $w->whereIn('status', ['sold', 'retired'])
+                        ->orWhereNotNull('sold_at');
+                });
+            }, function ($q) use ($tab) {
+                // All active operational tabs strictly exclude sold and retired units
+                $q->whereNotIn('status', ['sold', 'retired'])
+                    ->whereNull('sold_at')
+                    ->when($tab === 'in_pool', function ($w) {
+                        $w->whereDoesntHave('activeCheckOut')->where('status', '!=', 'maintenance');
+                    })
+                    ->when($tab === 'on_trip', function ($w) {
+                        $w->whereHas('activeCheckOut');
+                    })
+                    ->when($tab === 'maintenance', function ($w) {
+                        $w->where('status', 'maintenance');
+                    });
             })
             ->when($this->canManage && $this->status !== 'all', function ($q) {
                 $q->where('status', VehicleStatus::from($this->status));
             })
             ->orderBy($sortField, $sortDir);
 
-        // KPI Metrics
-        $baseMetricsQuery = Vehicle::query()
+        // Active Fleet KPI Metrics
+        $baseActiveQuery = Vehicle::query()
             ->whereNull('deleted_at')
             ->whereNotIn('status', ['sold', 'retired'])
+            ->whereNull('sold_at')
             ->when($this->category !== 'all', fn ($q) => $q->where('category', $this->category));
-        $totalVehicles = (clone $baseMetricsQuery)->count();
-        $onTripVehicles = (clone $baseMetricsQuery)->whereHas('activeCheckOut')->count();
-        $maintenanceVehicles = (clone $baseMetricsQuery)->where('status', 'maintenance')->count();
+
+        $totalVehicles = (clone $baseActiveQuery)->count();
+        $onTripVehicles = (clone $baseActiveQuery)->whereHas('activeCheckOut')->count();
+        $maintenanceVehicles = (clone $baseActiveQuery)->where('status', 'maintenance')->count();
         $inPoolVehicles = max(0, $totalVehicles - $onTripVehicles - $maintenanceVehicles);
+
+        $soldCount = $this->canManage
+            ? Vehicle::query()
+                ->whereNull('deleted_at')
+                ->where(function ($w) {
+                    $w->whereIn('status', ['sold', 'retired'])
+                        ->orWhereNotNull('sold_at');
+                })
+                ->when($this->category !== 'all', fn ($q) => $q->where('category', $this->category))
+                ->count()
+            : 0;
 
         $complianceAlerts = $this->canManage
             ? VehicleDocument::with('vehicle')
-                ->whereHas('vehicle', fn ($q) => $q->whereNull('deleted_at')->whereNotIn('status', ['sold', 'retired']))
+                ->whereHas('vehicle', fn ($q) => $q->whereNull('deleted_at')->whereNotIn('status', ['sold', 'retired'])->whereNull('sold_at'))
                 ->where('expired_date', '<=', now()->addDays(30))
                 ->orderBy('expired_date')
                 ->get()
@@ -213,6 +242,7 @@ class Index extends Component
             'on_trip' => $onTripVehicles,
             'in_pool' => $inPoolVehicles,
             'maintenance' => $maintenanceVehicles,
+            'sold' => $soldCount,
             'alerts' => $complianceAlerts->count(),
         ];
 
