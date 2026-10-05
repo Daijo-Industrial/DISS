@@ -185,24 +185,6 @@
                 </div>
             </div>
 
-            {{-- Tactile Quick Presets --}}
-            <div class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-200/60">
-                <span class="text-[11px] text-slate-400 font-medium mr-1">Preset:</span>
-                @foreach ([10 => '10%', 25 => '1/4', 50 => '1/2', 75 => '3/4', 100 => 'Full'] as $val => $lbl)
-                    <button type="button" wire:click="$set('fuel_percentage', {{ $val }})"
-                        class="rounded-lg py-1 px-2.5 text-xs font-bold transition cursor-pointer text-center active:scale-95
-                        {{ (int) $fuel_percentage === $val ? 'bg-slate-900 text-white shadow-2xs' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100' }}">
-                        {{ $lbl }}
-                    </button>
-                @endforeach
-
-                @if (!in_array((int) $fuel_percentage, [10, 25, 50, 75, 100], true))
-                    <span class="rounded-lg bg-indigo-50 border border-indigo-200/70 text-indigo-700 py-1 px-2 text-[11px] font-bold">
-                        Kustom: {{ $fuel_percentage }}%
-                    </span>
-                @endif
-            </div>
-
             @error('fuel_percentage')
                 <p class="text-[11px] text-rose-600 font-semibold">{{ $message }}</p>
             @enderror

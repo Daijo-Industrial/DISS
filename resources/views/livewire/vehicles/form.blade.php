@@ -45,7 +45,7 @@
     {{-- Form --}}
     <form wire:submit.prevent="save" x-data="{
         driver_name: @entangle('driver_name'),
-        plate_number: @entangle('plate_number'),
+        plate_number: @entangle('plate_number').live,
         @if ($canManage)
             brand: @entangle('brand'),
             model: @entangle('model'),
@@ -80,7 +80,22 @@
         },
         formatPlateInput() {
             if (!this.plate_number) return;
-            this.plate_number = this.plate_number.toUpperCase().replace(/[^A-Z0-9 ]/g, '').replace(/\s+/g, ' ');
+            let val = this.plate_number;
+            let endsWithSpace = val.endsWith(' ');
+            let raw = val.toUpperCase().replace(/[^A-Z0-9 ]/g, '').replace(/\s+/g, ' ');
+            let clean = raw.replace(/\s/g, '');
+            let m = clean.match(/^([A-Z]{1,2})([0-9]{0,4})([A-Z]{0,4})/);
+            if (!m || !m[1]) {
+                this.plate_number = raw;
+                return;
+            }
+            let res = m[1];
+            if (m[2]) res += ' ' + m[2];
+            if (m[3]) res += ' ' + m[3];
+            if (endsWithSpace && !res.endsWith(' ') && (!m[3] || m[3].length < 4)) {
+                res += ' ';
+            }
+            this.plate_number = res;
         },
         normalizePlateOnBlur() {
             if (!this.plate_number) return;
@@ -113,24 +128,52 @@
                         <label class="text-xs font-semibold text-slate-700">
                             Plat Nomor <span class="text-rose-500">*</span>
                         </label>
-                        <span x-show="isPlateValid() && getPlateRegion()" x-text="getPlateRegion()"
-                            class="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200"></span>
+                        <div class="flex items-center gap-1.5">
+                            <span x-show="getPlateRegion()" x-text="getPlateRegion()"
+                                class="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200"></span>
+                            @if (! $errors->has('plate_number'))
+                                <span x-show="isPlateValid()"
+                                    class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                    <i class="bi bi-check-circle-fill text-emerald-500 text-[10px]"></i>
+                                    Format Sesuai
+                                </span>
+                            @else
+                                <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                                    <i class="bi bi-exclamation-triangle-fill text-rose-500 text-[10px]"></i>
+                                    Perlu Perhatian
+                                </span>
+                            @endif
+                        </div>
                     </div>
 
-                    <div class="relative flex items-center rounded-xl bg-slate-900 border border-slate-700 px-3.5 py-2.5 shadow-inner focus-within:border-indigo-400 focus-within:ring-1 focus-within:ring-indigo-400">
+                    <div class="relative flex items-center rounded-xl bg-slate-900 border px-3.5 py-2.5 shadow-inner transition {{ $errors->has('plate_number') ? 'border-rose-500 ring-2 ring-rose-500/20' : '' }}"
+                        :class="! {{ $errors->has('plate_number') ? 'true' : 'false' }} && isPlateValid() ? 'border-emerald-500/80 ring-1 ring-emerald-500/30' : 'border-slate-700 focus-within:border-indigo-400 focus-within:ring-1 focus-within:ring-indigo-400'">
                         <span class="text-[10px] font-mono font-bold text-slate-400 border-r border-slate-700 pr-2.5 mr-2.5 select-none">RI</span>
                         <input type="text"
                             x-model="plate_number"
                             @input="formatPlateInput()"
-                            @blur="normalizePlateOnBlur()"
+                            @blur="normalizePlateOnBlur(); $wire.validateOnly('plate_number')"
                             placeholder="B 1234 XYZ"
+                            maxlength="16"
+                            autocomplete="off"
+                            spellcheck="false"
                             class="w-full bg-transparent font-mono text-xl font-bold uppercase tracking-widest text-white placeholder-slate-500 focus:outline-none">
-                        <span x-show="isPlateValid()" class="text-emerald-400 text-sm pl-2">
-                            <i class="bi bi-check-circle-fill"></i>
-                        </span>
+                        
+                        @if ($errors->has('plate_number'))
+                            <span class="text-rose-400 text-sm pl-2 shrink-0" title="Plat nomor bermasalah atau duplikat">
+                                <i class="bi bi-exclamation-circle-fill"></i>
+                            </span>
+                        @else
+                            <span x-show="isPlateValid()" class="text-emerald-400 text-sm pl-2 shrink-0" title="Format valid & tersedia">
+                                <i class="bi bi-check-circle-fill"></i>
+                            </span>
+                        @endif
                     </div>
                     @error('plate_number')
-                        <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
+                        <div class="mt-1.5 flex items-center gap-1.5 text-xs text-rose-600 font-semibold">
+                            <i class="bi bi-exclamation-circle-fill shrink-0"></i>
+                            <span>{{ $message }}</span>
+                        </div>
                     @enderror
                 </div>
 

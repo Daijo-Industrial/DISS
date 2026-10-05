@@ -70,11 +70,15 @@ All plate formatting, regex patterns, and region mappings are centralized in **`
 - Mapped in `config('fleet.plate_regions')` covering 40+ Indonesian Samsat registration areas (Jadetabek `B`, Bandung `D`, Surabaya `L`, Bali `DK`, dll).
 - Resolvable via Model Accessor: `$vehicle->region_name`.
 
-### Input Normalization & Masking
-- Handled in `App\Livewire\Vehicles\Form` via `normalizePlateNumber()`:
-  - Uppercases input and strips invalid characters.
-  - Automatically splits glued inputs without spaces (e.g. `b1234xyz` &rarr; `B 1234 XYZ`).
-  - Automatically triggers on blur and Livewire `save()`.
+### Strict Uniqueness & Database Constraint
+- Migration: `2026_10_05_170000_enforce_unique_plate_number_on_vehicles_table.php`.
+- Enforces strict database-level unique index on `vehicles.plate_number` to prevent any duplicate registration across the fleet.
+
+### Input Normalization & Real-Time Formatting
+- Handled in `App\Livewire\Vehicles\Form` and `form.blade.php`:
+  - Real-time auto-spacing and formatting on typing (`b1234xyz` &rarr; `B 1234 XYZ`), seamlessly inserting spaces between wilayah, number, and suffix without jumping or backspace fighting.
+  - Real-time validation and duplicate check: once regex matches, Livewire checks uniqueness against existing vehicles in the database, displaying instant visual confirmation or duplicate error.
+  - Automatically normalizes on blur and save.
 
 ---
 
@@ -166,6 +170,10 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
   - Defaults to `passenger` (`$category = 'passenger'`).
   - Dropdown options: `passenger` (Mobil Penumpang), `commercial_truck` (Truk), `pickup` (Pick-up), `other` (Lainnya), `all` (Semua Tipe Armada).
   - KPI Metrics (`$baseMetricsQuery`) are dynamically scoped to the selected category (unless `'all'`), ensuring operational status pill counts (`Semua`, `Di Pool`, `On-Trip`, `Perawatan`) accurately reflect the filtered category.
+- **Initially Hidden Available Filters**:
+  - The search input and "Filter" toggle button remain prominently visible.
+  - Available filters (Category, Sort By, Sort Direction, and Reset) are housed inside an initially collapsed drawer (`showFilters: false` in Alpine `x-data`, using `x-collapse` and `x-cloak`).
+  - An active indicator dot highlights the "Filter" button whenever non-default filters are active, preserving a clean, uncluttered interface by default.
 - **Conditional P2H Action Buttons**:
   - Primary CTA buttons (`P2H Check-out` / `Check-in Pulang ke Pool`) in Grid cards and Data Table rows are strictly guarded with `@if (!$v->is_sold && $v->category === 'passenger')`.
   - Non-passenger units render no P2H action button.
@@ -236,7 +244,7 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
 All tests and tools run inside the Docker Sail container (`diss-laravel.test-1`):
 
 ```bash
-# Run fleet inspection and compliance test suite (30 tests, 320 assertions)
+# Run fleet inspection and compliance test suite (31 tests, 334 assertions)
 docker exec diss-laravel.test-1 php artisan test --filter=VehicleInspectionAndComplianceTest
 
 # Check document reminders manually

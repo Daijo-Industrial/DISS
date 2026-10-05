@@ -1,5 +1,6 @@
 <div class="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5"
     x-data="{
+        showFilters: false,
         userSelected: false,
         viewMode: (function() {
             try {
@@ -172,66 +173,131 @@
     @endif
 
     {{-- Search & Control Bar --}}
-    <div class="rounded-2xl border border-slate-200/80 bg-white p-2.5 sm:p-3 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-        {{-- Left: Search Input & Fleet Type Filter --}}
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5 flex-1">
-            {{-- Search Input (Stays Visible) --}}
-            <div class="relative w-full sm:max-w-xs">
-                <i class="bi bi-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
-                <input type="text" placeholder="{{ __('fleet.index.search_placeholder') }}"
-                    wire:model.live.debounce.300ms="q"
-                    class="w-full rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 sm:py-1.5 pl-8 pr-8 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition">
-                @if ($q !== '')
-                    <button type="button" wire:click="$set('q','')" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600">
-                        <i class="bi bi-x-circle text-xs"></i>
-                    </button>
-                @endif
+    <div class="rounded-2xl border border-slate-200/80 bg-white p-2.5 sm:p-3 shadow-xs space-y-2.5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            {{-- Left: Search Input & Filter Toggle Button --}}
+            <div class="flex items-center gap-2 flex-1">
+                {{-- Search Input (Stays Visible) --}}
+                <div class="relative w-full sm:max-w-xs">
+                    <i class="bi bi-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                    <input type="text" placeholder="{{ __('fleet.index.search_placeholder') }}"
+                        wire:model.live.debounce.300ms="q"
+                        class="w-full rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 sm:py-1.5 pl-8 pr-8 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition">
+                    @if ($q !== '')
+                        <button type="button" wire:click="$set('q','')" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600">
+                            <i class="bi bi-x-circle text-xs"></i>
+                        </button>
+                    @endif
+                </div>
+
+                {{-- Filter Toggle Button (Initially Hidden Available Filters) --}}
+                <button type="button" @click="showFilters = !showFilters"
+                    :class="showFilters ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-bold shadow-2xs' : 'bg-slate-50/80 border-slate-200/80 text-slate-600 hover:bg-slate-100 font-semibold'"
+                    class="inline-flex items-center gap-1.5 rounded-xl border py-2 sm:py-1.5 px-3 text-xs transition shrink-0 cursor-pointer active:scale-95">
+                    <i class="bi bi-sliders text-xs"></i>
+                    <span>Filter</span>
+                    @if ($category !== 'passenger' || $sort !== 'plate_number' || $dir !== 'asc')
+                        <span class="h-1.5 w-1.5 rounded-full bg-indigo-600 ring-2 ring-indigo-200"></span>
+                    @endif
+                </button>
             </div>
 
-            {{-- Fleet Type Filter --}}
-            <div class="flex items-center gap-1.5 shrink-0">
-                <label for="fleet-category-filter" class="text-[11px] font-medium text-slate-400 shrink-0 hidden sm:inline">
-                    {{ __('fleet.index.filter_category') }}:
-                </label>
-                <div class="relative w-full sm:w-auto">
-                    <select id="fleet-category-filter" wire:model.live="category"
-                        class="w-full sm:w-auto appearance-none rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 sm:py-1.5 pl-3 pr-8 text-xs font-semibold text-slate-700 hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition cursor-pointer">
-                        <option value="passenger">{{ __('fleet.categories.passenger') }}</option>
-                        <option value="commercial_truck">{{ __('fleet.categories.commercial_truck') }}</option>
-                        <option value="pickup">{{ __('fleet.categories.pickup') }}</option>
-                        <option value="other">{{ __('fleet.categories.other') }}</option>
-                        <option value="all">{{ __('fleet.index.all_categories') }}</option>
+            {{-- Right: View Mode Switcher (Grid vs Table) & PerPage --}}
+            <div class="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                <div class="flex items-center gap-1.5 text-xs text-slate-500">
+                    <span class="text-[11px] font-medium text-slate-400">Baris:</span>
+                    <select wire:model.live="perPage"
+                        class="rounded-lg border border-slate-200 bg-slate-50 py-1 px-1.5 text-xs text-slate-700 focus:outline-none cursor-pointer">
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
                     </select>
-                    <i class="bi bi-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none"></i>
+                </div>
+
+                <div class="inline-flex rounded-xl bg-slate-100/90 p-0.5 border border-slate-200/60">
+                    <button type="button" @click="setView('grid')"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-1 rounded-lg text-xs font-semibold transition cursor-pointer"
+                        :class="viewMode === 'grid' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'">
+                        <i class="bi bi-grid-fill text-xs"></i>
+                        <span>Galeri</span>
+                    </button>
+                    <button type="button" @click="setView('table')"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-1 rounded-lg text-xs font-semibold transition cursor-pointer"
+                        :class="viewMode === 'table' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'">
+                        <i class="bi bi-table text-xs"></i>
+                        <span>Tabel</span>
+                    </button>
                 </div>
             </div>
         </div>
 
-        {{-- View Mode Switcher (Grid vs Table) & PerPage --}}
-        <div class="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-            <div class="flex items-center gap-1.5 text-xs text-slate-500">
-                <span class="text-[11px] font-medium text-slate-400">Baris:</span>
-                <select wire:model.live="perPage"
-                    class="rounded-lg border border-slate-200 bg-slate-50 py-1 px-1.5 text-xs text-slate-700 focus:outline-none">
-                    <option value="10">10</option>
-                    <option value="20">20</option>
-                    <option value="50">50</option>
-                </select>
-            </div>
+        {{-- Collapsible Available Filters Panel (Initially Hidden) --}}
+        <div x-show="showFilters" x-collapse x-cloak style="display: none;"
+            class="pt-3 border-t border-slate-100">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {{-- Category Filter --}}
+                <div>
+                    <label for="fleet-category-filter" class="block text-[11px] font-semibold text-slate-600 mb-1">
+                        {{ __('fleet.index.filter_category') }}
+                    </label>
+                    <div class="relative">
+                        <select id="fleet-category-filter" wire:model.live="category"
+                            class="w-full appearance-none rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 pl-3 pr-8 text-xs font-semibold text-slate-800 hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition cursor-pointer">
+                            <option value="passenger">{{ __('fleet.categories.passenger') }}</option>
+                            <option value="commercial_truck">{{ __('fleet.categories.commercial_truck') }}</option>
+                            <option value="pickup">{{ __('fleet.categories.pickup') }}</option>
+                            <option value="other">{{ __('fleet.categories.other') }}</option>
+                            <option value="all">{{ __('fleet.index.all_categories') }}</option>
+                        </select>
+                        <i class="bi bi-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none"></i>
+                    </div>
+                </div>
 
-            <div class="inline-flex rounded-xl bg-slate-100/90 p-0.5 border border-slate-200/60">
-                <button type="button" @click="setView('grid')"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-1 rounded-lg text-xs font-semibold transition"
-                    :class="viewMode === 'grid' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'">
-                    <i class="bi bi-grid-fill text-xs"></i>
-                    <span>Galeri</span>
-                </button>
-                <button type="button" @click="setView('table')"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-1 rounded-lg text-xs font-semibold transition"
-                    :class="viewMode === 'table' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'">
-                    <i class="bi bi-table text-xs"></i>
-                    <span>Tabel</span>
-                </button>
+                {{-- Sort Field --}}
+                <div>
+                    <label for="fleet-sort-filter" class="block text-[11px] font-semibold text-slate-600 mb-1">
+                        Urutkan Berdasarkan
+                    </label>
+                    <div class="relative">
+                        <select id="fleet-sort-filter" wire:model.live="sort"
+                            class="w-full appearance-none rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 pl-3 pr-8 text-xs font-semibold text-slate-800 hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition cursor-pointer">
+                            <option value="plate_number">Plat Nomor</option>
+                            <option value="driver_name">Driver Penanggung Jawab</option>
+                            @if ($canManage)
+                                <option value="odometer">Odometer (KM)</option>
+                                <option value="status">Status Unit</option>
+                                <option value="last_service_date">Servis Terakhir</option>
+                            @endif
+                        </select>
+                        <i class="bi bi-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none"></i>
+                    </div>
+                </div>
+
+                {{-- Sort Direction & Quick Reset --}}
+                <div>
+                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">
+                        Arah Urutan
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex-1">
+                            <select wire:model.live="dir"
+                                class="w-full appearance-none rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 pl-3 pr-8 text-xs font-semibold text-slate-800 hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition cursor-pointer">
+                                <option value="asc">A - Z (Naik / Terendah)</option>
+                                <option value="desc">Z - A (Turun / Tertinggi)</option>
+                            </select>
+                            <i class="bi bi-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none"></i>
+                        </div>
+
+                        @if ($category !== 'passenger' || $sort !== 'plate_number' || $dir !== 'asc')
+                            <button type="button" wire:click="$set('category', 'passenger'); $set('sort', 'plate_number'); $set('dir', 'asc')"
+                                class="rounded-xl border border-slate-200 bg-slate-100 hover:bg-slate-200 py-2 px-3 text-xs font-semibold text-slate-600 transition shrink-0 cursor-pointer"
+                                title="Reset filter ke pengaturan awal">
+                                <i class="bi bi-arrow-counterclockwise mr-1"></i>
+                                Reset
+                            </button>
+                        @endif
+                    </div>
+                </div>
             </div>
         </div>
     </div>

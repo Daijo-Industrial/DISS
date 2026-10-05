@@ -190,9 +190,9 @@
     {{-- Header Card --}}
     <div class="text-center space-y-1">
         <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">{{ __('fleet.scanner.title') }}</h1>
-        <p class="text-xs sm:text-sm text-slate-500">
+        <span class="text-xs sm:text-sm text-slate-500">
             {{ __('fleet.scanner.subtitle') }}
-        </p>
+        </span>
     </div>
 
     {{-- Camera Viewfinder Container --}}
@@ -284,7 +284,7 @@
     @endif
 
     {{-- Alternative: Manual Input / Quick Plate Picker --}}
-    <div class="rounded-2xl border border-slate-200 bg-white p-5 space-y-4 shadow-xs" x-data="{ expanded: {{ $isSearching ? 'true' : 'false' }} }">
+    <div class="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 shadow-xs" x-data="{ expanded: {{ $isSearching ? 'true' : 'false' }} }">
         <div class="flex items-center justify-between cursor-pointer" @click="expanded = !expanded">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 text-sm">
@@ -344,12 +344,12 @@
                                         @endif
                                     </div>
                                     <div class="min-w-0 flex-1">
-                                        <p class="font-mono text-xs font-bold text-slate-900 group-hover:text-indigo-600 truncate">{{ $v->plate_number }}</p>
-                                        <p class="text-[10px] text-slate-500 truncate">{{ $v->brand }} {{ $v->model }}</p>
+                                        <span class="font-mono text-xs font-bold text-slate-900 group-hover:text-indigo-600 truncate">{{ $v->plate_number }}</span>
+                                        <span class="text-[10px] text-slate-500 truncate">{{ $v->brand }} {{ $v->model }}</span>
                                         @if ($v->driver_name)
-                                            <p class="text-[9px] text-slate-400 truncate flex items-center gap-1 mt-0.5">
+                                            <span class="text-[9px] text-slate-400 truncate flex items-center gap-1 mt-0.5">
                                                 <i class="bi bi-person text-[10px]"></i> {{ $v->driver_name }}
-                                            </p>
+                                            </span>
                                         @endif
                                     </div>
                                     <i class="bi bi-chevron-right text-xs text-slate-300 group-hover:text-indigo-500 shrink-0"></i>

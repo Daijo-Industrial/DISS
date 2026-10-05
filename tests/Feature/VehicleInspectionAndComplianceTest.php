@@ -310,6 +310,23 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $this->assertDatabaseHas('vehicles', [
             'plate_number' => 'B 1234 XYZ',
         ]);
+
+        // 3. Enforce uniqueness: duplicate plate number fails real-time and save validation
+        Livewire::test(VehicleForm::class)
+            ->set('plate_number', 'b1234xyz')
+            ->assertHasErrors(['plate_number' => 'unique'])
+            ->set('category', 'passenger')
+            ->set('fuel_type', 'petrol')
+            ->set('status', 'active')
+            ->call('save')
+            ->assertHasErrors(['plate_number' => 'unique']);
+
+        // 4. Editing vehicle allows keeping its own plate number
+        $createdVehicle = Vehicle::where('plate_number', 'B 1234 XYZ')->firstOrFail();
+        Livewire::test(VehicleForm::class, ['vehicle' => $createdVehicle])
+            ->set('driver_name', 'Supir Update')
+            ->call('save')
+            ->assertHasNoErrors();
     }
 
     public function test_vehicle_uuid_primary_key_generated_automatically()
@@ -1226,5 +1243,23 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $legacy = new VehicleInspection;
         $legacy->created_at = now()->subDays(2);
         $this->assertEquals($legacy->created_at->toDateTimeString(), $legacy->checked_at->toDateTimeString());
+    }
+
+    public function test_inspection_form_fuel_presets_removed_and_index_filters_initially_hidden(): void
+    {
+        // 1. Inspection form has numeric input and range slider, but no quick presets
+        Livewire::actingAs($this->user)
+            ->test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
+            ->assertDontSeeHtml('wire:click="$set(\'fuel_percentage\'')
+            ->assertDontSee('Preset:')
+            ->assertSeeHtml('type="range"')
+            ->assertSeeHtml('wire:model.live.debounce.300ms="fuel_percentage"');
+
+        // 2. Vehicles index view initially hides available filters with a toggle button
+        Livewire::actingAs($this->user)
+            ->test(VehiclesIndex::class)
+            ->assertSeeHtml('showFilters: false')
+            ->assertSeeHtml('@click="showFilters = !showFilters"')
+            ->assertSeeHtml('x-show="showFilters"');
     }
 }

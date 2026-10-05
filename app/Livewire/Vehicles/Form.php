@@ -63,6 +63,13 @@ class Form extends Component
     public function updatedPlateNumber(string $value): void
     {
         $this->plate_number = $this->normalizePlateNumber($value);
+
+        $plateRegex = config('fleet.plate.regex', '^[A-Z]{1,2}\s[1-9][0-9]{0,3}\s[A-Z]{1,4}$');
+        if (preg_match('/' . $plateRegex . '/', $this->plate_number)) {
+            $this->validateOnly('plate_number');
+        } else {
+            $this->resetErrorBag('plate_number');
+        }
     }
 
     protected function rules(): array
@@ -77,8 +84,7 @@ class Form extends Component
                 'max:20',
                 'regex:/' . $plateRegex . '/',
                 Rule::unique('vehicles', 'plate_number')
-                    ->ignore($this->vehicle?->id)
-                    ->whereNull('deleted_at'),
+                    ->ignore($this->vehicle?->id),
             ],
         ];
 
