@@ -26,7 +26,7 @@
 - **Responsive Drawer & Topbar Navigation Standard**:
   - **Phone Viewports (`< sm`)**: Mobile sidebar drawer opens **fullscreen** (`fixed inset-y-0 left-0 w-full z-[150]`) for an uncluttered, native mobile feel.
   - **Tablet Viewports (`sm:` to `lg:`)**: Drawer adopts the exact PC sidebar width (`sm:w-72` / 288px) over a dark backdrop blur (`bg-slate-950/60 backdrop-blur-sm`).
-  - **Header Truncation & Controls Invariant**: In both mobile topbars and drawers, brand flex containers MUST specify `min-w-0 flex-1 truncate block` with `gap-2`, while right-hand action controls (search button, notification bell, close button) MUST specify `shrink-0`. Layouts and dropdowns must never use arbitrary negative margins (e.g. `right-[-60px]`) that force horizontal overflow, push the bell icon off-screen, or disable touch targets on mobile devices.
+  - **Header Truncation & Close Button Invariant**: In fixed-width drawers (`w-72`), flex containers with brand titles MUST specify `min-w-0 flex-1 truncate block`, `<aside>` must specify `overflow-hidden`, and the close button must be `shrink-0` with `gap-2` to prevent intrinsic text expansion from pushing the close button outside the sidebar.
   - **Unified Brand Header**: All topbars and drawer headers must share identical typography and subtitle hierarchy (`{{ $appName }}` title with `{{ strtoupper($appAcronym) }} System` badge).
   - **Floating Overlay Suppression**: Floating widgets with high z-index (e.g. IT Concierge bubble `z-[100]`) MUST listen to sidebar state (`x-show="typeof sidebarOpen === 'undefined' || !sidebarOpen"`) to cleanly hide when the drawer is open.
 - **Dashboard & Quick Access Standards**:
