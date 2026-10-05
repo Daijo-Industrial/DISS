@@ -1,4 +1,12 @@
-<div class="fixed bottom-6 right-6 z-[100]">
+<div x-show="typeof sidebarOpen === 'undefined' || !sidebarOpen"
+    x-transition:enter="transition ease-out duration-200"
+    x-transition:enter-start="opacity-0 scale-90"
+    x-transition:enter-end="opacity-100 scale-100"
+    x-transition:leave="transition ease-in duration-150"
+    x-transition:leave-start="opacity-100 scale-100"
+    x-transition:leave-end="opacity-0 scale-90"
+    class="fixed bottom-6 right-6 z-[100]"
+    x-cloak>
     {{-- Bubble Button --}}
     <button wire:click="toggle"
         class="relative flex h-14 w-14 items-center justify-center rounded-full bg-slate-900 text-white shadow-2xl shadow-indigo-500/30 hover:bg-slate-800 transition-transform hover:scale-105">

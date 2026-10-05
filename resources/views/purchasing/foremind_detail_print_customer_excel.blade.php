@@ -85,7 +85,7 @@
                         @php
                             $currentMaterialCode = null;
                             $materialTotal = 0;
-                            $monthlyTotals = array_fill(0, count($qforecast[0]), 0);
+                            $monthlyTotals = array_fill(0, count($qforecast[0] ?? []), 0);
                             $i = 1;
                         @endphp
 
@@ -104,11 +104,11 @@
                                             {{ $currentMaterialMeasure }}</td>
                                         @foreach ($monthlyTotals as $monthlyTotal)
                                             <td class="table-bordered" align="center" style="vertical-align: middle;">
-                                                <strong>{{ $monthlyTotal }}</strong>
+                                                <strong>{{ number_format($monthlyTotal, 2) }}</strong>
                                             </td>
                                         @endforeach
                                         <td class="table-bordered" align="center" style="vertical-align: middle;">
-                                            <strong>{{ array_sum($monthlyTotals) }}</strong>
+                                            <strong>{{ number_format(array_sum($monthlyTotals), 2) }}</strong>
                                         </td>
                                         <td class="table-bordered" rowspan="2" align="center"
                                             style="vertical-align: middle;"></td>
@@ -121,11 +121,11 @@
                                         </td>
                                         @foreach ($monthlyTotals as $monthlyTotal)
                                             <td align="center" style="vertical-align: middle;">
-                                                <strong>{{ $monthlyTotal }}</strong>
+                                                <strong>{{ number_format($monthlyTotal, 2) }}</strong>
                                             </td>
                                         @endforeach
                                         <td align="center" style="vertical-align: middle;">
-                                            <strong>{{ array_sum($monthlyTotals) }}</strong>
+                                            <strong>{{ number_format(array_sum($monthlyTotals), 2) }}</strong>
                                         </td>
                                         <td></td> <!-- Empty cell for customer -->
                                     </tr>
@@ -140,17 +140,17 @@
                                     $currentMaterialName = $material->material_name;
                                     $currentMaterialMeasure = $material->unit_of_measure;
                                     $materialTotal = 0;
-                                    $monthlyTotals = array_fill(0, count($qforecast[0]), 0);
+                                    $monthlyTotals = array_fill(0, count($qforecast[0] ?? []), 0);
                                     $currentCustomer = $material->customer;
                                 @endphp
                             @endif
 
                             <!-- Accumulate data for each month -->
-                            @foreach ($qforecast[$key] as $index => $value)
+                            @foreach ($qforecast[$key] ?? [] as $index => $value)
                                 @php
                                     $calculation = $value * $material->quantity_material;
                                     $materialTotal += $calculation;
-                                    $monthlyTotals[$index] += $calculation;
+                                    $monthlyTotals[$index] = ($monthlyTotals[$index] ?? 0) + $calculation;
                                 @endphp
                             @endforeach
                         @endforeach
@@ -167,11 +167,11 @@
                                 {{ $currentMaterialMeasure }}</td>
                             @foreach ($monthlyTotals as $monthlyTotal)
                                 <td class="table-bordered" align="center" style="vertical-align: middle;">
-                                    <strong>{{ $monthlyTotal }}</strong>
+                                    <strong>{{ number_format($monthlyTotal, 2) }}</strong>
                                 </td>
                             @endforeach
                             <td class="table-bordered" align="center" style="vertical-align: middle;">
-                                <strong>{{ array_sum($monthlyTotals) }}</strong>
+                                <strong>{{ number_format(array_sum($monthlyTotals), 2) }}</strong>
                             </td>
                             <td class="table-bordered" rowspan="2" align="center" style="vertical-align: middle;">
                             </td>
@@ -183,11 +183,11 @@
                             </td>
                             @foreach ($monthlyTotals as $monthlyTotal)
                                 <td align="center" style="vertical-align: middle;">
-                                    <strong>{{ $monthlyTotal }}</strong>
+                                    <strong>{{ number_format($monthlyTotal, 2) }}</strong>
                                 </td>
                             @endforeach
                             <td align="center" style="vertical-align: middle;">
-                                <strong>{{ array_sum($monthlyTotals) }}</strong>
+                                <strong>{{ number_format(array_sum($monthlyTotals), 2) }}</strong>
                             </td>
                             <td></td> <!-- Empty cell for customer -->
                         </tr>

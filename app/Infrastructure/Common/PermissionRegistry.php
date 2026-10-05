@@ -152,11 +152,9 @@ class PermissionRegistry
                     'operations' => ['fleet.view', 'fleet.manage', 'fleet.inspect', 'fleet.documents', 'fleet.view-costs'],
                     'logistics' => ['fleet.view', 'fleet.manage', 'fleet.inspect', 'fleet.documents', 'fleet.view-costs'],
                     'manager' => ['fleet.view', 'fleet.manage', 'fleet.inspect', 'fleet.documents', 'fleet.view-costs'],
-                    'staff' => ['fleet.view', 'fleet.inspect'],
                     'inspector' => ['fleet.view', 'fleet.inspect'],
                     'fleet-inspector' => ['fleet.view', 'fleet.inspect'],
                     'driver' => ['fleet.view', 'fleet.inspect'],
-                    'user' => ['fleet.view'],
                 ],
             ],
             'Personnel' => [

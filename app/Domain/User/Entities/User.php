@@ -13,6 +13,9 @@ class User
         private bool $active = true,
         private array $roles = [],
         private ?int $employeeId = null,
+        private ?\DateTimeInterface $emailVerifiedAt = null,
+        private ?\DateTimeInterface $lastVisitedAt = null,
+        private ?\DateTimeInterface $createdAt = null,
     ) {}
 
     public function id(): ?int
@@ -43,6 +46,21 @@ class User
     public function employeeId(): ?int
     {
         return $this->employeeId;
+    }
+
+    public function emailVerifiedAt(): ?\DateTimeInterface
+    {
+        return $this->emailVerifiedAt;
+    }
+
+    public function lastVisitedAt(): ?\DateTimeInterface
+    {
+        return $this->lastVisitedAt;
+    }
+
+    public function createdAt(): ?\DateTimeInterface
+    {
+        return $this->createdAt;
     }
 
     public function rename(string $name): void
@@ -82,6 +100,9 @@ class User
         ?bool $active = null,
         ?array $roles = null,
         ?int $employeeId = null,
+        ?\DateTimeInterface $emailVerifiedAt = null,
+        ?\DateTimeInterface $lastVisitedAt = null,
+        ?\DateTimeInterface $createdAt = null,
     ): self {
         return new self(
             id: $this->id,
@@ -90,6 +111,9 @@ class User
             active: $active ?? $this->active,
             roles: $roles ?? $this->roles,
             employeeId: $employeeId ?? $this->employeeId,
+            emailVerifiedAt: $emailVerifiedAt ?? $this->emailVerifiedAt,
+            lastVisitedAt: $lastVisitedAt ?? $this->lastVisitedAt,
+            createdAt: $createdAt ?? $this->createdAt,
         );
     }
 }

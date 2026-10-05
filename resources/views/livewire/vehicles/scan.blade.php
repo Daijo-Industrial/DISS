@@ -340,28 +340,28 @@
                 @if ($recentVehicles->isNotEmpty())
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         @foreach ($recentVehicles as $v)
-                            <button type="button" wire:click="selectVehicle('{{ $v->id }}')"
-                                class="flex items-center gap-2.5 p-2.5 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/50 text-left transition group">
-                                <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200 overflow-hidden">
-                                    @if ($v->image_url)
-                                        <img src="{{ $v->image_url }}" alt="{{ $v->plate_number }}" class="w-full h-full object-cover">
-                                    @elseif ($v->category === 'commercial_truck')
-                                        <i class="bi bi-truck text-slate-400 group-hover:text-indigo-600 text-sm"></i>
-                                    @else
-                                        <i class="bi bi-car-front text-slate-400 group-hover:text-indigo-600 text-sm"></i>
-                                    @endif
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <p class="font-mono text-xs font-bold text-slate-900 group-hover:text-indigo-600 truncate">{{ $v->plate_number }}</p>
-                                    <p class="text-[10px] text-slate-500 truncate">{{ $v->brand }} {{ $v->model }}</p>
-                                    @if ($v->driver_name)
-                                        <p class="text-[9px] text-slate-400 truncate flex items-center gap-1 mt-0.5">
-                                            <i class="bi bi-person text-[10px]"></i> {{ $v->driver_name }}
-                                        </p>
-                                    @endif
-                                </div>
-                                <i class="bi bi-chevron-right text-xs text-slate-300 group-hover:text-indigo-500 shrink-0"></i>
-                            </button>
+                            @if ($v->category === 'passenger')
+                                <button type="button" wire:click="selectVehicle('{{ $v->id }}')"
+                                    class="flex items-center gap-2.5 p-2.5 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/50 text-left transition group">
+                                    <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200 overflow-hidden">
+                                        @if ($v->image_url)
+                                            <img src="{{ $v->image_url }}" alt="{{ $v->plate_number }}" class="w-full h-full object-cover">
+                                        @else
+                                            <i class="bi bi-car-front text-slate-400 group-hover:text-indigo-600 text-sm"></i>
+                                        @endif
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="font-mono text-xs font-bold text-slate-900 group-hover:text-indigo-600 truncate">{{ $v->plate_number }}</p>
+                                        <p class="text-[10px] text-slate-500 truncate">{{ $v->brand }} {{ $v->model }}</p>
+                                        @if ($v->driver_name)
+                                            <p class="text-[9px] text-slate-400 truncate flex items-center gap-1 mt-0.5">
+                                                <i class="bi bi-person text-[10px]"></i> {{ $v->driver_name }}
+                                            </p>
+                                        @endif
+                                    </div>
+                                    <i class="bi bi-chevron-right text-xs text-slate-300 group-hover:text-indigo-500 shrink-0"></i>
+                                </button>
+                            @endif
                         @endforeach
                     </div>
                 @else

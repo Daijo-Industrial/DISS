@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 
 class NavPinController extends Controller
 {
-    private const MAX_PINS = 3;
+    public const MAX_PINS = 8;
 
     /**
      * Pin a route to Quick Access.

@@ -31,6 +31,8 @@ class VehicleInspectionAndComplianceTest extends TestCase
 
     protected Vehicle $vehicle;
 
+    protected Vehicle $truck;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -44,33 +46,51 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $this->user->givePermissionTo(['fleet.manage', 'fleet.view', 'fleet.inspect', 'fleet.documents', 'fleet.view-costs']);
         $this->actingAs($this->user);
 
+        // Passenger vehicle (Primary for P2H inspections)
         $this->vehicle = Vehicle::create([
             'plate_number' => 'B 9999 DISS',
             'driver_name' => 'Ahmad Supir',
+            'brand' => 'Toyota',
+            'model' => 'Innova Zenix',
+            'category' => 'passenger',
+            'fuel_type' => 'petrol',
+            'requires_kir' => false,
+            'odometer' => 50000,
+            'status' => VehicleStatus::ACTIVE,
+        ]);
+
+        // Commercial truck (For KIR and non-passenger restriction tests)
+        $this->truck = Vehicle::create([
+            'plate_number' => 'B 8888 TRK',
+            'driver_name' => 'Pak Supir Truk',
             'brand' => 'Hino',
             'model' => 'Dutro 130 HD',
             'category' => 'commercial_truck',
             'fuel_type' => 'diesel',
             'requires_kir' => true,
-            'odometer' => 50000,
+            'odometer' => 75000,
             'status' => VehicleStatus::ACTIVE,
         ]);
     }
 
     public function test_vehicle_model_attributes_and_relationships()
     {
-        $this->assertEquals('Truk / Mobil Gede', $this->vehicle->category_label);
-        $this->assertEquals('Solar / Diesel', $this->vehicle->fuel_type_label);
-        $this->assertTrue($this->vehicle->requires_kir);
+        $this->assertEquals('Mobil Penumpang / Kecil', $this->vehicle->category_label);
+        $this->assertEquals('Bensin', $this->vehicle->fuel_type_label);
+        $this->assertFalse($this->vehicle->requires_kir);
         $this->assertFalse($this->vehicle->is_out_on_trip);
         $this->assertStringContainsString('DKI Jakarta', $this->vehicle->region_name);
+
+        $this->assertEquals('Truk / Mobil Gede', $this->truck->category_label);
+        $this->assertEquals('Solar / Diesel', $this->truck->fuel_type_label);
+        $this->assertTrue($this->truck->requires_kir);
     }
 
     public function test_vehicle_document_status_calculation()
     {
-        // Expired KIR document
+        // Expired KIR document on commercial truck
         $expiredDoc = VehicleDocument::create([
-            'vehicle_id' => $this->vehicle->id,
+            'vehicle_id' => $this->truck->id,
             'document_type' => VehicleDocument::TYPE_KIR,
             'document_number' => 'KIR-TEST-001',
             'expired_date' => now()->subDays(5)->toDateString(),
@@ -106,6 +126,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
         // 1. Perform Check-out (Pre-trip)
         Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
             ->set('driver_name', 'Ahmad Supir')
+            ->set('created_by', 'Petugas GA')
             ->set('odometer', 50100)
             ->set('fuel_percentage', 100)
             ->set('trip_purpose', 'Kirim komponen ke pabrik Cikarang')
@@ -117,12 +138,14 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $this->assertEquals(50100, $this->vehicle->odometer);
         $this->assertTrue($this->vehicle->is_out_on_trip);
         $this->assertNotNull($this->vehicle->activeCheckOut);
+        $this->assertEquals('Petugas GA', $this->vehicle->activeCheckOut->created_by);
 
         $checkOutInspection = $this->vehicle->activeCheckOut;
 
         // 2. Perform Check-in (Post-trip)
         Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_in'])
             ->set('driver_name', 'Ahmad Supir')
+            ->set('created_by', 'Petugas Malam')
             ->set('odometer', 50250) // 150 km traveled
             ->set('fuel_percentage', 75)
             ->set('severity', 'none')
@@ -133,9 +156,10 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $this->assertEquals(50250, $this->vehicle->odometer);
         $this->assertFalse($this->vehicle->is_out_on_trip);
 
-        // Verify trip distance calculation
+        // Verify trip distance calculation and created_by
         $latestInspection = $this->vehicle->inspections()->latest()->first();
         $this->assertEquals('check_in', $latestInspection->inspection_type);
+        $this->assertEquals('Petugas Malam', $latestInspection->created_by);
         $this->assertEquals(150, $latestInspection->trip_distance);
         $this->assertEquals($checkOutInspection->id, $latestInspection->parent_inspection_id);
     }
@@ -144,6 +168,8 @@ class VehicleInspectionAndComplianceTest extends TestCase
     {
         Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
             ->set('driver_name', 'Ahmad Supir')
+            ->set('created_by', 'Petugas Bengkel')
+            ->set('trip_purpose', 'Uji kelayakan jalan')
             ->set('odometer', 50300)
             ->set('fuel_percentage', 100)
             ->set('checklist.brake_lights.status', 'issue')
@@ -167,6 +193,8 @@ class VehicleInspectionAndComplianceTest extends TestCase
 
         Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
             ->set('driver_name', 'Ahmad Supir')
+            ->set('created_by', 'Petugas Lapangan')
+            ->set('trip_purpose', 'Operasional antar divisi')
             ->set('odometer', 50400)
             ->set('fuel_percentage', 90)
             ->set('checklist.headlights.status', 'issue')
@@ -183,6 +211,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $inspection = $this->vehicle->inspections()->latest()->first();
         $this->assertNotNull($inspection);
         $this->assertEquals('minor', $inspection->severity);
+        $this->assertEquals('Petugas Lapangan', $inspection->created_by);
         $this->assertNull($inspection->defect_notes);
 
         $checklistResults = $inspection->checklist_results;
@@ -204,7 +233,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
 
         // Buat dokumen yang akan expired 5 hari lagi
         $doc = VehicleDocument::create([
-            'vehicle_id' => $this->vehicle->id,
+            'vehicle_id' => $this->truck->id,
             'document_type' => VehicleDocument::TYPE_KIR,
             'document_number' => 'KIR-ALERTER-1',
             'expired_date' => now()->addDays(5)->toDateString(),
@@ -448,7 +477,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
         // 2. Resolve by vehicle details (model, brand, driver name, partial plate)
         Livewire::actingAs($this->user)
             ->test(VehicleScan::class)
-            ->set('manualInput', 'Dutro')
+            ->set('manualInput', 'Innova')
             ->call('searchManual')
             ->assertRedirect(route('vehicles.inspect', ['vehicle' => $this->vehicle->id]));
 
@@ -602,8 +631,10 @@ class VehicleInspectionAndComplianceTest extends TestCase
     {
         // Indonesian (Default)
         app()->setLocale('id');
-        $this->assertEquals('Truk / Mobil Gede', $this->vehicle->category_label);
-        $this->assertEquals('Solar / Diesel', $this->vehicle->fuel_type_label);
+        $this->assertEquals('Mobil Penumpang / Kecil', $this->vehicle->category_label);
+        $this->assertEquals('Bensin', $this->vehicle->fuel_type_label);
+        $this->assertEquals('Truk / Mobil Gede', $this->truck->category_label);
+        $this->assertEquals('Solar / Diesel', $this->truck->fuel_type_label);
 
         $doc = new VehicleDocument([
             'document_type' => 'kir',
@@ -619,8 +650,10 @@ class VehicleInspectionAndComplianceTest extends TestCase
 
         // English (Switched)
         app()->setLocale('en');
-        $this->assertEquals('Commercial Truck / Heavy', $this->vehicle->category_label);
-        $this->assertEquals('Diesel', $this->vehicle->fuel_type_label);
+        $this->assertEquals('Passenger Car / Small', $this->vehicle->category_label);
+        $this->assertEquals('Petrol / Gasoline', $this->vehicle->fuel_type_label);
+        $this->assertEquals('Commercial Truck / Heavy', $this->truck->category_label);
+        $this->assertEquals('Diesel', $this->truck->fuel_type_label);
         $this->assertEquals('Periodic KIR Inspection', $doc->type_label);
         $this->assertStringContainsString('Renewal Due', $doc->status_label);
         $this->assertEquals('Safe (Fit to Drive)', $inspection->severity_label);
@@ -828,6 +861,8 @@ class VehicleInspectionAndComplianceTest extends TestCase
         Livewire::actingAs($inspector)
             ->test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
             ->set('driver_name', 'Inspector Budi')
+            ->set('created_by', 'Inspector Budi')
+            ->set('trip_purpose', 'Patroli area industri')
             ->set('odometer', 50600)
             ->set('fuel_percentage', 95)
             ->set('severity', 'none')
@@ -905,5 +940,194 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->assertSee('Rp 1.750.000')
             ->assertSee(__('fleet.show.btn_add_service'))
             ->assertSee(__('fleet.show.btn_edit_vehicle'));
+    }
+
+    public function test_p2h_validation_requires_trip_purpose_and_created_by(): void
+    {
+        // 1. Missing trip_purpose and created_by should fail step 1 validation
+        Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
+            ->set('driver_name', 'Bambang supriyanto')
+            ->set('created_by', '')
+            ->set('trip_purpose', '')
+            ->set('odometer', 50100)
+            ->set('fuel_percentage', 100)
+            ->call('nextStep')
+            ->assertHasErrors(['created_by', 'trip_purpose'])
+            ->assertSet('currentStep', 1);
+
+        // 2. Fails save if missing trip_purpose or created_by
+        Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
+            ->set('driver_name', 'Bambang supriyanto')
+            ->set('created_by', '')
+            ->set('trip_purpose', '')
+            ->set('odometer', 50100)
+            ->set('fuel_percentage', 100)
+            ->call('save')
+            ->assertHasErrors(['created_by', 'trip_purpose']);
+    }
+
+    public function test_driver_name_and_created_by_support_custom_and_configured_values(): void
+    {
+        $configuredDrivers = config('fleet.drivers');
+        $this->assertContains('Bambang supriyanto', $configuredDrivers);
+        $this->assertContains('Khumedi', $configuredDrivers);
+        $this->assertContains('Endang', $configuredDrivers);
+
+        // 1. Can submit using a configured driver name
+        Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
+            ->set('driver_name', 'Bambang supriyanto')
+            ->set('created_by', 'PIC Satpam')
+            ->set('trip_purpose', 'Antar barang divisi produksi ke Plant 2')
+            ->set('odometer', 50200)
+            ->set('fuel_percentage', 85)
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('vehicles.index'));
+
+        $inspection = $this->vehicle->inspections()->latest()->first();
+        $this->assertEquals('Bambang supriyanto', $inspection->driver_name);
+        $this->assertEquals('PIC Satpam', $inspection->created_by);
+        $this->assertEquals('Antar barang divisi produksi ke Plant 2', $inspection->trip_purpose);
+
+        // 2. Can submit with a custom typed driver name and custom created_by
+        Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_in'])
+            ->set('driver_name', 'Supir Rental Baru')
+            ->set('created_by', 'Inspektor Khusus')
+            ->set('trip_purpose', 'Kembali dari Plant 2')
+            ->set('odometer', 50350)
+            ->set('fuel_percentage', 60)
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('vehicles.index'));
+
+        $checkIn = $this->vehicle->inspections()->latest()->first();
+        $this->assertEquals('check_in', $checkIn->inspection_type);
+        $this->assertEquals('Supir Rental Baru', $checkIn->driver_name);
+        $this->assertEquals('Inspektor Khusus', $checkIn->created_by);
+    }
+
+    public function test_p2h_inspection_strictly_restricted_to_passenger_category(): void
+    {
+        // 1. Direct InspectionForm mount aborts 403 on non-passenger vehicle
+        Livewire::test(InspectionForm::class, ['vehicle' => $this->truck])
+            ->assertStatus(403);
+
+        // 2. Scanner resolve with truck UUID rejects with passenger_only error and scan-failed event
+        Livewire::test(VehicleScan::class)
+            ->call('resolve', (string) $this->truck->id)
+            ->assertSet('errorMessage', __('fleet.scanner.passenger_only'))
+            ->assertDispatched('scan-failed')
+            ->assertNoRedirect();
+
+        // 3. Scanner manual search with truck plate number rejects with passenger_only error
+        Livewire::test(VehicleScan::class)
+            ->set('manualInput', $this->truck->plate_number)
+            ->call('searchManual')
+            ->assertSet('errorMessage', __('fleet.scanner.passenger_only'))
+            ->assertNoRedirect();
+
+        // 4. Scanner selectVehicle with truck ID rejects with passenger_only error
+        Livewire::test(VehicleScan::class)
+            ->call('selectVehicle', (string) $this->truck->id)
+            ->assertSet('errorMessage', __('fleet.scanner.passenger_only'))
+            ->assertNoRedirect();
+
+        // 5. Scanner recent list only returns passenger vehicles
+        Livewire::test(VehicleScan::class)
+            ->assertSee($this->vehicle->plate_number)
+            ->assertDontSee($this->truck->plate_number);
+
+        // 6. VehiclesIndex defaults to passenger category, hiding truck and showing passenger
+        Livewire::test(VehiclesIndex::class)
+            ->assertSet('category', 'passenger')
+            ->assertSee($this->vehicle->plate_number)
+            ->assertDontSee($this->truck->plate_number)
+            ->assertSeeHtml(route('vehicles.inspect', ['vehicle' => $this->vehicle, 'type' => 'check_out']));
+
+        // When category is changed to all, both vehicles are visible, but only passenger has P2H link
+        Livewire::test(VehiclesIndex::class)
+            ->set('category', 'all')
+            ->assertSee($this->vehicle->plate_number)
+            ->assertSee($this->truck->plate_number)
+            ->assertSeeHtml(route('vehicles.inspect', ['vehicle' => $this->vehicle, 'type' => 'check_out']))
+            ->assertDontSeeHtml(route('vehicles.inspect', ['vehicle' => $this->truck, 'type' => 'check_out']));
+
+        // 7. VehicleShow cockpit view does not show P2H button for truck
+        Livewire::test(VehicleShow::class, ['vehicle' => $this->truck])
+            ->assertDontSeeHtml(route('vehicles.inspect', ['vehicle' => $this->truck, 'type' => 'check_out']));
+
+        // But shows P2H button for passenger vehicle
+        Livewire::test(VehicleShow::class, ['vehicle' => $this->vehicle])
+            ->assertSeeHtml(route('vehicles.inspect', ['vehicle' => $this->vehicle, 'type' => 'check_out']));
+    }
+
+    public function test_sold_and_retired_vehicles_are_excluded_from_active_index_and_available_in_sold_tab(): void
+    {
+        // 1. Create a sold vehicle and a retired vehicle
+        $soldVehicle = Vehicle::create([
+            'plate_number' => 'B 1111 SOLD',
+            'driver_name' => 'Eks Supir',
+            'brand' => 'Daihatsu',
+            'model' => 'Xenia',
+            'category' => 'passenger',
+            'fuel_type' => 'petrol',
+            'requires_kir' => false,
+            'odometer' => 120000,
+            'status' => VehicleStatus::SOLD,
+            'sold_at' => now()->subMonths(2)->toDateString(),
+        ]);
+
+        $retiredVehicle = Vehicle::create([
+            'plate_number' => 'B 2222 RET',
+            'driver_name' => 'Eks Supir 2',
+            'brand' => 'Suzuki',
+            'model' => 'APV',
+            'category' => 'passenger',
+            'fuel_type' => 'petrol',
+            'requires_kir' => false,
+            'odometer' => 180000,
+            'status' => VehicleStatus::RETIRED,
+        ]);
+
+        $this->assertTrue($soldVehicle->is_sold);
+
+        // 2. Active index view (operationalTab = 'all') does NOT show sold or retired vehicles
+        Livewire::test(VehiclesIndex::class)
+            ->assertSet('operationalTab', 'all')
+            ->assertSee($this->vehicle->plate_number)
+            ->assertDontSee($soldVehicle->plate_number)
+            ->assertDontSee($retiredVehicle->plate_number);
+
+        // 3. In-pool tab does NOT show sold or retired vehicles
+        Livewire::test(VehiclesIndex::class)
+            ->call('setOperationalTab', 'in_pool')
+            ->assertSee($this->vehicle->plate_number)
+            ->assertDontSee($soldVehicle->plate_number)
+            ->assertDontSee($retiredVehicle->plate_number);
+
+        // 4. Viewer without canManage cannot access sold tab
+        $viewerUser = User::factory()->create();
+        $viewerUser->givePermissionTo('fleet.view');
+
+        Livewire::actingAs($viewerUser)
+            ->test(VehiclesIndex::class)
+            ->assertDontSeeHtml('wire:click="setOperationalTab(\'sold\')"')
+            ->call('setOperationalTab', 'sold')
+            ->assertSet('operationalTab', 'all') // Rejected from setting sold tab
+            ->assertDontSee($soldVehicle->plate_number);
+
+        // 5. Manager with canManage can see sold tab with counter and access sold/retired units
+        Livewire::actingAs($this->user)
+            ->test(VehiclesIndex::class)
+            ->assertSeeHtml('wire:click="setOperationalTab(\'sold\')"')
+            ->call('setOperationalTab', 'sold')
+            ->assertSet('operationalTab', 'sold')
+            ->assertSee($soldVehicle->plate_number)
+            ->assertSee($retiredVehicle->plate_number)
+            ->assertDontSee($this->vehicle->plate_number) // Active unit not in sold tab
+            ->assertSee('Terjual')
+            ->assertSee('Purnatugas')
+            // Sold units never show P2H inspection button
+            ->assertDontSeeHtml(route('vehicles.inspect', ['vehicle' => $soldVehicle, 'type' => 'check_out']));
     }
 }

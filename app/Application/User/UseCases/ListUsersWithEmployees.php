@@ -25,6 +25,7 @@ class ListUsersWithEmployees
             perPage: $filter->perPage ?? 10,
             search: $filter->search,
             onlyActive: $filter->onlyActive,
+            onlyDormant: $filter->onlyDormant,
         );
 
         $users = $paginator->getCollection();
@@ -63,6 +64,9 @@ class ListUsersWithEmployees
                 employeeName: $employee?->name(),
                 employeeBranch: $employee?->branch(),
                 employeeDeptCode: $employee?->deptCode(),
+                emailVerifiedAt: $user->emailVerifiedAt(),
+                lastVisitedAt: $user->lastVisitedAt(),
+                createdAt: $user->createdAt(),
             );
         });
 

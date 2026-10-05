@@ -45,6 +45,7 @@ return [
     ],
 
     'categories' => [
+        'all' => 'All Categories',
         'passenger' => 'Passenger Car / Small',
         'commercial_truck' => 'Commercial Truck / Heavy',
         'pickup' => 'Pick-up / Flatbed',
@@ -75,6 +76,8 @@ return [
     'index' => [
         'title' => 'Fleet Management',
         'subtitle' => 'Operational vehicle readiness monitoring, daily P2H inspections, and legal compliance.',
+        'filter_category' => 'Fleet Type',
+        'all_categories' => 'All Fleet Types',
         'search_placeholder' => 'Search license plate, brand, driver name...',
         'add_vehicle' => 'Add Vehicle',
         'scan_qr' => 'Scan P2H QR',
@@ -220,8 +223,15 @@ return [
         'trip_distance' => 'Trip Distance Traveled (KM)',
         'fuel_level' => 'Fuel Capacity (%)',
         'driver_name' => 'Operational Driver Name',
+        'driver_name_placeholder' => 'Select or type driver name...',
+        'created_by' => 'Created By (Inspector / PIC)',
+        'created_by_placeholder' => 'Type or select inspector name...',
         'trip_purpose' => 'Trip Purpose & Destination',
         'trip_purpose_placeholder' => 'e.g. Delivering parts to Cikarang, executive airport pickup...',
+        'driver_name_required' => 'Operational driver name is required.',
+        'created_by_required' => 'Creator / inspector name is required.',
+        'trip_purpose_required' => 'Trip purpose & destination is required.',
+        'passenger_only' => 'Vehicle P2H inspection is strictly restricted to passenger vehicles.',
         'checklist_heading' => 'Visual & Mechanical Readiness Checklist',
         'status_ok' => 'Ready / Normal',
         'status_issue' => 'Issue / Defective',
@@ -367,6 +377,7 @@ return [
         'active_fleet_label' => 'Active Operational Fleet',
         'torch_title' => 'Flashlight',
         'camera_switch_title' => 'Switch Camera',
+        'passenger_only' => 'Vehicle P2H inspection is strictly restricted to passenger vehicles.',
     ],
 
     'messages' => [

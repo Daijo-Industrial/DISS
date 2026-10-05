@@ -45,6 +45,7 @@ return [
     ],
 
     'categories' => [
+        'all' => 'Semua Kategori',
         'passenger' => 'Mobil Penumpang / Kecil',
         'commercial_truck' => 'Truk / Mobil Gede',
         'pickup' => 'Pick-up / Bak',
@@ -75,6 +76,8 @@ return [
     'index' => [
         'title' => 'Manajemen Armada',
         'subtitle' => 'Monitoring kesiapan unit operasional, inspeksi P2H harian, dan kepatuhan legalitas hukum.',
+        'filter_category' => 'Tipe Armada',
+        'all_categories' => 'Semua Tipe Armada',
         'search_placeholder' => 'Cari plat nomor, merk, nama driver...',
         'add_vehicle' => 'Tambah Armada',
         'scan_qr' => 'Pindai QR P2H',
@@ -220,8 +223,15 @@ return [
         'trip_distance' => 'Jarak Tempuh Perjalanan (KM)',
         'fuel_level' => 'Kapasitas BBM (%)',
         'driver_name' => 'Nama Driver Operasional',
+        'driver_name_placeholder' => 'Pilih atau ketik nama driver...',
+        'created_by' => 'Dibuat Oleh (Pemeriksa / PIC)',
+        'created_by_placeholder' => 'Ketik atau pilih nama pemeriksa...',
         'trip_purpose' => 'Keperluan & Rute Perjalanan',
         'trip_purpose_placeholder' => 'contoh: Pengiriman part ke Cikarang, jemput tamu direksi bandara...',
+        'driver_name_required' => 'Nama pengemudi / driver wajib diisi.',
+        'created_by_required' => 'Nama pembuat / pemeriksa wajib diisi.',
+        'trip_purpose_required' => 'Keperluan & rute perjalanan wajib diisi.',
+        'passenger_only' => 'Pemeriksaan P2H armada hanya diperuntukkan untuk kendaraan kategori Mobil Penumpang.',
         'checklist_heading' => 'Poin Pemeriksaan Kelayakan Fisik & Mekanikal',
         'status_ok' => 'Siap / Normal',
         'status_issue' => 'Ada Catatan / Rusak',
@@ -367,6 +377,7 @@ return [
         'active_fleet_label' => 'Armada Operasional Aktif',
         'torch_title' => 'Lampu Senter',
         'camera_switch_title' => 'Ganti Kamera',
+        'passenger_only' => 'Pemeriksaan P2H armada hanya diperuntukkan untuk kendaraan kategori Mobil Penumpang.',
     ],
 
     'messages' => [

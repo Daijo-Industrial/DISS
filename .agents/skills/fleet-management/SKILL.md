@@ -76,7 +76,7 @@ All plate formatting, regex patterns, and region mappings are centralized in **`
 
 ---
 
-## 3. Fleet Categories & KIR Compliance Automation
+## 3. Fleet Categories, KIR Compliance & P2H Passenger Restriction
 
 - **Kategori Armada**:
   - `passenger`: Mobil Penumpang (Avanza, Innova, Sedan, MPV operasional).
@@ -85,6 +85,9 @@ All plate formatting, regex patterns, and region mappings are centralized in **`
   - `other`: Lainnya / Fasilitas Pool Khusus (Forklift pool, dll).
 - **KIR Automation Rule**:
   - Memilih `commercial_truck` otomatis mengeset `requires_kir = true` di Alpine.js dan Livewire.
+- **P2H Passenger Strictness Rule**:
+  - Pemeriksaan harian P2H (`/vehicles/{vehicle}/inspect` & `/vehicles/scan`) **HANYA** berlaku untuk kategori `passenger`.
+  - Armada non-passenger (`commercial_truck`, `pickup`, `other`) dilarang melakukan inspeksi P2H dan tidak menampilkan tombol aksi P2H di Card View, Table View, maupun Cockpit.
 
 ---
 
@@ -107,6 +110,11 @@ Driver scans the physical sticker attached to the vehicle dashboard / steering w
   - Audio (Web Audio API 880Hz chime) and haptic vibration feedback on successful QR detection.
   - Resolves raw UUID, URL with UUID, or vehicle license plate into `vehicles.inspect`.
   - Manual fallback search for dirty/damaged physical stickers or blocked camera permissions.
+- **Passenger Enforcement**:
+  - `resolve(string $code)`: Scanned QR strictly checks `category === 'passenger'`. If non-passenger, sets error message `__('fleet.scanner.passenger_only')`, dispatches `scan-failed` to re-arm camera, and halts navigation.
+  - `searchManual()`: Exact plate search rejects non-passenger vehicles; partial match query strictly filters `where('category', 'passenger')`.
+  - `selectVehicle(string $id)`: Validates that selected vehicle is `passenger` before redirecting.
+  - `render()`: Quick picker query is scoped strictly to `->where('category', 'passenger')`. Non-passenger buttons are omitted from the template.
 
 ---
 
@@ -114,17 +122,26 @@ Driver scans the physical sticker attached to the vehicle dashboard / steering w
 
 Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/vehicles/inspection-form.blade.php`):
 
-1. **Auto-Detect & Switching**:
+1. **Passenger Category Guard**:
+   - `mount()` enforces `$vehicle->category === 'passenger'`. If non-passenger, aborts `403 Forbidden` (`__('fleet.inspection.passenger_only')`).
+2. **Operational Driver Selection (TomSelect)**:
+   - Configurable roster in `config('fleet.drivers')`.
+   - UI uses TomSelect with `create: true`, allowing one-tap selection from the preset roster or typing custom driver names.
+   - Scoped styling in `resources/css/app.css` (`.ts-fleet-driver`).
+3. **Mandatory Header Fields**:
+   - `created_by`: Required string for the inspector/creator name.
+   - `trip_purpose`: Required string for route and business trip purpose.
+4. **Auto-Detect & Switching**:
    - On load, automatically detects if the vehicle is currently on a trip (`$vehicle->is_out_on_trip`). If out, defaults to `check_in`; otherwise `check_out`.
    - One-tap switch buttons (`switchType('check_out')` / `switchType('check_in')`) allow instant mode changes without re-entering form data.
-2. **Check-out (Sebelum Berangkat)**:
+5. **Check-out (Sebelum Berangkat)**:
    - Mencatat Odometer awal, BBM %, dan 7 titik checklist: bodi, ban, km/odometer, isi mobil/kabin, baterai/aki & bensin, lampu rem, lampu depan & sein.
-3. **Check-in (Kepulangan)**:
+6. **Check-in (Kepulangan)**:
    - Mencatat Odometer akhir & BBM sisa.
    - Otomatis menghitung jarak tempuh (`trip_distance = odometer_kembali - odometer_berangkat`) dan menautkan ke `parent_inspection_id`.
-4. **Critical Defect Grounding**:
+7. **Critical Defect Grounding**:
    - Jika terdapat temuan `critical_grounded`, status kendaraan otomatis dikunci menjadi `VehicleStatus::MAINTENANCE`, mencegah keberangkatan baru sampai diservis.
-5. **Handover ke Bengkel**:
+8. **Handover ke Bengkel**:
    - Temuan P2H dapat langsung dialihkan ke form servis (`App\Livewire\Services\Form`) dengan pre-fill otomatis via query params `?vehicle_id=X&defect=Y`.
 
 ---
@@ -141,6 +158,13 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
 ## 7. UI Conventions, Responsiveness & Field Ergonomics (Ponytail & KISS)
 
 ### Responsive View Engine (`resources/views/livewire/vehicles/index.blade.php`)
+- **Fleet Type Filter (Category)**:
+  - Defaults to `passenger` (`$category = 'passenger'`).
+  - Dropdown options: `passenger` (Mobil Penumpang), `commercial_truck` (Truk), `pickup` (Pick-up), `other` (Lainnya), `all` (Semua Tipe Armada).
+  - KPI Metrics (`$baseMetricsQuery`) are dynamically scoped to the selected category (unless `'all'`), ensuring operational status pill counts (`Semua`, `Di Pool`, `On-Trip`, `Perawatan`) accurately reflect the filtered category.
+- **Conditional P2H Action Buttons**:
+  - Primary CTA buttons (`P2H Check-out` / `Check-in Pulang ke Pool`) in Grid cards and Data Table rows are strictly guarded with `@if (!$v->is_sold && $v->category === 'passenger')`.
+  - Non-passenger units render no P2H action button.
 - **Default for Tablets & Mobile (`< 1280px` / iPad portrait 768px-820px, landscape 1024px-1180px, Android tabs)**:
   - Defaults to **Grid View (Galeri Kartu)**.
   - Large thumb-friendly 44px primary action buttons (`P2H Check-out` / `Check-in Pulang ke Pool`).
@@ -151,6 +175,9 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
   - Both views are rendered in the DOM; switching is instantaneous (**0ms**) without server roundtrip.
   - User selection is saved to `localStorage('diss_vehicle_view_mode')` and cleanly mirrored to URL `?view=grid` or `?view=table` using `history.replaceState`.
   - Resizing or device rotation auto-adapts unless the user manually chose a view mode.
+- **Livewire 3 Integration Invariant**:
+  - Livewire 3 components strictly require **one single root HTML element**. Never place `<style>` or `<script>` tags outside the root `div` inside partials to prevent `MultipleRootElementsDetectedException`.
+  - All 3rd-party library custom CSS (e.g. TomSelect `.ts-fleet-driver`) must be placed in `resources/css/app.css`.
 
 ### Apple-Inspired Minimalist UI Standard (`resources/views/livewire/vehicles/index.blade.php`)
 - **Clean Typography Header**:
@@ -181,12 +208,6 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
   - **Document Archive (`Arsip Dokumen`)**: Complete historical renewal audit trail table.
 - **Unified Modal (`show-modals.blade.php`)**:
   - Dynamically switches to dual expiration date pickers (`stnk_annual_expired_date` & `stnk_five_year_expired_date`) when `stnk` is selected, pre-populating existing dates and sharing a single file attachment.
-
-### Layout Navigation Drawer (`resources/views/new/layouts/app.blade.php`)
-- **Breakpoint**: Drawer active on `< 1024px` (`lg:hidden`), providing full-width screen real estate for tablets in portrait mode.
-- **Auto-Close Behavior**: Closes on link click (`@click="if ($event.target.closest('a')) sidebarOpen = false"`), backdrop click, or Escape key.
-- **Thumb Ergonomics**: Mobile topbar hamburger button is aligned on the **right** for comfortable one-handed thumb reach on tall screens (iPhone XR).
-
 ### Universal Photo Lightbox (`resources/views/components/universal-lightbox.blade.php`)
 - **Reactive 0ms Alpine.js Modal**: Replaces direct storage URLs (`target="_blank"`) across all vehicle views.
 - **Trigger**: Dispatched anywhere via `@click="$dispatch('open-lightbox', { src: url, title: caption, subtitle: sub })"`.
@@ -211,7 +232,7 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
 All tests and tools run inside the Docker Sail container (`diss-laravel.test-1`):
 
 ```bash
-# Run fleet inspection and compliance test suite (25 tests, 219 assertions)
+# Run fleet inspection and compliance test suite (29 tests, 294 assertions)
 docker exec diss-laravel.test-1 php artisan test --filter=VehicleInspectionAndComplianceTest
 
 # Check document reminders manually

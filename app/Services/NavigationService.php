@@ -606,6 +606,7 @@ class NavigationService
     public static function getQuickAccessItems($user): array
     {
         $menu = self::applyRoleBasedFiltering(self::getBaseMenuStructure(), $user);
+        $menu = self::applySmartDefaults($menu, $user);
 
         return self::buildQuickAccessItems($menu, $user);
     }
@@ -638,10 +639,10 @@ class NavigationService
 
         $allowedRoutes = self::buildAllowedRouteMap($menu, $userRoles, $user);
 
-        // ── 1. Pinned items (max 3, always first) ───────────────────────────
+        // ── 1. Pinned items (max 8, always first) ───────────────────────────
         $pinnedRoutes = UserPinnedRoute::where('user_id', $userId)
             ->orderBy('pinned_at', 'desc')
-            ->limit(3)
+            ->limit(8)
             ->pluck('route_name')
             ->toArray();
 
@@ -655,14 +656,14 @@ class NavigationService
         }
         $pinnedRouteNames = array_column($quickItems, 'route');
 
-        // ── 2. Activity-scored items (fill up to 5 total) ───────────────────
+        // ── 2. Activity-scored items (fill up to 8 total) ───────────────────
         $topVisits = UserPageVisit::where('user_id', $userId)
             ->orderByRaw('(visit_count * 2) + (10 / (DATEDIFF(NOW(), last_visited_at) + 1)) DESC')
-            ->limit(10)
+            ->limit(15)
             ->get();
 
         foreach ($topVisits as $visit) {
-            if (count($quickItems) >= 5) {
+            if (count($quickItems) >= 8) {
                 break;
             }
             if (in_array($visit->route_name, $pinnedRouteNames)) {
@@ -677,7 +678,79 @@ class NavigationService
             $quickItems[] = $item;
         }
 
+        // ── 3. Role-based cold-start fallback (fill up to 6 total) ───────────
+        if (count($quickItems) < 6) {
+            $existingRoutes = array_column($quickItems, 'route');
+            foreach ($allowedRoutes as $routeName => $item) {
+                if (count($quickItems) >= 6) {
+                    break;
+                }
+                if ($routeName === 'home' || in_array($routeName, $existingRoutes, true)) {
+                    continue;
+                }
+                $item['pinned'] = false;
+                $quickItems[] = $item;
+            }
+        }
+
         return $quickItems;
+    }
+
+    /**
+     * Get all accessible navigation modules for the user, grouped by their section/group.
+     * Used by the Quick Access Add Shortcut search modal on the /home dashboard.
+     */
+    public static function getAllAccessibleModules($user): array
+    {
+        if (! $user) {
+            return [];
+        }
+
+        $menu = self::applyRoleBasedFiltering(self::getBaseMenuStructure(), $user);
+        $pinnedRoutes = UserPinnedRoute::where('user_id', $user->id)
+            ->pluck('route_name')
+            ->toArray();
+
+        $modules = [];
+        $currentSection = 'General';
+
+        foreach ($menu as $item) {
+            if ($item['type'] === 'divider') {
+                $currentSection = $item['label'] ?? 'General';
+                continue;
+            }
+
+            if ($item['type'] === 'single' && isset($item['route'])) {
+                if ($item['route'] === 'home') {
+                    continue;
+                }
+                $modules[] = [
+                    'label' => $item['label'],
+                    'route' => $item['route'],
+                    'icon' => $item['icon'] ?? 'circle',
+                    'section' => $currentSection,
+                    'is_pinned' => in_array($item['route'], $pinnedRoutes),
+                ];
+            }
+
+            if ($item['type'] === 'group' && isset($item['children'])) {
+                $groupLabel = $item['label'] ?? $currentSection;
+                foreach ($item['children'] as $child) {
+                    if (! isset($child['route'])) {
+                        continue;
+                    }
+                    $modules[] = [
+                        'label' => $child['label'],
+                        'route' => $child['route'],
+                        'icon' => $child['icon'] ?? ($item['icon'] ?? 'circle'),
+                        'section' => $groupLabel,
+                        'is_pinned' => in_array($child['route'], $pinnedRoutes),
+                    ];
+                }
+            }
+        }
+
+        return $modules;
     }
 
     /**
@@ -694,11 +767,13 @@ class NavigationService
                     'label' => $item['label'],
                     'route' => $item['route'],
                     'icon' => $item['icon'] ?? 'circle',
+                    'section' => 'General',
                     'active' => $item['active'] ?? request()->routeIs($item['route']),
                 ];
             }
 
             if ($item['type'] === 'group' && isset($item['children'])) {
+                $groupLabel = $item['label'] ?? 'General';
                 foreach ($item['children'] as $child) {
                     if (! isset($child['route'])) {
                         continue;
@@ -706,7 +781,8 @@ class NavigationService
                     $map[$child['route']] = [
                         'label' => $child['label'],
                         'route' => $child['route'],
-                        'icon' => $child['icon'] ?? 'circle',
+                        'icon' => $child['icon'] ?? ($item['icon'] ?? 'circle'),
+                        'section' => $groupLabel,
                         'active' => $child['active'] ?? request()->routeIs($child['route']),
                     ];
                 }

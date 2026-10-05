@@ -15,6 +15,7 @@ class VehicleInspection extends Model
         'parent_inspection_id',
         'inspection_type',
         'driver_name',
+        'created_by',
         'inspector_id',
         'odometer',
         'fuel_percentage',

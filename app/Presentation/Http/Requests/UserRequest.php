@@ -13,7 +13,7 @@ abstract class UserRequest extends FormRequest
     public static function storeRules(): array
     {
         return [
-            'employeeId' => ['required', 'integer', 'exists:employees,id'],
+            'employeeId' => ['nullable', 'integer', 'exists:employees,id'],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
@@ -47,6 +47,7 @@ abstract class UserRequest extends FormRequest
     {
         return [
             'employeeId.required' => 'Karyawan wajib dipilih',
+            'employeeId.exists' => 'Data karyawan tidak ditemukan',
             'employee.exists' => 'Data karyawan tidak ditemukan',
             'name.required' => 'Nama wajib diisi.',
             'name.max' => 'Nama maksimal 255 karakter.',

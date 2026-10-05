@@ -39,6 +39,8 @@ class InspectionForm extends Component
 
     public array $point_photos = [];
 
+    public string $created_by = '';
+
     public ?string $trip_purpose = null;
 
     public function mount(Vehicle $vehicle, ?string $type = null): void
@@ -49,6 +51,9 @@ class InspectionForm extends Component
         }
 
         $this->vehicle = $vehicle;
+        if ($this->vehicle->category !== 'passenger') {
+            abort(403, __('fleet.inspection.passenger_only'));
+        }
         if ($type && in_array($type, [VehicleInspection::TYPE_CHECK_OUT, VehicleInspection::TYPE_CHECK_IN], true)) {
             $this->type = $type;
         } else {
@@ -108,6 +113,7 @@ class InspectionForm extends Component
             if ($this->parentInspection) {
                 $this->parent_inspection_id = $this->parentInspection->id;
                 $this->driver_name = $this->parentInspection->driver_name;
+                $this->trip_purpose = (string) ($this->parentInspection->trip_purpose ?: '');
                 $this->odometer = (int) $this->parentInspection->odometer;
                 $this->fuel_percentage = (int) $this->parentInspection->fuel_percentage;
             } else {
@@ -132,6 +138,7 @@ class InspectionForm extends Component
                 if ($this->parentInspection) {
                     $this->parent_inspection_id = $this->parentInspection->id;
                     $this->driver_name = $this->parentInspection->driver_name;
+                    $this->trip_purpose = (string) ($this->parentInspection->trip_purpose ?: '');
                     $this->odometer = (int) $this->parentInspection->odometer;
                     $this->fuel_percentage = (int) $this->parentInspection->fuel_percentage;
                 } else {
@@ -142,6 +149,7 @@ class InspectionForm extends Component
                 $this->parentInspection = null;
                 $this->parent_inspection_id = null;
                 $this->driver_name = (string) ($this->vehicle->driver_name ?: '');
+                $this->trip_purpose = '';
                 $this->odometer = (int) $this->vehicle->odometer;
                 $this->fuel_percentage = 100;
             }
@@ -219,11 +227,14 @@ class InspectionForm extends Component
 
         $this->validate([
             'driver_name' => ['required', 'string', 'max:255'],
+            'created_by' => ['required', 'string', 'max:255'],
             'odometer' => ['required', 'integer', 'min:' . $minKm],
             'fuel_percentage' => ['required', 'integer', 'min:0', 'max:100'],
-            'trip_purpose' => ['nullable', 'string', 'max:500'],
+            'trip_purpose' => ['required', 'string', 'max:500'],
         ], [
-            'driver_name.required' => 'Nama pengemudi / driver wajib diisi.',
+            'driver_name.required' => __('fleet.inspection.driver_name_required'),
+            'created_by.required' => __('fleet.inspection.created_by_required'),
+            'trip_purpose.required' => __('fleet.inspection.trip_purpose_required'),
             'odometer.required' => 'Nilai KM Odometer wajib diisi.',
             'odometer.min' => 'KM Odometer tidak boleh lebih kecil dari KM sebelumnya (:min km).',
             'fuel_percentage.required' => 'Level bahan bakar wajib diisi.',
@@ -322,9 +333,10 @@ class InspectionForm extends Component
 
         return [
             'driver_name' => ['required', 'string', 'max:255'],
+            'created_by' => ['required', 'string', 'max:255'],
             'odometer' => ['required', 'integer', 'min:' . $minKm],
             'fuel_percentage' => ['required', 'integer', 'min:0', 'max:100'],
-            'trip_purpose' => ['nullable', 'string', 'max:500'],
+            'trip_purpose' => ['required', 'string', 'max:500'],
             'severity' => ['required', 'string', 'in:none,minor,critical_grounded'],
             'defect_notes' => ['nullable', 'string', 'max:1000'],
             'photos.*' => ['nullable', 'image', 'max:5120'], // Max 5MB per image
@@ -336,7 +348,9 @@ class InspectionForm extends Component
     protected function messages(): array
     {
         return [
-            'driver_name.required' => 'Nama pengemudi / driver wajib diisi.',
+            'driver_name.required' => __('fleet.inspection.driver_name_required'),
+            'created_by.required' => __('fleet.inspection.created_by_required'),
+            'trip_purpose.required' => __('fleet.inspection.trip_purpose_required'),
             'odometer.required' => 'Nilai KM Odometer wajib diisi.',
             'odometer.min' => 'KM Odometer tidak boleh lebih kecil dari KM sebelumnya (:min km).',
         ];
@@ -373,6 +387,7 @@ class InspectionForm extends Component
                 'parent_inspection_id' => $this->parent_inspection_id,
                 'inspection_type' => $this->type,
                 'driver_name' => $this->driver_name,
+                'created_by' => $this->created_by,
                 'inspector_id' => auth()->id() ?? 1,
                 'odometer' => $this->odometer,
                 'fuel_percentage' => (int) $this->fuel_percentage,
@@ -406,6 +421,9 @@ class InspectionForm extends Component
 
     public function render()
     {
-        return view('livewire.vehicles.inspection-form')->layout('new.layouts.app');
+        return view('livewire.vehicles.inspection-form', [
+            'drivers' => config('fleet.drivers', []),
+            'inspectors' => config('fleet.inspectors', []),
+        ])->layout('new.layouts.app');
     }
 }
