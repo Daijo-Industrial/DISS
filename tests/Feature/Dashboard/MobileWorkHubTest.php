@@ -104,7 +104,7 @@ class MobileWorkHubTest extends TestCase
         $response->assertSee('My Recent Requests');
 
         // Verify mobile fullscreen & tablet w-72 drawer aside
-        $response->assertSee('class="fixed inset-y-0 left-0 z-[150] flex w-full sm:w-72 flex-col bg-white border-r border-slate-200/80 shadow-2xl will-change-transform"', false);
+        $response->assertSee('class="fixed inset-y-0 left-0 z-[150] flex w-full sm:w-72 flex-col bg-white border-r border-slate-200/80 shadow-2xl will-change-transform overflow-hidden"', false);
 
         // Verify IT Concierge bubble hides when sidebar is open
         $response->assertSee('x-show="typeof sidebarOpen === \'undefined\' || !sidebarOpen"', false);

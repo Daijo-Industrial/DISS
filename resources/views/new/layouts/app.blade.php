@@ -110,7 +110,7 @@
 
         {{-- Mobile Fullscreen & Tablet Drawer Menu (exclusively < lg) --}}
         <aside
-            class="fixed inset-y-0 left-0 z-[150] flex w-full sm:w-72 flex-col bg-white border-r border-slate-200/80 shadow-2xl will-change-transform"
+            class="fixed inset-y-0 left-0 z-[150] flex w-full sm:w-72 flex-col bg-white border-r border-slate-200/80 shadow-2xl will-change-transform overflow-hidden"
             x-show="sidebarOpen"
             x-transition:enter="transform transition ease-out duration-200"
             x-transition:enter-start="-translate-x-full"
@@ -121,23 +121,23 @@
             @touchstart="touchStartX = $event.touches[0].clientX"
             @touchend="if ($event.changedTouches[0].clientX - touchStartX < -50) sidebarOpen = false">
             {{-- Header --}}
-            <div class="flex items-center justify-between h-16 px-4 sm:px-5 border-b border-slate-100 bg-white/80 backdrop-blur-sm shrink-0">
-                <a href="{{ url('/') }}" class="flex items-center gap-3 group">
+            <div class="flex items-center justify-between h-16 px-4 sm:px-5 border-b border-slate-100 bg-white/80 backdrop-blur-sm shrink-0 gap-2">
+                <a href="{{ url('/') }}" class="flex items-center gap-2.5 min-w-0 flex-1 group">
                     <div
                         class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 shadow-md shadow-blue-200/60 transition-transform duration-200 group-hover:scale-105 shrink-0">
                         <img class="h-5 w-5 brightness-0 invert" src="{{ asset('image/Asset 1.svg') }}" alt="logo">
                     </div>
-                    <div class="flex flex-col justify-center min-w-0">
-                        <span class="text-[15px] font-extrabold text-slate-900 leading-tight tracking-tight truncate">
-                            {{ config('app.name') }}
+                    <div class="flex flex-col justify-center min-w-0 flex-1">
+                        <span class="text-sm font-extrabold text-slate-900 leading-tight tracking-tight truncate block">
+                            {{ $appName }}
                         </span>
-                        <span class="text-[9px] font-bold text-blue-600 uppercase tracking-widest leading-none mt-0.5">
+                        <span class="text-[9px] font-bold text-blue-600 uppercase tracking-widest leading-none mt-0.5 truncate block">
                             {{ strtoupper($appAcronym) }} System
                         </span>
                     </div>
                 </a>
                 <button type="button"
-                    class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-slate-50/80 text-slate-400 hover:text-rose-600 hover:bg-rose-50/70 hover:border-rose-200 active:scale-95 transition-all duration-200 shadow-2xs group"
+                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-slate-50/80 text-slate-400 hover:text-rose-600 hover:bg-rose-50/70 hover:border-rose-200 active:scale-95 transition-all duration-200 shadow-2xs group"
                     aria-label="Close menu"
                     @click="sidebarOpen = false">
                     <svg class="h-5 w-5 text-slate-500 group-hover:text-rose-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -396,11 +396,14 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </button>
-                    <a href="{{ url('/') }}" class="flex items-center gap-2.5">
+                    <a href="{{ url('/') }}" class="flex items-center gap-2.5 min-w-0">
                         <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 shadow-sm shrink-0">
                             <img class="h-5 w-5 brightness-0 invert" src="{{ asset('image/Asset 1.svg') }}" alt="logo">
                         </div>
-                        <span class="text-[15px] font-extrabold text-slate-900 leading-none tracking-tight">{{ config('app.name') }}</span>
+                        <div class="flex flex-col justify-center min-w-0">
+                            <span class="text-sm font-extrabold text-slate-900 leading-tight tracking-tight truncate block">{{ $appName }}</span>
+                            <span class="text-[9px] font-bold text-blue-600 uppercase tracking-widest leading-none mt-0.5 truncate block">{{ strtoupper($appAcronym) }} System</span>
+                        </div>
                     </a>
                 </div>
                 <div class="flex items-center gap-2">
