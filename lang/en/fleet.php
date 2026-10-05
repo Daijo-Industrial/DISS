@@ -45,6 +45,7 @@ return [
     ],
 
     'categories' => [
+        'all' => 'All Categories',
         'passenger' => 'Passenger Car / Small',
         'commercial_truck' => 'Commercial Truck / Heavy',
         'pickup' => 'Pick-up / Flatbed',
@@ -75,6 +76,8 @@ return [
     'index' => [
         'title' => 'Fleet Management',
         'subtitle' => 'Operational vehicle readiness monitoring, daily P2H inspections, and legal compliance.',
+        'filter_category' => 'Fleet Type',
+        'all_categories' => 'All Fleet Types',
         'search_placeholder' => 'Search license plate, brand, driver name...',
         'add_vehicle' => 'Add Vehicle',
         'scan_qr' => 'Scan P2H QR',
@@ -228,6 +231,7 @@ return [
         'driver_name_required' => 'Operational driver name is required.',
         'created_by_required' => 'Creator / inspector name is required.',
         'trip_purpose_required' => 'Trip purpose & destination is required.',
+        'passenger_only' => 'Vehicle P2H inspection is strictly restricted to passenger vehicles.',
         'checklist_heading' => 'Visual & Mechanical Readiness Checklist',
         'status_ok' => 'Ready / Normal',
         'status_issue' => 'Issue / Defective',
@@ -373,6 +377,7 @@ return [
         'active_fleet_label' => 'Active Operational Fleet',
         'torch_title' => 'Flashlight',
         'camera_switch_title' => 'Switch Camera',
+        'passenger_only' => 'Vehicle P2H inspection is strictly restricted to passenger vehicles.',
     ],
 
     'messages' => [

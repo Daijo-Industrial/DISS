@@ -99,7 +99,7 @@ class Index extends Component
     }
 
     #[Url(as: 'cat')]
-    public string $category = 'all';
+    public string $category = 'passenger';
 
     #[Url(as: 'tab')]
     public string $operationalTab = 'all'; // 'all', 'in_pool', 'on_trip', 'maintenance'
@@ -110,6 +110,14 @@ class Index extends Component
     public function updatingCategory()
     {
         $this->resetPage();
+    }
+
+    public function setCategory(string $category): void
+    {
+        if (in_array($category, ['all', 'passenger', 'commercial_truck', 'pickup', 'other'], true)) {
+            $this->category = $category;
+            $this->resetPage();
+        }
     }
 
     public function updatingOperationalTab()
@@ -183,7 +191,10 @@ class Index extends Component
             ->orderBy($sortField, $sortDir);
 
         // KPI Metrics
-        $baseMetricsQuery = Vehicle::query()->whereNull('deleted_at')->whereNotIn('status', ['sold', 'retired']);
+        $baseMetricsQuery = Vehicle::query()
+            ->whereNull('deleted_at')
+            ->whereNotIn('status', ['sold', 'retired'])
+            ->when($this->category !== 'all', fn ($q) => $q->where('category', $this->category));
         $totalVehicles = (clone $baseMetricsQuery)->count();
         $onTripVehicles = (clone $baseMetricsQuery)->whereHas('activeCheckOut')->count();
         $maintenanceVehicles = (clone $baseMetricsQuery)->where('status', 'maintenance')->count();

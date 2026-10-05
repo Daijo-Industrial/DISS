@@ -147,17 +147,38 @@
 
     {{-- Search & Control Bar --}}
     <div class="rounded-2xl border border-slate-200/80 bg-white p-2.5 sm:p-3 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-        {{-- Search Input (Stays Visible) --}}
-        <div class="relative w-full sm:max-w-md">
-            <i class="bi bi-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
-            <input type="text" placeholder="{{ __('fleet.index.search_placeholder') }}"
-                wire:model.live.debounce.300ms="q"
-                class="w-full rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 sm:py-1.5 pl-8 pr-8 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition">
-            @if ($q !== '')
-                <button type="button" wire:click="$set('q','')" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600">
-                    <i class="bi bi-x-circle text-xs"></i>
-                </button>
-            @endif
+        {{-- Left: Search Input & Fleet Type Filter --}}
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5 flex-1">
+            {{-- Search Input (Stays Visible) --}}
+            <div class="relative w-full sm:max-w-xs">
+                <i class="bi bi-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                <input type="text" placeholder="{{ __('fleet.index.search_placeholder') }}"
+                    wire:model.live.debounce.300ms="q"
+                    class="w-full rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 sm:py-1.5 pl-8 pr-8 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition">
+                @if ($q !== '')
+                    <button type="button" wire:click="$set('q','')" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600">
+                        <i class="bi bi-x-circle text-xs"></i>
+                    </button>
+                @endif
+            </div>
+
+            {{-- Fleet Type Filter --}}
+            <div class="flex items-center gap-1.5 shrink-0">
+                <label for="fleet-category-filter" class="text-[11px] font-medium text-slate-400 shrink-0 hidden sm:inline">
+                    {{ __('fleet.index.filter_category') }}:
+                </label>
+                <div class="relative w-full sm:w-auto">
+                    <select id="fleet-category-filter" wire:model.live="category"
+                        class="w-full sm:w-auto appearance-none rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 sm:py-1.5 pl-3 pr-8 text-xs font-semibold text-slate-700 hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition cursor-pointer">
+                        <option value="passenger">{{ __('fleet.categories.passenger') }}</option>
+                        <option value="commercial_truck">{{ __('fleet.categories.commercial_truck') }}</option>
+                        <option value="pickup">{{ __('fleet.categories.pickup') }}</option>
+                        <option value="other">{{ __('fleet.categories.other') }}</option>
+                        <option value="all">{{ __('fleet.index.all_categories') }}</option>
+                    </select>
+                    <i class="bi bi-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none"></i>
+                </div>
+            </div>
         </div>
 
         {{-- View Mode Switcher (Grid vs Table) & PerPage --}}
@@ -300,8 +321,8 @@
                     </div>
 
                     {{-- Card Footer: Single Primary Action Button --}}
-                    <div class="mt-3 pt-3 border-t border-slate-100" @click.stop>
-                        @if (!$v->is_sold)
+                    @if (!$v->is_sold && $v->category === 'passenger')
+                        <div class="mt-3 pt-3 border-t border-slate-100" @click.stop>
                             @if ($isOut)
                                 <a href="{{ route('vehicles.inspect', ['vehicle' => $v, 'type' => 'check_in']) }}"
                                     class="w-full flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 py-2 px-3 text-xs font-bold text-white shadow-2xs hover:bg-amber-600 transition active:scale-[0.98]">
@@ -315,8 +336,8 @@
                                     <span>P2H Check-out →</span>
                                 </a>
                             @endif
-                        @endif
-                    </div>
+                        </div>
+                    @endif
                 </div>
             @empty
                 <div class="col-span-full rounded-2xl border border-dashed border-slate-300 p-8 sm:p-12 text-center">
@@ -407,7 +428,7 @@
                             </td>
                             <td class="px-4 py-3.5 text-right whitespace-nowrap" onclick="event.stopPropagation()">
                                 <div class="inline-flex items-center gap-1.5">
-                                    @if (!$v->is_sold)
+                                    @if (!$v->is_sold && $v->category === 'passenger')
                                         @if ($isOut)
                                             <a href="{{ route('vehicles.inspect', ['vehicle' => $v, 'type' => 'check_in']) }}"
                                                 class="rounded-xl bg-amber-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-600 shadow-2xs transition active:scale-[0.98]">
