@@ -1149,7 +1149,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
 
         Livewire::actingAs($viewerUser)
             ->test(VehiclesIndex::class)
-            ->assertDontSeeHtml('wire:click="setOperationalTab(\'sold\')"')
+            ->assertDontSeeHtml('<option value="sold">')
             ->call('setOperationalTab', 'sold')
             ->assertSet('operationalTab', 'all') // Rejected from setting sold tab
             ->assertDontSee($soldVehicle->plate_number);
@@ -1157,7 +1157,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
         // 5. Manager with canManage can see sold tab with counter and access sold/retired units
         Livewire::actingAs($this->user)
             ->test(VehiclesIndex::class)
-            ->assertSeeHtml('wire:click="setOperationalTab(\'sold\')"')
+            ->assertSeeHtml('<option value="sold">')
             ->call('setOperationalTab', 'sold')
             ->assertSet('operationalTab', 'sold')
             ->assertSee($soldVehicle->plate_number)
@@ -1255,11 +1255,300 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->assertSeeHtml('type="range"')
             ->assertSeeHtml('wire:model.live.debounce.300ms="fuel_percentage"');
 
-        // 2. Vehicles index view initially hides available filters with a toggle button
+        // 2. Vehicles index view initially hides available filters, removes Baris label, uses status dropdown, and provides selectable table sorting
         Livewire::actingAs($this->user)
             ->test(VehiclesIndex::class)
             ->assertSeeHtml('showFilters: false')
             ->assertSeeHtml('@click="showFilters = !showFilters"')
-            ->assertSeeHtml('x-show="showFilters"');
+            ->assertSeeHtml('x-show="showFilters && viewMode === \'grid\'"')
+            ->assertDontSee('Baris:')
+            ->assertSeeHtml('10 / hal')
+            ->assertSeeHtml('wire:model.live="operationalTab"')
+            ->assertSeeHtml('wire:click="sortBy(\'plate_number\')"');
+    }
+
+    public function test_vehicle_show_right_layout_initially_hidden_but_accessible_with_tab_counts(): void
+    {
+        // 1. Initial mount without tab query param has showRightLayout = false
+        $component = Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle]);
+
+        $component->assertSet('showRightLayout', false)
+            ->assertSeeHtml('max-w-xl')
+            ->assertSeeHtml('showRightLayout')
+            ->assertSeeHtml('x-show="showRightLayout"')
+            ->assertSee('Riwayat & Dokumen')
+            ->assertSee('Buka Detail')
+            ->assertSeeHtml('openTab(\'inspections\')')
+            ->assertSeeHtml('openTab(\'documents\')')
+            ->assertSeeHtml('openTab(\'services\')')
+            ->assertDontSeeHtml('<span class="hidden sm:inline">Tutup</span>');
+
+        // 2. Toggling right layout opens the panel
+        $component->call('toggleRightLayout')
+            ->assertSet('showRightLayout', true);
+
+        // 3. Selecting a tab automatically sets showRightLayout to true
+        $component->set('showRightLayout', false)
+            ->assertSet('showRightLayout', false)
+            ->call('setTab', 'documents')
+            ->assertSet('showRightLayout', true)
+            ->assertSet('tab', 'documents');
+
+        // 4. Mounting with explicit tab query param opens the panel immediately
+        Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'services'])
+            ->assertSet('showRightLayout', true)
+            ->assertSet('tab', 'services');
+    }
+
+    public function test_vehicles_index_table_view_multi_select_category_and_status_filtering(): void
+    {
+        // Setup additional vehicles
+        $pickup = Vehicle::create([
+            'plate_number' => 'B 7777 PKP',
+            'driver_name' => 'Supir Pickup',
+            'brand' => 'Daihatsu',
+            'model' => 'Gran Max',
+            'category' => 'pickup',
+            'fuel_type' => 'petrol',
+            'requires_kir' => false,
+            'odometer' => 30000,
+            'status' => VehicleStatus::ACTIVE,
+        ]);
+
+        $tripVehicle = Vehicle::create([
+            'plate_number' => 'B 6666 TRIP',
+            'driver_name' => 'Supir Trip',
+            'brand' => 'Toyota',
+            'model' => 'Avanza',
+            'category' => 'passenger',
+            'fuel_type' => 'petrol',
+            'requires_kir' => false,
+            'odometer' => 45000,
+            'status' => VehicleStatus::ACTIVE,
+        ]);
+
+        // Create active checkout for tripVehicle
+        VehicleInspection::create([
+            'vehicle_id' => $tripVehicle->id,
+            'inspection_type' => 'check_out',
+            'checked_at' => now()->subHours(2),
+            'driver_name' => 'Supir Trip',
+            'created_by' => 'Petugas GA',
+            'trip_purpose' => 'Antar tamu VIP',
+            'odometer' => 45000,
+            'fuel_percentage' => 100,
+            'checklist_results' => [],
+            'severity' => 'none',
+            'inspector_id' => $this->user->id,
+        ]);
+
+        $maintenanceVehicle = Vehicle::create([
+            'plate_number' => 'B 5555 MNT',
+            'driver_name' => 'Supir Bengkel',
+            'brand' => 'Toyota',
+            'model' => 'Calya',
+            'category' => 'passenger',
+            'fuel_type' => 'petrol',
+            'requires_kir' => false,
+            'odometer' => 60000,
+            'status' => VehicleStatus::MAINTENANCE,
+        ]);
+
+        $component = Livewire::actingAs($this->user)
+            ->test(VehiclesIndex::class);
+
+        // 1. Initial default state: passenger category only and active operational statuses
+        $component->assertSet('selectedCategories', ['passenger'])
+            ->assertSet('category', 'passenger')
+            ->assertSet('selectedStatuses', ['in_pool', 'on_trip', 'maintenance'])
+            ->assertSet('operationalTab', 'all')
+            ->assertSet('hasCustomCategory', false)
+            ->assertSet('hasCustomStatus', false)
+            ->assertSet('hasActiveFilters', false)
+            ->assertDontSeeHtml('wire:click="resetFilters"')
+            ->assertDontSeeHtml('bg-indigo-50 border-indigo-200 text-indigo-700 font-bold')
+            ->assertSeeHtml('bg-slate-100 text-slate-600')
+            ->assertSee($this->vehicle->plate_number)
+            ->assertSee($tripVehicle->plate_number)
+            ->assertSee($maintenanceVehicle->plate_number)
+            ->assertDontSee($this->truck->plate_number)
+            ->assertDontSee($pickup->plate_number);
+
+        // 2. Select multiple categories: passenger & commercial_truck
+        $component->set('selectedCategories', ['passenger', 'commercial_truck'])
+            ->assertSet('category', 'custom')
+            ->assertSet('hasCustomCategory', true)
+            ->assertSet('hasActiveFilters', true)
+            ->assertSeeHtml('wire:click="resetFilters"')
+            ->assertSeeHtml('bg-indigo-50 border-indigo-200 text-indigo-700 font-bold')
+            ->assertSee($this->vehicle->plate_number)
+            ->assertSee($this->truck->plate_number)
+            ->assertDontSee($pickup->plate_number);
+
+        // 3. Select all categories helper
+        $component->call('selectAllCategories')
+            ->assertSet('category', 'all')
+            ->assertSet('hasCustomCategory', true)
+            ->assertSee($this->vehicle->plate_number)
+            ->assertSee($this->truck->plate_number)
+            ->assertSee($pickup->plate_number);
+
+        // 4. Reset category filter helper
+        $component->call('resetCategoryFilter')
+            ->assertSet('selectedCategories', ['passenger'])
+            ->assertSet('category', 'passenger')
+            ->assertSet('hasCustomCategory', false)
+            ->assertSee($this->vehicle->plate_number)
+            ->assertDontSee($this->truck->plate_number)
+            ->assertDontSee($pickup->plate_number);
+
+        // 5. Status multi-select: in_pool and on_trip only (excludes maintenance)
+        $component->set('selectedStatuses', ['in_pool', 'on_trip'])
+            ->assertSet('operationalTab', 'custom')
+            ->assertSee($this->vehicle->plate_number)
+            ->assertSee($tripVehicle->plate_number)
+            ->assertDontSee($maintenanceVehicle->plate_number);
+
+        // 6. Status multi-select: maintenance only
+        $component->set('selectedStatuses', ['maintenance'])
+            ->assertSet('operationalTab', 'maintenance')
+            ->assertSee($maintenanceVehicle->plate_number)
+            ->assertDontSee($this->vehicle->plate_number)
+            ->assertDontSee($tripVehicle->plate_number);
+
+        // 7. Select all statuses and reset status filter
+        $component->call('selectAllStatuses')
+            ->assertSet('operationalTab', 'custom')
+            ->assertSee($this->vehicle->plate_number)
+            ->assertSee($tripVehicle->plate_number)
+            ->assertSee($maintenanceVehicle->plate_number);
+
+        $component->call('resetStatusFilter')
+            ->assertSet('selectedStatuses', ['in_pool', 'on_trip', 'maintenance'])
+            ->assertSet('operationalTab', 'all')
+            ->assertSee($this->vehicle->plate_number)
+            ->assertSee($tripVehicle->plate_number)
+            ->assertSee($maintenanceVehicle->plate_number);
+
+        // 8. Filters compose with search query and sorting
+        $component->set('selectedCategories', ['passenger', 'commercial_truck'])
+            ->set('q', 'TRK')
+            ->assertSee($this->truck->plate_number)
+            ->assertDontSee($this->vehicle->plate_number)
+            ->assertDontSee($tripVehicle->plate_number);
+
+        // 9. Table view contains interactive popover triggers and custom selection indicator
+        $component->set('q', '')
+            ->set('selectedCategories', ['passenger', 'commercial_truck'])
+            ->set('selectedStatuses', ['in_pool', 'on_trip'])
+            ->assertSeeHtml('catFilterOpen')
+            ->assertSeeHtml('statusFilterOpen')
+            ->assertSeeHtml('Filter Kategori')
+            ->assertSeeHtml('Filter Status Armada')
+            ->assertSeeHtml('Semua')
+            ->assertSeeHtml('Reset')
+            ->assertSeeHtml('wire:click="resetFilters"');
+
+        // 10. resetFilters() resets both multi-select category and status
+        $component->call('resetFilters')
+            ->assertSet('selectedCategories', ['passenger'])
+            ->assertSet('category', 'passenger')
+            ->assertSet('selectedStatuses', ['in_pool', 'on_trip', 'maintenance'])
+            ->assertSet('operationalTab', 'all')
+            ->assertSet('q', '')
+            ->assertSet('sort', 'plate_number')
+            ->assertSet('dir', 'asc')
+            ->assertDontSeeHtml('wire:click="resetFilters"');
+    }
+
+    public function test_vehicle_form_stepper_navigation_validation_and_submission(): void
+    {
+        Role::firstOrCreate(['name' => 'super-admin']);
+        $this->user->assignRole('super-admin');
+
+        $component = Livewire::actingAs($this->user)
+            ->test(VehicleForm::class);
+
+        // 1. Initial state: Step 1 active with total 3 steps
+        $component->assertSet('currentStep', 1)
+            ->assertSet('totalSteps', 3)
+            ->assertSeeHtml('1. Identitas &amp; Status')
+            ->assertSeeHtml('2. Kategori &amp; Regulasi')
+            ->assertSeeHtml('3. Spesifikasi Teknis');
+
+        // 2. Advancing without filling required plate number triggers Step 1 validation
+        $component->call('nextStep')
+            ->assertHasErrors(['plate_number' => 'required'])
+            ->assertSet('currentStep', 1);
+
+        // 3. Advancing with invalid plate number regex fails validation
+        $component->set('plate_number', 'INVALID')
+            ->call('nextStep')
+            ->assertHasErrors(['plate_number' => 'regex'])
+            ->assertSet('currentStep', 1);
+
+        // 4. Fill valid Step 1 data and advance to Step 2
+        $component->set('plate_number', 'b1111stp')
+            ->set('driver_name', 'Supir Stepper')
+            ->set('status', 'active')
+            ->call('nextStep')
+            ->assertHasNoErrors()
+            ->assertSet('currentStep', 2)
+            ->assertSet('plate_number', 'B 1111 STP');
+
+        // 5. In Step 2: Selecting commercial_truck auto-toggles requires_kir
+        $component->set('category', 'commercial_truck')
+            ->assertSet('requires_kir', true)
+            ->set('fuel_type', 'diesel')
+            ->call('nextStep')
+            ->assertHasNoErrors()
+            ->assertSet('currentStep', 3);
+
+        // 6. In Step 3: Navigating backward to Step 2
+        $component->call('previousStep')
+            ->assertSet('currentStep', 2);
+
+        // 7. Jumping backward to Step 1 via goToStep(1)
+        $component->call('goToStep', 1)
+            ->assertSet('currentStep', 1);
+
+        // 8. Jumping forward to Step 3 via goToStep(3) validates intermediate steps
+        $component->call('goToStep', 3)
+            ->assertHasNoErrors()
+            ->assertSet('currentStep', 3);
+
+        // 9. Complete Step 3 specs and submit form
+        $component->set('brand', 'Hino')
+            ->set('model', 'Dutro 130 HD')
+            ->set('year', 2024)
+            ->set('vin', 'MHF1234567890')
+            ->set('odometer', 15000)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $newVehicle = Vehicle::where('plate_number', 'B 1111 STP')->first();
+        $this->assertNotNull($newVehicle);
+        $this->assertEquals('Hino', $newVehicle->brand);
+        $this->assertEquals('Dutro 130 HD', $newVehicle->model);
+        $this->assertEquals('commercial_truck', $newVehicle->category);
+        $this->assertEquals('diesel', $newVehicle->fuel_type);
+        $this->assertTrue($newVehicle->requires_kir);
+        $this->assertEquals(15000, $newVehicle->odometer);
+
+        // 10. Non-manager editing mode has totalSteps = 1 and ignores forward navigation
+        $viewerUser = User::factory()->create();
+        $viewerUser->givePermissionTo('fleet.view');
+
+        Livewire::actingAs($viewerUser)
+            ->test(VehicleForm::class, ['vehicle' => $newVehicle])
+            ->assertSet('canManage', false)
+            ->assertSet('totalSteps', 1)
+            ->assertSet('currentStep', 1)
+            ->call('goToStep', 2)
+            ->assertSet('currentStep', 1)
+            ->call('nextStep')
+            ->assertSet('currentStep', 1);
     }
 }

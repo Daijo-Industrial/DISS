@@ -30,6 +30,21 @@ class Index extends Component
     #[Url(as: 'dir')]
     public string $dir = 'asc';
 
+    #[Url(as: 'cat')]
+    public string $category = 'passenger';
+
+    #[Url(as: 'cats')]
+    public array $selectedCategories = ['passenger'];
+
+    #[Url(as: 'tab')]
+    public string $operationalTab = 'all'; // 'all', 'in_pool', 'on_trip', 'maintenance'
+
+    #[Url(as: 'stats')]
+    public array $selectedStatuses = ['in_pool', 'on_trip', 'maintenance'];
+
+    #[Url(as: 'view')]
+    public string $viewMode = 'table'; // 'grid' (Gallery Cards) or 'table' (Data Table)
+
     public bool $canManage = false;
 
     public bool $canInspect = false;
@@ -43,6 +58,40 @@ class Index extends Component
 
         $this->canManage = $user?->can('fleet.manage') ?? false;
         $this->canInspect = $this->canManage || ($user?->can('fleet.inspect') ?? false);
+
+        if (! empty($this->selectedCategories)) {
+            $this->selectedCategories = array_values($this->selectedCategories);
+            if (count($this->selectedCategories) === 1) {
+                $this->category = $this->selectedCategories[0];
+            } elseif (count($this->selectedCategories) === 4) {
+                $this->category = 'all';
+            } else {
+                $this->category = 'custom';
+            }
+        } else {
+            $this->selectedCategories = ['passenger'];
+            $this->category = 'passenger';
+        }
+
+        if (! empty($this->selectedStatuses)) {
+            if (count($this->selectedStatuses) === 1) {
+                $this->operationalTab = $this->selectedStatuses[0];
+            } elseif ($this->isDefaultActiveStatuses($this->selectedStatuses)) {
+                $this->operationalTab = 'all';
+            } elseif ($this->canManage && count($this->selectedStatuses) === 4) {
+                $this->operationalTab = 'all';
+            } else {
+                $this->operationalTab = 'custom';
+            }
+        } else {
+            if ($this->operationalTab === 'all') {
+                $this->selectedStatuses = ['in_pool', 'on_trip', 'maintenance'];
+            } elseif (in_array($this->operationalTab, ['in_pool', 'on_trip', 'maintenance', 'sold'], true)) {
+                $this->selectedStatuses = [$this->operationalTab];
+            } else {
+                $this->selectedStatuses = ['in_pool', 'on_trip', 'maintenance'];
+            }
+        }
     }
 
     public function sortBy(string $field): void
@@ -98,17 +147,44 @@ class Index extends Component
         $this->resetPage();
     }
 
-    #[Url(as: 'cat')]
-    public string $category = 'passenger';
-
-    #[Url(as: 'tab')]
-    public string $operationalTab = 'all'; // 'all', 'in_pool', 'on_trip', 'maintenance'
-
-    #[Url(as: 'view')]
-    public string $viewMode = 'table'; // 'grid' (Gallery Cards) or 'table' (Data Table)
-
-    public function updatingCategory()
+    public function updatedSelectedCategories(): void
     {
+        $this->selectedCategories = array_values($this->selectedCategories);
+        if (count($this->selectedCategories) === 1) {
+            $this->category = $this->selectedCategories[0];
+        } elseif (count($this->selectedCategories) === 4 || empty($this->selectedCategories)) {
+            $this->category = 'all';
+        } else {
+            $this->category = 'custom';
+        }
+        $this->resetPage();
+    }
+
+    public function updatedSelectedStatuses(): void
+    {
+        $this->selectedStatuses = array_values($this->selectedStatuses);
+        if (count($this->selectedStatuses) === 1) {
+            $this->operationalTab = $this->selectedStatuses[0];
+        } elseif ($this->isDefaultActiveStatuses($this->selectedStatuses)) {
+            $this->operationalTab = 'all';
+        } elseif ($this->canManage && count($this->selectedStatuses) === 4) {
+            $this->operationalTab = 'all';
+        } elseif (empty($this->selectedStatuses)) {
+            $this->selectedStatuses = ['in_pool', 'on_trip', 'maintenance'];
+            $this->operationalTab = 'all';
+        } else {
+            $this->operationalTab = 'custom';
+        }
+        $this->resetPage();
+    }
+
+    public function updatedCategory($value): void
+    {
+        if ($value === 'all') {
+            $this->selectedCategories = ['passenger', 'commercial_truck', 'pickup', 'other'];
+        } elseif ($value !== 'custom') {
+            $this->selectedCategories = [$value];
+        }
         $this->resetPage();
     }
 
@@ -116,12 +192,34 @@ class Index extends Component
     {
         if (in_array($category, ['all', 'passenger', 'commercial_truck', 'pickup', 'other'], true)) {
             $this->category = $category;
+            $this->selectedCategories = ($category === 'all')
+                ? ['passenger', 'commercial_truck', 'pickup', 'other']
+                : [$category];
             $this->resetPage();
         }
     }
 
-    public function updatingOperationalTab()
+    public function selectAllCategories(): void
     {
+        $this->selectedCategories = ['passenger', 'commercial_truck', 'pickup', 'other'];
+        $this->category = 'all';
+        $this->resetPage();
+    }
+
+    public function resetCategoryFilter(): void
+    {
+        $this->selectedCategories = ['passenger'];
+        $this->category = 'passenger';
+        $this->resetPage();
+    }
+
+    public function updatedOperationalTab($value): void
+    {
+        if ($value === 'all') {
+            $this->selectedStatuses = ['in_pool', 'on_trip', 'maintenance'];
+        } elseif ($value !== 'custom') {
+            $this->selectedStatuses = [$value];
+        }
         $this->resetPage();
     }
 
@@ -133,8 +231,75 @@ class Index extends Component
 
         if (in_array($tab, $allowed, true)) {
             $this->operationalTab = $tab;
+            $this->selectedStatuses = ($tab === 'all')
+                ? ['in_pool', 'on_trip', 'maintenance']
+                : [$tab];
             $this->resetPage();
         }
+    }
+
+    public function selectAllStatuses(): void
+    {
+        $this->selectedStatuses = $this->canManage
+            ? ['in_pool', 'on_trip', 'maintenance', 'sold']
+            : ['in_pool', 'on_trip', 'maintenance'];
+        $this->operationalTab = $this->canManage ? 'custom' : 'all';
+        $this->resetPage();
+    }
+
+    public function resetStatusFilter(): void
+    {
+        $this->selectedStatuses = ['in_pool', 'on_trip', 'maintenance'];
+        $this->operationalTab = 'all';
+        $this->resetPage();
+    }
+
+    public function resetFilters(): void
+    {
+        $this->q = '';
+        $this->status = 'all';
+        $this->operationalTab = 'all';
+        $this->selectedStatuses = ['in_pool', 'on_trip', 'maintenance'];
+        $this->category = 'passenger';
+        $this->selectedCategories = ['passenger'];
+        $this->sort = 'plate_number';
+        $this->dir = 'asc';
+        $this->resetPage();
+    }
+
+    public function isDefaultActiveStatuses(array $statuses): bool
+    {
+        return count($statuses) === 3
+            && in_array('in_pool', $statuses, true)
+            && in_array('on_trip', $statuses, true)
+            && in_array('maintenance', $statuses, true)
+            && ! in_array('sold', $statuses, true);
+    }
+
+    public function isDefaultCategory(array $categories): bool
+    {
+        $vals = array_values($categories);
+
+        return count($vals) === 1 && $vals[0] === 'passenger';
+    }
+
+    public function getHasCustomCategoryProperty(): bool
+    {
+        return $this->category !== 'passenger' || ! $this->isDefaultCategory($this->selectedCategories);
+    }
+
+    public function getHasCustomStatusProperty(): bool
+    {
+        return ! ($this->operationalTab === 'all' && $this->isDefaultActiveStatuses($this->selectedStatuses));
+    }
+
+    public function getHasActiveFiltersProperty(): bool
+    {
+        return $this->hasCustomCategory
+            || $this->hasCustomStatus
+            || $this->q !== ''
+            || $this->sort !== 'plate_number'
+            || $this->dir !== 'asc';
     }
 
     public function setViewMode(string $mode): void
@@ -178,18 +343,71 @@ class Index extends Component
                         ->orWhere('model', 'like', '%' . $this->q . '%')
                         ->orWhere('driver_name', 'like', '%' . $this->q . '%');
                 }),
-            )
-            ->when($this->category !== 'all', function ($q) {
-                $q->where('category', $this->category);
-            })
-            ->when($tab === 'sold', function ($q) {
-                $q->where(function ($w) {
+            );
+
+        // 1. Category filtering
+        if (! empty($this->selectedCategories) && count($this->selectedCategories) < 4 && $this->category !== 'all') {
+            $query->whereIn('category', $this->selectedCategories);
+        } elseif ($this->category !== 'all' && $this->category !== 'custom') {
+            $query->where('category', $this->category);
+        }
+
+        // 2. Operational Status filtering
+        if (! empty($this->selectedStatuses) && ! $this->isDefaultActiveStatuses($this->selectedStatuses)) {
+            $hasSold = in_array('sold', $this->selectedStatuses, true) && $this->canManage;
+            $activeStatuses = array_values(array_diff($this->selectedStatuses, ['sold']));
+
+            $query->where(function ($w) use ($hasSold, $activeStatuses) {
+                $conditionUsed = false;
+
+                if ($hasSold) {
+                    $w->where(function ($sw) {
+                        $sw->whereIn('status', ['sold', 'retired'])
+                            ->orWhereNotNull('sold_at');
+                    });
+                    $conditionUsed = true;
+                }
+
+                if (! empty($activeStatuses)) {
+                    $method = $conditionUsed ? 'orWhere' : 'where';
+                    $w->$method(function ($aw) use ($activeStatuses) {
+                        $aw->whereNotIn('status', ['sold', 'retired'])
+                            ->whereNull('sold_at')
+                            ->where(function ($cw) use ($activeStatuses) {
+                                $first = true;
+                                if (in_array('in_pool', $activeStatuses, true)) {
+                                    $cw->where(function ($pw) {
+                                        $pw->whereDoesntHave('activeCheckOut')->where('status', '!=', 'maintenance');
+                                    });
+                                    $first = false;
+                                }
+                                if (in_array('on_trip', $activeStatuses, true)) {
+                                    $m = $first ? 'where' : 'orWhere';
+                                    $cw->$m(function ($tw) {
+                                        $tw->whereHas('activeCheckOut');
+                                    });
+                                    $first = false;
+                                }
+                                if (in_array('maintenance', $activeStatuses, true)) {
+                                    $m = $first ? 'where' : 'orWhere';
+                                    $cw->$m(function ($mw) {
+                                        $mw->where('status', 'maintenance');
+                                    });
+                                }
+                            });
+                    });
+                }
+            });
+        } else {
+            $tab = ($this->operationalTab === 'sold' && ! $this->canManage) ? 'all' : $this->operationalTab;
+
+            if ($tab === 'sold') {
+                $query->where(function ($w) {
                     $w->whereIn('status', ['sold', 'retired'])
                         ->orWhereNotNull('sold_at');
                 });
-            }, function ($q) use ($tab) {
-                // All active operational tabs strictly exclude sold and retired units
-                $q->whereNotIn('status', ['sold', 'retired'])
+            } elseif ($tab !== 'all' && $tab !== 'custom') {
+                $query->whereNotIn('status', ['sold', 'retired'])
                     ->whereNull('sold_at')
                     ->when($tab === 'in_pool', function ($w) {
                         $w->whereDoesntHave('activeCheckOut')->where('status', '!=', 'maintenance');
@@ -200,7 +418,13 @@ class Index extends Component
                     ->when($tab === 'maintenance', function ($w) {
                         $w->where('status', 'maintenance');
                     });
-            })
+            } else {
+                $query->whereNotIn('status', ['sold', 'retired'])
+                    ->whereNull('sold_at');
+            }
+        }
+
+        $query
             ->when($this->canManage && $this->status !== 'all', function ($q) {
                 $q->where('status', VehicleStatus::from($this->status));
             })
@@ -211,7 +435,8 @@ class Index extends Component
             ->whereNull('deleted_at')
             ->whereNotIn('status', ['sold', 'retired'])
             ->whereNull('sold_at')
-            ->when($this->category !== 'all', fn ($q) => $q->where('category', $this->category));
+            ->when(! empty($this->selectedCategories) && count($this->selectedCategories) < 4 && $this->category !== 'all', fn ($q) => $q->whereIn('category', $this->selectedCategories))
+            ->when($this->category !== 'all' && $this->category !== 'custom' && empty($this->selectedCategories), fn ($q) => $q->where('category', $this->category));
 
         $totalVehicles = (clone $baseActiveQuery)->count();
         $onTripVehicles = (clone $baseActiveQuery)->whereHas('activeCheckOut')->count();
@@ -225,7 +450,8 @@ class Index extends Component
                     $w->whereIn('status', ['sold', 'retired'])
                         ->orWhereNotNull('sold_at');
                 })
-                ->when($this->category !== 'all', fn ($q) => $q->where('category', $this->category))
+                ->when(! empty($this->selectedCategories) && count($this->selectedCategories) < 4 && $this->category !== 'all', fn ($q) => $q->whereIn('category', $this->selectedCategories))
+                ->when($this->category !== 'all' && $this->category !== 'custom' && empty($this->selectedCategories), fn ($q) => $q->where('category', $this->category))
                 ->count()
             : 0;
 
@@ -252,6 +478,9 @@ class Index extends Component
             'fullFeature' => $this->canManage,
             'complianceAlerts' => $complianceAlerts,
             'metrics' => $metrics,
+            'hasCustomCategory' => $this->hasCustomCategory,
+            'hasCustomStatus' => $this->hasCustomStatus,
+            'hasActiveFilters' => $this->hasActiveFilters,
         ]);
     }
 }

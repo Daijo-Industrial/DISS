@@ -94,62 +94,6 @@
         </div>
     @endif
 
-    {{-- Apple Segmented Operational Status Pills (Replacing heavy KPI cards) --}}
-    <div class="overflow-x-auto pb-1 sm:pb-0 -mx-3 px-3 sm:mx-0 sm:px-0">
-        <div class="inline-flex items-center p-1 bg-slate-100/90 rounded-2xl border border-slate-200/60 min-w-full sm:min-w-0">
-            {{-- All --}}
-            <button type="button" wire:click="setOperationalTab('all')"
-                class="flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-xs transition cursor-pointer flex-1 sm:flex-initial {{ $operationalTab === 'all' ? 'bg-white text-slate-900 font-bold shadow-xs' : 'text-slate-500 hover:text-slate-800 font-medium' }}">
-                <span>Semua</span>
-                <span class="rounded-full px-1.5 py-0.2 text-[11px] {{ $operationalTab === 'all' ? 'bg-slate-100 text-slate-800 font-bold' : 'text-slate-400 font-medium' }}">
-                    {{ $metrics['total'] }}
-                </span>
-            </button>
-
-            {{-- In Pool --}}
-            <button type="button" wire:click="setOperationalTab('in_pool')"
-                class="flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-xs transition cursor-pointer flex-1 sm:flex-initial {{ $operationalTab === 'in_pool' ? 'bg-white text-slate-900 font-bold shadow-xs' : 'text-slate-500 hover:text-slate-800 font-medium' }}">
-                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                <span>Di Pool</span>
-                <span class="rounded-full px-1.5 py-0.2 text-[11px] {{ $operationalTab === 'in_pool' ? 'bg-emerald-50 text-emerald-700 font-bold' : 'text-slate-400 font-medium' }}">
-                    {{ $metrics['in_pool'] }}
-                </span>
-            </button>
-
-            {{-- On Trip --}}
-            <button type="button" wire:click="setOperationalTab('on_trip')"
-                class="flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-xs transition cursor-pointer flex-1 sm:flex-initial {{ $operationalTab === 'on_trip' ? 'bg-white text-slate-900 font-bold shadow-xs' : 'text-slate-500 hover:text-slate-800 font-medium' }}">
-                <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-                <span>On-Trip</span>
-                <span class="rounded-full px-1.5 py-0.2 text-[11px] {{ $operationalTab === 'on_trip' ? 'bg-amber-50 text-amber-700 font-bold' : 'text-slate-400 font-medium' }}">
-                    {{ $metrics['on_trip'] }}
-                </span>
-            </button>
-
-            {{-- Maintenance --}}
-            <button type="button" wire:click="setOperationalTab('maintenance')"
-                class="flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-xs transition cursor-pointer flex-1 sm:flex-initial {{ $operationalTab === 'maintenance' ? 'bg-white text-slate-900 font-bold shadow-xs' : 'text-slate-500 hover:text-slate-800 font-medium' }}">
-                <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
-                <span>Perawatan</span>
-                <span class="rounded-full px-1.5 py-0.2 text-[11px] {{ $operationalTab === 'maintenance' ? 'bg-rose-50 text-rose-700 font-bold' : 'text-slate-400 font-medium' }}">
-                    {{ $metrics['maintenance'] ?? 0 }}
-                </span>
-            </button>
-
-            {{-- Terjual (Sold / Archived) - Visible for managers only --}}
-            @if ($canManage)
-                <button type="button" wire:click="setOperationalTab('sold')"
-                    class="flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-xs transition cursor-pointer flex-1 sm:flex-initial {{ $operationalTab === 'sold' ? 'bg-white text-slate-900 font-bold shadow-xs' : 'text-slate-500 hover:text-slate-800 font-medium' }}">
-                    <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
-                    <span>Terjual</span>
-                    <span class="rounded-full px-1.5 py-0.2 text-[11px] {{ $operationalTab === 'sold' ? 'bg-rose-50 text-rose-700 font-bold' : 'text-slate-400 font-medium' }}">
-                        {{ $metrics['sold'] ?? 0 }}
-                    </span>
-                </button>
-            @endif
-        </div>
-    </div>
-
     {{-- Compact Compliance Expiry Notification Strip --}}
     @if ($canManage && $complianceAlerts->isNotEmpty())
         <div class="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl bg-amber-50/70 border border-amber-200/60 text-xs text-amber-900">
@@ -190,29 +134,26 @@
                     @endif
                 </div>
 
-                {{-- Filter Toggle Button (Initially Hidden Available Filters) --}}
-                <button type="button" @click="showFilters = !showFilters"
+                {{-- Filter Toggle Button (Shown in Grid view, since Table view has interactive toolbar filters) --}}
+                <button type="button" x-show="viewMode === 'grid'" @click="showFilters = !showFilters"
                     :class="showFilters ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-bold shadow-2xs' : 'bg-slate-50/80 border-slate-200/80 text-slate-600 hover:bg-slate-100 font-semibold'"
                     class="inline-flex items-center gap-1.5 rounded-xl border py-2 sm:py-1.5 px-3 text-xs transition shrink-0 cursor-pointer active:scale-95">
                     <i class="bi bi-sliders text-xs"></i>
                     <span>Filter</span>
-                    @if ($category !== 'passenger' || $sort !== 'plate_number' || $dir !== 'asc')
+                    @if ($hasActiveFilters)
                         <span class="h-1.5 w-1.5 rounded-full bg-indigo-600 ring-2 ring-indigo-200"></span>
                     @endif
                 </button>
             </div>
 
             {{-- Right: View Mode Switcher (Grid vs Table) & PerPage --}}
-            <div class="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-                <div class="flex items-center gap-1.5 text-xs text-slate-500">
-                    <span class="text-[11px] font-medium text-slate-400">Baris:</span>
-                    <select wire:model.live="perPage"
-                        class="rounded-lg border border-slate-200 bg-slate-50 py-1 px-1.5 text-xs text-slate-700 focus:outline-none cursor-pointer">
-                        <option value="10">10</option>
-                        <option value="20">20</option>
-                        <option value="50">50</option>
-                    </select>
-                </div>
+            <div class="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                <select wire:model.live="perPage"
+                    class="rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 sm:py-1.5 px-2.5 text-xs font-semibold text-slate-700 hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition cursor-pointer">
+                    <option value="10">10 / hal</option>
+                    <option value="20">20 / hal</option>
+                    <option value="50">50 / hal</option>
+                </select>
 
                 <div class="inline-flex rounded-xl bg-slate-100/90 p-0.5 border border-slate-200/60">
                     <button type="button" @click="setView('grid')"
@@ -231,18 +172,55 @@
             </div>
         </div>
 
-        {{-- Collapsible Available Filters Panel (Initially Hidden) --}}
-        <div x-show="showFilters" x-collapse x-cloak style="display: none;"
-            class="pt-3 border-t border-slate-100">
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {{-- Category Filter --}}
-                <div>
+        {{-- Collapsible Available Filters Panel (Shown only in Grid view, since Table view has interactive toolbar filters) --}}
+        <div x-show="showFilters && viewMode === 'grid'" x-collapse x-cloak style="display: none;"
+            class="pt-3 border-t border-slate-100 space-y-3">
+            <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Filter Tambahan</span>
+                @if ($hasActiveFilters)
+                    <button type="button" wire:click="resetFilters"
+                        class="text-[11px] font-semibold text-rose-600 hover:text-rose-700 inline-flex items-center gap-1 cursor-pointer">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                        <span>Reset Filter</span>
+                    </button>
+                @endif
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {{-- Operational Status Dropdown Filter (Grid view only) --}}
+                <div x-show="viewMode === 'grid'">
+                    <label for="fleet-status-filter" class="block text-[11px] font-semibold text-slate-600 mb-1">
+                        Status Operasional
+                    </label>
+                    <div class="relative">
+                        <select id="fleet-status-filter" wire:model.live="operationalTab"
+                            class="w-full appearance-none rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 pl-3 pr-8 text-xs font-semibold text-slate-800 hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition cursor-pointer">
+                            @if ($operationalTab === 'custom')
+                                <option value="custom" disabled selected>Multi-Pilihan ({{ count($selectedStatuses) }} status)</option>
+                            @endif
+                            <option value="all">Semua Status ({{ $metrics['total'] }})</option>
+                            <option value="in_pool">Di Pool ({{ $metrics['in_pool'] }})</option>
+                            <option value="on_trip">On-Trip ({{ $metrics['on_trip'] }})</option>
+                            <option value="maintenance">Perawatan ({{ $metrics['maintenance'] ?? 0 }})</option>
+                            @if ($canManage)
+                                <option value="sold">Terjual ({{ $metrics['sold'] ?? 0 }})</option>
+                            @endif
+                        </select>
+                        <i class="bi bi-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none"></i>
+                    </div>
+                </div>
+
+                {{-- Category Filter (Grid view only) --}}
+                <div x-show="viewMode === 'grid'">
                     <label for="fleet-category-filter" class="block text-[11px] font-semibold text-slate-600 mb-1">
                         {{ __('fleet.index.filter_category') }}
                     </label>
                     <div class="relative">
                         <select id="fleet-category-filter" wire:model.live="category"
                             class="w-full appearance-none rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 pl-3 pr-8 text-xs font-semibold text-slate-800 hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition cursor-pointer">
+                            @if ($category === 'custom' || (!empty($selectedCategories) && count($selectedCategories) > 1 && count($selectedCategories) < 4))
+                                <option value="custom" disabled selected>Multi-Pilihan ({{ count($selectedCategories) }} tipe)</option>
+                            @endif
                             <option value="passenger">{{ __('fleet.categories.passenger') }}</option>
                             <option value="commercial_truck">{{ __('fleet.categories.commercial_truck') }}</option>
                             <option value="pickup">{{ __('fleet.categories.pickup') }}</option>
@@ -253,8 +231,8 @@
                     </div>
                 </div>
 
-                {{-- Sort Field --}}
-                <div>
+                {{-- Sort Field (Shown only when viewMode is grid) --}}
+                <div x-show="viewMode === 'grid'">
                     <label for="fleet-sort-filter" class="block text-[11px] font-semibold text-slate-600 mb-1">
                         Urutkan Berdasarkan
                     </label>
@@ -273,29 +251,18 @@
                     </div>
                 </div>
 
-                {{-- Sort Direction & Quick Reset --}}
-                <div>
+                {{-- Sort Direction (Shown only when viewMode is grid) --}}
+                <div x-show="viewMode === 'grid'">
                     <label class="block text-[11px] font-semibold text-slate-600 mb-1">
                         Arah Urutan
                     </label>
-                    <div class="flex items-center gap-2">
-                        <div class="relative flex-1">
-                            <select wire:model.live="dir"
-                                class="w-full appearance-none rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 pl-3 pr-8 text-xs font-semibold text-slate-800 hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition cursor-pointer">
-                                <option value="asc">A - Z (Naik / Terendah)</option>
-                                <option value="desc">Z - A (Turun / Tertinggi)</option>
-                            </select>
-                            <i class="bi bi-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none"></i>
-                        </div>
-
-                        @if ($category !== 'passenger' || $sort !== 'plate_number' || $dir !== 'asc')
-                            <button type="button" wire:click="$set('category', 'passenger'); $set('sort', 'plate_number'); $set('dir', 'asc')"
-                                class="rounded-xl border border-slate-200 bg-slate-100 hover:bg-slate-200 py-2 px-3 text-xs font-semibold text-slate-600 transition shrink-0 cursor-pointer"
-                                title="Reset filter ke pengaturan awal">
-                                <i class="bi bi-arrow-counterclockwise mr-1"></i>
-                                Reset
-                            </button>
-                        @endif
+                    <div class="relative">
+                        <select wire:model.live="dir"
+                            class="w-full appearance-none rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 pl-3 pr-8 text-xs font-semibold text-slate-800 hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition cursor-pointer">
+                            <option value="asc">A - Z (Naik / Terendah)</option>
+                            <option value="desc">Z - A (Turun / Tertinggi)</option>
+                        </select>
+                        <i class="bi bi-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none"></i>
                     </div>
                 </div>
             </div>
@@ -457,17 +424,278 @@
     </div>
 
     {{-- DATA TABLE VIEW (Default for Laptop Screens >= 1280px, or when toggled on Tab) --}}
-    <div x-show="viewMode === 'table'" x-cloak class="rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
-        <div class="overflow-x-auto">
+    <div x-show="viewMode === 'table'" x-cloak class="rounded-2xl border border-slate-200/80 bg-white shadow-xs relative"
+        x-data="{
+            catFilterOpen: false,
+            statusFilterOpen: false
+        }">
+
+        {{-- TABLE TOOLBAR (ON TOP OF TABLE: Prevents dropdowns from getting clipped by overflow-x-auto or table body) --}}
+        <div class="px-4 py-2.5 sm:py-3 border-b border-slate-100 bg-slate-50/70 rounded-t-2xl flex flex-wrap items-center justify-between gap-3 relative z-30">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1 flex items-center gap-1.5">
+                    <i class="bi bi-funnel text-xs text-slate-500"></i>
+                    <span>Filter:</span>
+                </span>
+
+                {{-- Kategori Filter Dropdown Popover --}}
+                <div class="relative" @click.outside="catFilterOpen = false">
+                    <button type="button" @click="catFilterOpen = !catFilterOpen; statusFilterOpen = false"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition cursor-pointer active:scale-95 shadow-2xs {{ $hasCustomCategory ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-bold' : 'bg-white border-slate-200/80 text-slate-700 hover:bg-slate-50' }}">
+                        <i class="bi bi-car-front text-xs {{ $hasCustomCategory ? 'text-indigo-600' : 'text-slate-400' }}"></i>
+                        <span>Kategori</span>
+                        <span class="rounded-full px-1.5 py-0.2 text-[10px] font-bold {{ $hasCustomCategory ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600' }}">
+                            {{ count($selectedCategories) }}
+                        </span>
+                        <i class="bi bi-chevron-down text-[10px] text-slate-400"></i>
+                    </button>
+
+                    {{-- Category Popover Menu --}}
+                    <div x-show="catFilterOpen" x-cloak
+                        class="absolute left-0 top-full mt-1.5 w-64 rounded-2xl bg-white border border-slate-200 shadow-xl p-3 z-50 normal-case tracking-normal space-y-2.5">
+                        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                            <span class="text-[11px] font-bold text-slate-800">Filter Kategori</span>
+                            <div class="flex items-center gap-2 text-[10px]">
+                                <button type="button" wire:click="selectAllCategories"
+                                    class="font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer">
+                                    Semua
+                                </button>
+                                @if ($hasCustomCategory)
+                                    <span class="text-slate-300">•</span>
+                                    <button type="button" wire:click="resetCategoryFilter"
+                                        class="font-semibold text-rose-600 hover:text-rose-800 cursor-pointer">
+                                        Reset
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="space-y-1">
+                            {{-- Passenger --}}
+                            <label class="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-slate-50 cursor-pointer transition">
+                                <input type="checkbox" value="passenger" wire:model.live="selectedCategories"
+                                    class="rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer">
+                                <div class="flex items-center gap-2 flex-1 min-w-0">
+                                    <span class="h-5 w-5 rounded-md bg-slate-100 flex items-center justify-center text-slate-600 shrink-0 text-xs">
+                                        <i class="bi bi-car-front"></i>
+                                    </span>
+                                    <span class="text-xs text-slate-700 font-medium truncate">{{ __('fleet.categories.passenger') }}</span>
+                                </div>
+                            </label>
+
+                            {{-- Commercial Truck --}}
+                            <label class="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-slate-50 cursor-pointer transition">
+                                <input type="checkbox" value="commercial_truck" wire:model.live="selectedCategories"
+                                    class="rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer">
+                                <div class="flex items-center gap-2 flex-1 min-w-0">
+                                    <span class="h-5 w-5 rounded-md bg-amber-50 flex items-center justify-center text-amber-600 shrink-0 text-xs">
+                                        <i class="bi bi-truck"></i>
+                                    </span>
+                                    <span class="text-xs text-slate-700 font-medium truncate">{{ __('fleet.categories.commercial_truck') }}</span>
+                                </div>
+                            </label>
+
+                            {{-- Pickup --}}
+                            <label class="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-slate-50 cursor-pointer transition">
+                                <input type="checkbox" value="pickup" wire:model.live="selectedCategories"
+                                    class="rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer">
+                                <div class="flex items-center gap-2 flex-1 min-w-0">
+                                    <span class="h-5 w-5 rounded-md bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0 text-xs">
+                                        <i class="bi bi-truck-front"></i>
+                                    </span>
+                                    <span class="text-xs text-slate-700 font-medium truncate">{{ __('fleet.categories.pickup') }}</span>
+                                </div>
+                            </label>
+
+                            {{-- Other --}}
+                            <label class="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-slate-50 cursor-pointer transition">
+                                <input type="checkbox" value="other" wire:model.live="selectedCategories"
+                                    class="rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer">
+                                <div class="flex items-center gap-2 flex-1 min-w-0">
+                                    <span class="h-5 w-5 rounded-md bg-slate-100 flex items-center justify-center text-slate-600 shrink-0 text-xs">
+                                        <i class="bi bi-gear"></i>
+                                    </span>
+                                    <span class="text-xs text-slate-700 font-medium truncate">{{ __('fleet.categories.other') }}</span>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                            <span>{{ ! $hasCustomCategory ? 'Penumpang (Default)' : (count($selectedCategories) === 4 ? 'Semua kategori' : count($selectedCategories) . ' terpilih') }}</span>
+                            <button type="button" @click="catFilterOpen = false"
+                                class="px-2.5 py-1 rounded-lg bg-slate-900 text-white font-semibold hover:bg-slate-800 transition cursor-pointer">
+                                Tutup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Status Operasional Filter Dropdown Popover --}}
+                <div class="relative" @click.outside="statusFilterOpen = false">
+                    <button type="button" @click="statusFilterOpen = !statusFilterOpen; catFilterOpen = false"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition cursor-pointer active:scale-95 shadow-2xs {{ $hasCustomStatus ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-bold' : 'bg-white border-slate-200/80 text-slate-700 hover:bg-slate-50' }}">
+                        <i class="bi bi-activity text-xs {{ $hasCustomStatus ? 'text-indigo-600' : 'text-slate-400' }}"></i>
+                        <span>Status Operasional</span>
+                        <span class="rounded-full px-1.5 py-0.2 text-[10px] font-bold {{ $hasCustomStatus ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600' }}">
+                            {{ count($selectedStatuses) }}
+                        </span>
+                        <i class="bi bi-chevron-down text-[10px] text-slate-400"></i>
+                    </button>
+
+                    {{-- Status Popover Menu --}}
+                    <div x-show="statusFilterOpen" x-cloak
+                        class="absolute left-0 top-full mt-1.5 w-64 rounded-2xl bg-white border border-slate-200 shadow-xl p-3 z-50 normal-case tracking-normal space-y-2.5">
+                        <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                            <span class="text-[11px] font-bold text-slate-800">Filter Status Armada</span>
+                            <div class="flex items-center gap-2 text-[10px]">
+                                <button type="button" wire:click="selectAllStatuses"
+                                    class="font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer">
+                                    Semua
+                                </button>
+                                @if ($hasCustomStatus)
+                                    <span class="text-slate-300">•</span>
+                                    <button type="button" wire:click="resetStatusFilter"
+                                        class="font-semibold text-rose-600 hover:text-rose-800 cursor-pointer">
+                                        Reset
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="space-y-1">
+                            {{-- In Pool --}}
+                            <label class="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-slate-50 cursor-pointer transition">
+                                <input type="checkbox" value="in_pool" wire:model.live="selectedStatuses"
+                                    class="rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer">
+                                <div class="flex items-center gap-2 flex-1 min-w-0">
+                                    <span class="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
+                                    <span class="text-xs text-slate-700 font-medium truncate">Di Pool</span>
+                                    <span class="ml-auto text-[10px] text-slate-400 font-semibold">{{ $metrics['in_pool'] }}</span>
+                                </div>
+                            </label>
+
+                            {{-- On Trip --}}
+                            <label class="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-slate-50 cursor-pointer transition">
+                                <input type="checkbox" value="on_trip" wire:model.live="selectedStatuses"
+                                    class="rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer">
+                                <div class="flex items-center gap-2 flex-1 min-w-0">
+                                    <span class="h-2 w-2 rounded-full bg-amber-500 shrink-0"></span>
+                                    <span class="text-xs text-slate-700 font-medium truncate">On-Trip</span>
+                                    <span class="ml-auto text-[10px] text-slate-400 font-semibold">{{ $metrics['on_trip'] }}</span>
+                                </div>
+                            </label>
+
+                            {{-- Maintenance --}}
+                            <label class="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-slate-50 cursor-pointer transition">
+                                <input type="checkbox" value="maintenance" wire:model.live="selectedStatuses"
+                                    class="rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer">
+                                <div class="flex items-center gap-2 flex-1 min-w-0">
+                                    <span class="h-2 w-2 rounded-full bg-rose-500 shrink-0"></span>
+                                    <span class="text-xs text-slate-700 font-medium truncate">Perawatan</span>
+                                    <span class="ml-auto text-[10px] text-slate-400 font-semibold">{{ $metrics['maintenance'] ?? 0 }}</span>
+                                </div>
+                            </label>
+
+                            {{-- Sold (Visible for managers only) --}}
+                            @if ($canManage)
+                                <label class="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-slate-50 cursor-pointer transition">
+                                    <input type="checkbox" value="sold" wire:model.live="selectedStatuses"
+                                        class="rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer">
+                                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                                        <span class="h-2 w-2 rounded-full bg-slate-500 shrink-0"></span>
+                                        <span class="text-xs text-slate-700 font-medium truncate">Terjual / Purnatugas</span>
+                                        <span class="ml-auto text-[10px] text-slate-400 font-semibold">{{ $metrics['sold'] ?? 0 }}</span>
+                                    </div>
+                                </label>
+                            @endif
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                            <span>{{ ! $hasCustomStatus ? 'Semua status aktif' : (count($selectedStatuses) === ($canManage ? 4 : 3) ? 'Semua status' : count($selectedStatuses) . ' terpilih') }}</span>
+                            <button type="button" @click="statusFilterOpen = false"
+                                class="px-2.5 py-1 rounded-lg bg-slate-900 text-white font-semibold hover:bg-slate-800 transition cursor-pointer">
+                                Tutup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Quick Clear / Reset if any active filter is applied --}}
+                @if ($hasActiveFilters)
+                    <button type="button" wire:click="resetFilters"
+                        class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition cursor-pointer">
+                        <i class="bi bi-arrow-counterclockwise text-xs"></i>
+                        <span>Reset</span>
+                    </button>
+                @endif
+            </div>
+
+            {{-- Summary count on the right --}}
+            <div class="text-[11px] text-slate-400 font-medium">
+                Total: <span class="font-bold text-slate-700">{{ $vehicles->total() }}</span> unit
+            </div>
+        </div>
+
+        {{-- Scrollable Table Area --}}
+        <div class="overflow-x-auto rounded-b-2xl">
             <table class="min-w-full divide-y divide-slate-200 text-left text-xs">
-                <thead class="bg-slate-50 font-semibold text-slate-600 uppercase tracking-wider">
+                <thead class="bg-slate-50 font-semibold text-slate-600 uppercase tracking-wider text-[11px]">
                     <tr>
-                        <th class="px-4 py-3">Armada / Plat</th>
+                        <th class="px-4 py-3 cursor-pointer select-none hover:bg-slate-100/80 transition group"
+                            wire:click="sortBy('plate_number')">
+                            <div class="flex items-center gap-1.5">
+                                <span>Armada / Plat</span>
+                                <i class="bi {{ $sort === 'plate_number' ? ($dir === 'asc' ? 'bi-sort-up text-indigo-600 font-bold' : 'bi-sort-down text-indigo-600 font-bold') : 'bi-arrow-down-up text-slate-300 opacity-0 group-hover:opacity-100' }} text-xs transition"></i>
+                            </div>
+                        </th>
+
+                        {{-- Kategori Column Header --}}
                         <th class="px-4 py-3">Kategori</th>
-                        <th class="px-4 py-3">Driver</th>
-                        <th class="px-4 py-3">Odometer</th>
-                        <th class="px-4 py-3">Status Operasional</th>
-                        <th class="px-4 py-3">Servis Terakhir</th>
+
+                        <th class="px-4 py-3 cursor-pointer select-none hover:bg-slate-100/80 transition group"
+                            wire:click="sortBy('driver_name')">
+                            <div class="flex items-center gap-1.5">
+                                <span>Driver</span>
+                                <i class="bi {{ $sort === 'driver_name' ? ($dir === 'asc' ? 'bi-sort-up text-indigo-600 font-bold' : 'bi-sort-down text-indigo-600 font-bold') : 'bi-arrow-down-up text-slate-300 opacity-0 group-hover:opacity-100' }} text-xs transition"></i>
+                            </div>
+                        </th>
+
+                        @if ($canManage)
+                            <th class="px-4 py-3 cursor-pointer select-none hover:bg-slate-100/80 transition group"
+                                wire:click="sortBy('odometer')">
+                                <div class="flex items-center gap-1.5">
+                                    <span>Odometer</span>
+                                    <i class="bi {{ $sort === 'odometer' ? ($dir === 'asc' ? 'bi-sort-up text-indigo-600 font-bold' : 'bi-sort-down text-indigo-600 font-bold') : 'bi-arrow-down-up text-slate-300 opacity-0 group-hover:opacity-100' }} text-xs transition"></i>
+                                </div>
+                            </th>
+                        @else
+                            <th class="px-4 py-3">Odometer</th>
+                        @endif
+
+                        {{-- Status Operasional Column Header --}}
+                        @if ($canManage)
+                            <th class="px-4 py-3 cursor-pointer select-none hover:bg-slate-100/80 transition group"
+                                wire:click="sortBy('status')">
+                                <div class="flex items-center gap-1.5">
+                                    <span>Status Operasional</span>
+                                    <i class="bi {{ $sort === 'status' ? ($dir === 'asc' ? 'bi-sort-up text-indigo-600 font-bold' : 'bi-sort-down text-indigo-600 font-bold') : 'bi-arrow-down-up text-slate-300 opacity-0 group-hover:opacity-100' }} text-xs transition"></i>
+                                </div>
+                            </th>
+                        @else
+                            <th class="px-4 py-3">Status Operasional</th>
+                        @endif
+
+                        @if ($canManage)
+                            <th class="px-4 py-3 cursor-pointer select-none hover:bg-slate-100/80 transition group"
+                                wire:click="sortBy('last_service_date')">
+                                <div class="flex items-center gap-1.5">
+                                    <span>Servis Terakhir</span>
+                                    <i class="bi {{ $sort === 'last_service_date' ? ($dir === 'asc' ? 'bi-sort-up text-indigo-600 font-bold' : 'bi-sort-down text-indigo-600 font-bold') : 'bi-arrow-down-up text-slate-300 opacity-0 group-hover:opacity-100' }} text-xs transition"></i>
+                                </div>
+                            </th>
+                        @else
+                            <th class="px-4 py-3">Servis Terakhir</th>
+                        @endif
                         <th class="px-4 py-3 text-right">Aksi</th>
                     </tr>
                 </thead>

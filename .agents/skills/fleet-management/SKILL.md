@@ -80,6 +80,18 @@ All plate formatting, regex patterns, and region mappings are centralized in **`
   - Real-time validation and duplicate check: once regex matches, Livewire checks uniqueness against existing vehicles in the database, displaying instant visual confirmation or duplicate error.
   - Automatically normalizes on blur and save.
 
+### Stepper-like Vehicle Registration & Edit Wizard (`App\Livewire\Vehicles\Form`)
+- **3-Step Wizard Architecture (for Managers)**:
+  - **Step 1: Identitas & Status Armada**: TNKB plate number with real-time formatting & regex check, driver assignment, operational status pills, conditional sale date (`sold_at` if marked sold), and vehicle profile photo upload.
+  - **Step 2: Kategori & Regulasi**: Visual category selection cards (auto-toggling KIR for `commercial_truck`), fuel type selection (`petrol`, `diesel`, `ev`), and KIR compliance toggle.
+  - **Step 3: Spesifikasi Teknis & Ringkasan**: Brand, model, year, VIN, odometer, and a reactive confirmation preview card before final submission.
+- **Granular RBAC Adaptation**:
+  - Full managers (`canManage = true`) navigate the full 3-step wizard (`totalSteps = 3`) via `goToStep()`, `nextStep()`, and `previousStep()`.
+  - Non-managers (`canManage = false`) are restricted to a single step (`totalSteps = 1`) containing only plate number and driver name without wizard navigation controls.
+- **Fail-safe Validation Navigation**:
+  - Step transitions validate intermediate inputs (`validateStep1()`, `validateStep2()`).
+  - Directly calling `save()` validates all rules and automatically navigates `$currentStep` to whichever step contains the first validation error.
+
 ---
 
 ## 3. Fleet Categories, KIR Compliance & P2H Passenger Restriction
@@ -170,49 +182,29 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
   - Defaults to `passenger` (`$category = 'passenger'`).
   - Dropdown options: `passenger` (Mobil Penumpang), `commercial_truck` (Truk), `pickup` (Pick-up), `other` (Lainnya), `all` (Semua Tipe Armada).
   - KPI Metrics (`$baseMetricsQuery`) are dynamically scoped to the selected category (unless `'all'`), ensuring operational status pill counts (`Semua`, `Di Pool`, `On-Trip`, `Perawatan`) accurately reflect the filtered category.
-- **Initially Hidden Available Filters**:
-  - The search input and "Filter" toggle button remain prominently visible.
-  - Available filters (Category, Sort By, Sort Direction, and Reset) are housed inside an initially collapsed drawer (`showFilters: false` in Alpine `x-data`, using `x-collapse` and `x-cloak`).
-  - An active indicator dot highlights the "Filter" button whenever non-default filters are active, preserving a clean, uncluttered interface by default.
-- **Conditional P2H Action Buttons**:
-  - Primary CTA buttons (`P2H Check-out` / `Check-in Pulang ke Pool`) in Grid cards and Data Table rows are strictly guarded with `@if (!$v->is_sold && $v->category === 'passenger')`.
-  - Non-passenger units render no P2H action button.
-- **Default for Tablets & Mobile (`< 1280px` / iPad portrait 768px-820px, landscape 1024px-1180px, Android tabs)**:
-  - Defaults to **Grid View (Galeri Kartu)**.
-  - Large thumb-friendly 44px primary action buttons (`P2H Check-out` / `Check-in Pulang ke Pool`).
-  - Active trip banner displaying driver name, purpose, and departure timestamp.
-- **Default for Laptop Screens (`>= 1280px`)**:
-  - Defaults to high-density **Table View (Data Table)**.
-- **Alpine.js Instant Switcher**:
-  - Both views are rendered in the DOM; switching is instantaneous (**0ms**) without server roundtrip.
-  - User selection is saved to `localStorage('diss_vehicle_view_mode')` and cleanly mirrored to URL `?view=grid` or `?view=table` using `history.replaceState`.
-  - Resizing or device rotation auto-adapts unless the user manually chose a view mode.
-- **Livewire 3 Integration Invariant**:
-  - Livewire 3 components strictly require **one single root HTML element**. Never place `<style>` or `<script>` tags outside the root `div` inside partials to prevent `MultipleRootElementsDetectedException`.
-  - All 3rd-party library custom CSS (e.g. TomSelect `.ts-fleet-driver`) must be placed in `resources/css/app.css`.
-
-### Apple-Inspired Minimalist UI Standard (`resources/views/livewire/vehicles/index.blade.php`)
-- **Clean Typography Header**:
-  - Direct title with an inline muted count pill (e.g., `12 unit`).
-  - Omit verbose multi-line subtitles and redundant category badges above the title.
-  - Action buttons styled as sleek pill buttons (`[Pindai QR]` subtle secondary, `[+ Tambah]` dark primary).
-- **Segmented Status Pill Control**:
-  - Replaces heavy, space-consuming KPI cards with a horizontal Apple-style segmented pill control track (`Semua`, `Di Pool`, `On-Trip`, `Perawatan`).
-  - Active tab uses a crisp white card style with subtle shadow; inactive tabs use muted text.
-  - Features color-coded status dots (Emerald for Pool, Amber for On-Trip, Rose for Maintenance) and count badges.
-- **Compact Notification Strip**:
-  - Compliance expiry warnings (KIR/STNK) are displayed as a single-line notification strip with an alert icon and direct drill-down link (`Lihat Dokumen →`), removing multi-badge tag clutter.
-- **Clickable Card Touch Targets & Condensed Metadata**:
-  - The entire card container is an interactive touch target navigating directly to the Cockpit (`route('vehicles.show', $v)`).
-  - Metadata is condensed into a single clean line: `👤 Driver • Odometer km` with subtle dot indicators for STNK and KIR.
-  - Secondary buttons ("Detail Cockpit", "Servis") are eliminated from the card face.
-  - Only a single primary action button sits at the footer (`[ Check-in (Pulang ke Pool) → ]` or `[ P2H Check-out → ]`).
-- **Data Table Row Navigation**:
-  - Entire table row is clickable directly to Cockpit; the action column only contains the quick P2H action button.
+- **Initially Hidden Available Filters & Status Dropdown (`vehicles/index.blade.php`)**:
+  - The search input, "Filter" toggle button, and compact per-page dropdown (`10 / hal`, `20 / hal`, `50 / hal`, without redundant `"Baris:"` label) remain visible in the main bar.
+  - Operational status pills were replaced with an operational status dropdown (`Semua Status`, `Di Pool`, `On-Trip`, `Perawatan`, `Terjual` for managers) housed inside the collapsible filter drawer (`showFilters: false` in Alpine `x-data`, using `x-collapse` and `x-cloak`).
+  - Sort fields ("Urutkan Berdasarkan" & "Arah Urutan") are conditionally shown inside the filter drawer only when in Gallery Grid view (`x-show="viewMode === 'grid'"`).
+  - In Table view (`x-show="viewMode === 'table'"`), table headers (`Armada / Plat`, `Driver`, `Odometer`, `Status Operasional`, `Servis Terakhir`) feature interactive selectable column sorting (`wire:click="sortBy('...')"` with ascending/descending directional icons).
+  - **Interactive Multi-Select Table Column Popovers**:
+    - `Kategori` and `Status Operasional` table column headers open interactive Alpine popovers (`catFilterOpen`, `statusFilterOpen`) allowing users to check 1 or more options simultaneously (`$selectedCategories`, `$selectedStatuses`) with color badges and count indicators.
+    - Features 1-tap quick actions: **"Semua"** (select all), **"Reset"** (restore default/clear), and **"Tutup"**.
+    - Full two-way synchronization with legacy drawer dropdowns (`$category` and `$operationalTab` reflect `'custom'` when multi-selected) and highlights the filter button indicator dot.
+    - Seamlessly composes with keyword search (`$q`), column sorting (`$sort`), and pagination (`$perPage`).
+  - An active indicator dot highlights the "Filter" button whenever non-default filters are active.
 
 ### Cockpit & Legal Documents View (`resources/views/livewire/vehicles/show.blade.php`)
 - **Indonesian TNKB Plate Chassis**: Monospace bold plate badge with metallic bolt styling.
-- **Glance & Health Shortcuts**: Quick links to latest service record and document compliance status overview.
+- **Initially Hidden Collapsible Right Layout (`showRightLayout`)**:
+  - By default on initial load (`/vehicles/{id}`), the heavy right layout (P2H inspection tables, legal document cards, workshop service history) is initially hidden (`showRightLayout = false`), with the vehicle cockpit taking the full space of a focused `max-w-xl` container (`w-full`).
+  - Expanding any detail tab or clicking "Buka Detail" dynamically transitions the container to `max-w-7xl` with a 2-column split (`lg:col-span-4` sticky cockpit on the left, `lg:col-span-8` tab details on the right).
+  - The segmented tab control is kept clean and dedicated solely to tabs (P2H, Documents, Services), with panel toggling managed cleanly from the top action bar or the cockpit quick-access card.
+  - Mounting with an explicit query parameter (e.g. `?tab=documents` from compliance alerts) or setting a tab via `setTab('...')` automatically opens the right layout (`showRightLayout = true`).
+  - **Always Accessible Tab Counts**:
+    - **Top Action Bar**: Toggle button beside VIN displaying total tab count (`Tutup Panel Detail` / `Buka Detail`).
+    - **Cockpit Tab Quick Access Card**: Prominent 3-tab card (`Riwayat & Dokumen`) displaying real-time counts and badges for P2H (`$inspections->total()`), Documents (`$documents->count()` with expired/warning indicator), and Services (`$records->total()`). Clicking any tab immediately opens the right layout on that exact tab.
+    - **Glance & Health Shortcuts**: Clicking Last Service, Document Compliance, or P2H Inspection rows smoothly opens the right layout on that tab.
 - **Unified 2-Card Legal Documents Tab (`show-tab-documents.blade.php`)**:
   - **Card 1: KIR (Uji Berkala)**: Automatic commercial/passenger mandate display.
   - **Card 2: STNK & Pajak Kendaraan**: Consolidates Annual Tax (PKB 1-Yr) and 5-Year Plate Renewal into a single card with dual-date rows, document number, unified Lightbox preview, and single renewal trigger.

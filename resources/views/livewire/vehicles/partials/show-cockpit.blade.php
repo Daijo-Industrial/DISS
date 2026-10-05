@@ -1,7 +1,8 @@
 {{-- ========================================================================= --}}
-{{-- LEFT COLUMN: Sticky Cockpit & Vehicle Identity (lg:col-span-4)            --}}
+{{-- LEFT COLUMN: Sticky Cockpit & Vehicle Identity                            --}}
 {{-- ========================================================================= --}}
-<div class="lg:col-span-4 space-y-4 lg:sticky lg:top-6 min-w-0">
+<div :class="showRightLayout ? 'lg:col-span-4 lg:sticky lg:top-6' : 'w-full'"
+    class="space-y-4 min-w-0 transition-all duration-300">
 
     {{-- Vehicle Identity & Primary Cockpit Card --}}
     <div class="rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs relative z-20 space-y-4 min-w-0">
@@ -191,11 +192,85 @@
         </div>
     </div>
 
+    {{-- Logbook & Tab Quick Access Card (Always accessible & shows counts for each tab) --}}
+    <div class="rounded-3xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-xs space-y-2.5 min-w-0">
+        <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Riwayat &amp; Dokumen</span>
+            <button type="button" @click="showRightLayout = !showRightLayout"
+                class="text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1 cursor-pointer">
+                <span x-text="showRightLayout ? 'Sembunyikan' : 'Buka Detail'"></span>
+                <i class="bi" :class="showRightLayout ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+            </button>
+        </div>
+
+        <div class="grid {{ $canViewDocuments ? 'grid-cols-3' : 'grid-cols-2' }} gap-2">
+            {{-- P2H Tab Button --}}
+            <button type="button" @click="openTab('inspections')"
+                class="flex flex-col items-center justify-center p-2.5 rounded-2xl border transition cursor-pointer text-center group"
+                :class="(showRightLayout && '{{ $tab }}' === 'inspections') ? 'bg-indigo-50/80 border-indigo-200 text-indigo-900 shadow-2xs font-bold' : 'bg-slate-50/60 border-slate-200/60 text-slate-700 hover:bg-slate-100 hover:border-slate-300'">
+                <div class="flex items-center justify-center w-7 h-7 rounded-xl bg-white border border-slate-200/60 shadow-2xs mb-1.5 group-hover:scale-105 transition">
+                    <i class="bi bi-clipboard-check text-xs" :class="(showRightLayout && '{{ $tab }}' === 'inspections') ? 'text-indigo-600 font-bold' : 'text-slate-600'"></i>
+                </div>
+                <span class="font-mono text-xs font-black text-slate-900">{{ $inspections->total() }}</span>
+                <span class="text-[10px] text-slate-500 font-medium truncate w-full mt-0.5">P2H</span>
+            </button>
+
+            {{-- Documents Tab Button --}}
+            @if ($canViewDocuments)
+                <button type="button" @click="openTab('documents')"
+                    class="flex flex-col items-center justify-center p-2.5 rounded-2xl border transition cursor-pointer text-center group"
+                    :class="(showRightLayout && '{{ $tab }}' === 'documents') ? 'bg-indigo-50/80 border-indigo-200 text-indigo-900 shadow-2xs font-bold' : 'bg-slate-50/60 border-slate-200/60 text-slate-700 hover:bg-slate-100 hover:border-slate-300'">
+                    <div class="relative flex items-center justify-center w-7 h-7 rounded-xl bg-white border border-slate-200/60 shadow-2xs mb-1.5 group-hover:scale-105 transition">
+                        <i class="bi bi-file-earmark-text text-xs" :class="(showRightLayout && '{{ $tab }}' === 'documents') ? 'text-indigo-600 font-bold' : 'text-slate-600'"></i>
+                        @if ($hasExpired + $hasWarning > 0)
+                            <span class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white"></span>
+                        @endif
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span class="font-mono text-xs font-black text-slate-900">{{ $documents->count() }}</span>
+                        @if ($hasExpired + $hasWarning > 0)
+                            <span class="rounded-full bg-rose-50 px-1 text-[9px] font-bold text-rose-700 border border-rose-200/60">
+                                {{ $hasExpired + $hasWarning }}!
+                            </span>
+                        @endif
+                    </div>
+                    <span class="text-[10px] text-slate-500 font-medium truncate w-full mt-0.5">Dokumen</span>
+                </button>
+            @endif
+
+            {{-- Services Tab Button --}}
+            <button type="button" @click="openTab('services')"
+                class="flex flex-col items-center justify-center p-2.5 rounded-2xl border transition cursor-pointer text-center group"
+                :class="(showRightLayout && '{{ $tab }}' === 'services') ? 'bg-indigo-50/80 border-indigo-200 text-indigo-900 shadow-2xs font-bold' : 'bg-slate-50/60 border-slate-200/60 text-slate-700 hover:bg-slate-100 hover:border-slate-300'">
+                <div class="flex items-center justify-center w-7 h-7 rounded-xl bg-white border border-slate-200/60 shadow-2xs mb-1.5 group-hover:scale-105 transition">
+                    <i class="bi bi-wrench text-xs" :class="(showRightLayout && '{{ $tab }}' === 'services') ? 'text-indigo-600 font-bold' : 'text-slate-600'"></i>
+                </div>
+                <span class="font-mono text-xs font-black text-slate-900">{{ $records->total() }}</span>
+                <span class="text-[10px] text-slate-500 font-medium truncate w-full mt-0.5">Servis</span>
+            </button>
+        </div>
+    </div>
+
     {{-- Compact Glance & Health Card --}}
     <div class="rounded-3xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-xs space-y-3 min-w-0">
-        {{-- Last Service Record Shortcut --}}
+        {{-- P2H Inspection Shortcut --}}
         <div class="cursor-pointer hover:bg-slate-50/80 -mx-1 px-1 py-1 rounded-xl transition"
-            wire:click="setTab('services')">
+            @click="openTab('inspections')">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ __('fleet.tabs.inspections') }}</span>
+                <span class="text-[10px] text-slate-400">{{ __('fleet.show.doc_compliance_open') }}</span>
+            </div>
+            <div class="mt-1 flex items-baseline justify-between gap-2">
+                <span class="text-xs font-bold text-slate-900">{{ $inspections->total() }} Log Pemeriksaan</span>
+                <span class="text-[11px] font-semibold {{ $isOut ? 'text-amber-600' : 'text-emerald-600' }}">
+                    {{ $isOut ? 'Unit On-Trip' : 'Unit Di Pool' }}
+                </span>
+            </div>
+        </div>
+
+        {{-- Last Service Record Shortcut --}}
+        <div class="pt-2 border-t border-slate-100 cursor-pointer hover:bg-slate-50/80 -mx-1 px-1 py-1 rounded-xl transition"
+            @click="openTab('services')">
             <div class="flex items-center justify-between">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ __('fleet.show.last_service_title') }}</span>
                 <span class="text-[10px] text-slate-400">{{ __('fleet.show.doc_compliance_open') }}</span>
@@ -221,7 +296,7 @@
 
         {{-- Document Compliance Shortcut --}}
         <div class="pt-2 border-t border-slate-100 {{ $canViewDocuments ? 'cursor-pointer hover:bg-slate-50/80 -mx-1 px-1 py-1 rounded-xl transition' : '' }}"
-            @if ($canViewDocuments) wire:click="setTab('documents')" @endif>
+            @if ($canViewDocuments) @click="openTab('documents')" @endif>
             <div class="flex items-center justify-between">
                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ __('fleet.show.doc_compliance_title') }}</span>
                 @if ($canViewDocuments)
