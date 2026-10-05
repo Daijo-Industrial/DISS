@@ -356,7 +356,6 @@ return [
         'manual_heading' => 'Stiker QR Rusak atau Kamera Terkendala?',
         'manual_desc' => 'Ketik plat nomor atau detail armada (merek, tipe, nama driver):',
         'manual_placeholder' => 'Cari plat nomor atau detail mobil (contoh: B 1234 XYZ, Avanza)...',
-        'manual_submit' => 'Buka Form P2H',
         'not_found_alert' => 'Kendaraan tidak ditemukan atau kode QR tidak valid.',
         'not_found_code' => "Armada dengan kode/plat ':code' tidak ditemukan dalam sistem DISS.",
         'uuid_not_allowed' => 'Pencarian dengan UUID tidak diizinkan. Silakan cari berdasarkan plat nomor atau detail armada.',
