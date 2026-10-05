@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="overflow-x-hidden">
 
 <head>
     <meta charset="utf-8">
@@ -68,7 +68,7 @@
 @endphp
 
 <body
-    class="min-h-screen main-gradient text-slate-900 font-sans antialiased selection:bg-blue-100 selection:text-blue-900"
+    class="min-h-screen main-gradient text-slate-900 font-sans antialiased selection:bg-blue-100 selection:text-blue-900 overflow-x-hidden"
     :class="{ 'overflow-hidden': sidebarOpen }"
     x-data='{
         sidebarOpen: false,
@@ -246,7 +246,7 @@
             </aside>
     </div>
 
-    <div class="min-h-screen flex">
+    <div class="min-h-screen flex w-full">
         {{-- Desktop sidebar (>= lg / >= 1024px) --}}
         <aside
             class="hidden lg:flex flex-col border-r border-slate-200/60 bg-white/95 backdrop-blur-sm transition-all duration-500 ease-in-out sticky top-0 h-screen z-50 overflow-hidden"
@@ -288,7 +288,7 @@
         </aside>
 
         {{-- Main area --}}
-        <div class="flex-1 flex flex-col min-w-0">
+        <div class="flex-1 flex flex-col min-w-0 w-full">
             {{-- Desktop Minimal Topbar (>= lg) --}}
             <header class="hidden lg:flex h-16 items-center justify-between border-b border-slate-200/60 bg-white/90 backdrop-blur-sm px-6 sticky top-0 z-40 transition-all duration-300">
                 {{-- Command Palette Trigger --}}
@@ -387,29 +387,29 @@
             </header>
 
             {{-- Mobile & Tablet Minimal Header (< lg) --}}
-            <header class="lg:hidden h-16 flex items-center justify-between border-b border-slate-200/80 bg-white/95 backdrop-blur-md px-4 sm:px-6 sticky top-0 z-40 transition-colors">
-                <div class="flex items-center gap-3">
+            <header class="lg:hidden h-16 flex items-center justify-between gap-2 border-b border-slate-200/80 bg-white/95 backdrop-blur-md px-3 sm:px-6 sticky top-0 z-40 transition-colors w-full">
+                <div class="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                     <button type="button" @click="sidebarOpen = true"
-                        class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-slate-50/80 text-slate-700 hover:text-blue-600 hover:bg-blue-50/50 hover:border-blue-200 transition-all active:scale-95 shadow-sm"
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-slate-50/80 text-slate-700 hover:text-blue-600 hover:bg-blue-50/50 hover:border-blue-200 transition-all active:scale-95 shadow-sm"
                         aria-label="Open sidebar menu">
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </button>
-                    <a href="{{ url('/') }}" class="flex items-center gap-2.5 min-w-0">
+                    <a href="{{ url('/') }}" class="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1 group">
                         <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 shadow-sm shrink-0">
                             <img class="h-5 w-5 brightness-0 invert" src="{{ asset('image/Asset 1.svg') }}" alt="logo">
                         </div>
-                        <div class="flex flex-col justify-center min-w-0">
-                            <span class="text-sm font-extrabold text-slate-900 leading-tight tracking-tight truncate block">{{ $appName }}</span>
+                        <div class="flex flex-col justify-center min-w-0 flex-1">
+                            <span class="text-xs sm:text-sm font-extrabold text-slate-900 leading-tight tracking-tight truncate block">{{ $appName }}</span>
                             <span class="text-[9px] font-bold text-blue-600 uppercase tracking-widest leading-none mt-0.5 truncate block">{{ strtoupper($appAcronym) }} System</span>
                         </div>
                     </a>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
                     {{-- Quick Search / Command Palette Trigger on Mobile & Tablet --}}
                     <button type="button" @click="$dispatch('open-cmd-k')"
-                        class="flex h-10 w-10 sm:w-auto sm:px-3 sm:gap-2.5 items-center justify-center rounded-xl border border-slate-200/80 bg-slate-50/80 hover:bg-blue-50/50 hover:border-blue-200 text-slate-500 hover:text-blue-600 transition-all active:scale-95 shadow-2xs group"
+                        class="flex h-10 w-10 sm:w-auto sm:px-3 sm:gap-2.5 items-center justify-center rounded-xl border border-slate-200/80 bg-slate-50/80 hover:bg-blue-50/50 hover:border-blue-200 text-slate-500 hover:text-blue-600 transition-all active:scale-95 shadow-2xs group shrink-0"
                         aria-label="Quick search commands">
                         <svg class="h-5 w-5 shrink-0 text-slate-500 group-hover:text-blue-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
@@ -422,7 +422,9 @@
                         </kbd>
                     </button>
 
-                    @livewire('notifications.bell', key('bell-mobile'))
+                    <div class="shrink-0">
+                        @livewire('notifications.bell', key('bell-mobile'))
+                    </div>
                 </div>
             </header>
 
