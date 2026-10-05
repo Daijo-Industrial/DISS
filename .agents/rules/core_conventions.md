@@ -21,7 +21,18 @@
   - **Targeted Code Styling**: NEVER run `vendor/bin/pint` without specific file arguments. The legacy repository contains hundreds of unformatted files and will time out; always pass specific modified file paths.
   - **Testing Invariants**:
     - **Livewire Ampersand Escaping**: Pass `escape: false` when testing strings containing literal `&` (e.g. `assertSee('Navigation & Usage', escape: false)`).
+    - **HTTP Response Unescaped HTML**: Laravel `TestResponse` does not have `assertSeeHtml()`. Use `$response->assertSee('<tag ...>', false)`. `assertSeeHtml()` is strictly a Livewire test method.
     - **Indonesian Locale**: `config('app.locale')` is `'id'`. `Carbon::diffForHumans()` produces Indonesian strings; evaluate dynamically in tests instead of hardcoding English.
+- **Responsive Drawer & Topbar Navigation Standard**:
+  - **Phone Viewports (`< sm`)**: Mobile sidebar drawer opens **fullscreen** (`fixed inset-y-0 left-0 w-full z-[150]`) for an uncluttered, native mobile feel.
+  - **Tablet Viewports (`sm:` to `lg:`)**: Drawer adopts the exact PC sidebar width (`sm:w-72` / 288px) over a dark backdrop blur (`bg-slate-950/60 backdrop-blur-sm`).
+  - **Header Truncation & Close Button Invariant**: In fixed-width drawers (`w-72`), flex containers with brand titles MUST specify `min-w-0 flex-1 truncate block`, `<aside>` must specify `overflow-hidden`, and the close button must be `shrink-0` with `gap-2` to prevent intrinsic text expansion from pushing the close button outside the sidebar.
+  - **Unified Brand Header**: All topbars and drawer headers must share identical typography and subtitle hierarchy (`{{ $appName }}` title with `{{ strtoupper($appAcronym) }} System` badge).
+  - **Floating Overlay Suppression**: Floating widgets with high z-index (e.g. IT Concierge bubble `z-[100]`) MUST listen to sidebar state (`x-show="typeof sidebarOpen === 'undefined' || !sidebarOpen"`) to cleanly hide when the drawer is open.
+- **Dashboard & Quick Access Standards**:
+  - **Home Screen Focus**: `/home` displays only the greeting header, Quick Access shortcuts, and Recent Requests (`my-submissions`) / Approval Queue (`approval-queue`). Never embed the full sidebar tree on `/home`.
+  - **Personalization & Cold-Start**: `NavigationService::getQuickAccessItems($user)` must always call `applySmartDefaults($menu, $user)` and role-based cold-start fallback (filling up to 6 items) so operational users with restricted permissions immediately see their daily work links (e.g. `P2H Armada`).
+  - **Pin Limit Source of Truth**: `NavPinController::MAX_PINS = 8` governs the maximum manual pins across both REST API and Livewire components.
 - **Admin Layout Standard**:
   - **Directory vs Record Canvas**: `new.layouts.admin-settings` (with inner 260px category sidebar) is strictly for directory/index listings.
   - **Edit & Create Canvas**: Entity edit and create views MUST extend `new.layouts.app` directly and wrap inside `max-w-6xl mx-auto` with a `← Back to <Module>` button, eliminating the double-sidebar penalty and accidental navigation away from unsaved data.
@@ -30,5 +41,3 @@
   - **Progressive Disclosure & Single Touchpoints**: Do not repeat action buttons across multiple headers. Place actionable triggers contextually where the user interacts with the data (e.g., inline next to the relevant input).
   - **Soft Geometry & Restrained Depth**: Use generous rounded corners (`rounded-2xl`, `rounded-3xl`), ultra-subtle border rings (`ring-1 ring-slate-900/5`, `border-slate-200/80`), and soft shadows over harsh borders.
   - **Typography & Hierarchy**: Rely on font scale and weight (`Plus Jakarta Sans`) rather than high-contrast background colors to establish information hierarchy.
-
-
