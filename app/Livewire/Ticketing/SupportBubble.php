@@ -108,6 +108,13 @@ class SupportBubble extends Component
         }
     }
 
+    public function updatedIsOpen($value)
+    {
+        if ($value) {
+            $this->hasUnreadUpdates = false;
+        }
+    }
+
     public function toggle()
     {
         $this->isOpen = ! $this->isOpen;

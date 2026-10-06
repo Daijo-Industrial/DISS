@@ -19,7 +19,7 @@
             </a>
             <button
                 class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white shadow-md hover:bg-indigo-700 transition-colors"
-                @click="$dispatch('open-support-bubble', { tab: 'new' })">
+                @click.stop="$dispatch('open-support-bubble', { tab: 'new' })">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
