@@ -1,29 +1,41 @@
-<div x-show="typeof sidebarOpen === 'undefined' || !sidebarOpen"
+<div x-data="{
+        open: @entangle('isOpen').live,
+        toggle() {
+            this.open = !this.open;
+        },
+        close() {
+            this.open = false;
+        }
+    }"
+    x-show="typeof sidebarOpen === 'undefined' || !sidebarOpen"
     x-transition:enter="transition ease-out duration-200"
     x-transition:enter-start="opacity-0 scale-90"
     x-transition:enter-end="opacity-100 scale-100"
     x-transition:leave="transition ease-in duration-150"
     x-transition:leave-start="opacity-100 scale-100"
     x-transition:leave-end="opacity-0 scale-90"
+    @click.outside="close()"
+    @keydown.escape.window="close()"
+    @open-support-bubble.window="$nextTick(() => { open = true; })"
     class="fixed bottom-6 right-6 z-[100]"
     x-cloak>
     {{-- Bubble Button --}}
-    <button wire:click="toggle"
-        class="relative flex h-14 w-14 items-center justify-center rounded-full bg-slate-900 text-white shadow-2xl shadow-indigo-500/30 hover:bg-slate-800 transition-transform hover:scale-105">
-        @if ($isOpen)
-            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-        @else
-            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-        @endif
+    <button type="button"
+        @click="toggle()"
+        :aria-expanded="open.toString()"
+        aria-label="Toggle IT Concierge"
+        class="relative flex h-14 w-14 items-center justify-center rounded-full bg-slate-900 text-white shadow-2xl shadow-indigo-500/30 hover:bg-slate-800 transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+        <svg x-show="open" x-cloak class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        <svg x-show="!open" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
 
         {{-- Notification Dot --}}
         @if ($hasUnreadUpdates)
-            <span class="absolute right-0 top-0 flex h-3.5 w-3.5">
+            <span x-show="!open" class="absolute right-0 top-0 flex h-3.5 w-3.5">
                 <span
                     class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                 <span
@@ -33,13 +45,14 @@
     </button>
 
     {{-- Concierge Panel --}}
-    <div x-data="{ show: @entangle('isOpen') }" x-show="show" x-transition:enter="transition ease-out duration-200"
+    <div x-show="open"
+        x-transition:enter="transition ease-out duration-200"
         x-transition:enter-start="opacity-0 translate-y-8 scale-95"
         x-transition:enter-end="opacity-100 translate-y-0 scale-100"
         x-transition:leave="transition ease-in duration-150"
         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-        x-transition:leave-end="opacity-0 translate-y-8 scale-95" @click.away="show = false"
-        class="absolute bottom-20 right-0 w-[400px] rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[600px]"
+        x-transition:leave-end="opacity-0 translate-y-8 scale-95"
+        class="absolute bottom-20 right-0 w-[calc(100vw-3rem)] sm:w-[400px] rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[600px]"
         x-cloak>
         {{-- Header --}}
         <div class="bg-slate-900 px-6 py-5 flex items-center justify-between">
@@ -55,7 +68,7 @@
                     <p class="text-[11px] text-slate-400 font-medium mt-0.5">We typically reply in < 5 mins</p>
                 </div>
             </div>
-            <button wire:click="toggle" class="text-slate-400 hover:text-white transition-colors">
+            <button type="button" @click="close()" class="text-slate-400 hover:text-white transition-colors" aria-label="Close IT Concierge">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -94,7 +107,25 @@
 
             @if ($activeTab === 'new')
                 {{-- Tab A: New Ticket Form --}}
-                <div class="space-y-4">
+                <div class="space-y-4" x-data="{
+                    openDropdown: null,
+                    selectedCat: @entangle('category_id').live,
+                    selectedPriority: @entangle('priority').live,
+                    categories: @js($this->categories->map(fn($c) => ['id' => $c->id, 'name' => $c->name])),
+                    priorities: [
+                        { value: 'Low', label: 'Low', desc: 'No rush' },
+                        { value: 'Medium', label: 'Medium', desc: 'Affects some work' },
+                        { value: 'High', label: 'High', desc: 'Cannot perform duties' },
+                        { value: 'Critical', label: 'Critical', desc: 'System down' }
+                    ],
+                    get currentCategoryName() {
+                        const found = this.categories.find(c => c.id == this.selectedCat);
+                        return found ? found.name : 'Select a category';
+                    },
+                    get currentPriorityObj() {
+                        return this.priorities.find(p => p.value === this.selectedPriority) || this.priorities[1];
+                    }
+                }" @click.outside="openDropdown = null">
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">Issue Overview</label>
                         <input type="text" wire:model="title" placeholder="e.g. Printer is jammed"
@@ -104,29 +135,111 @@
                         @enderror
                     </div>
 
-                    <div>
+                    {{-- Category Custom Dropdown --}}
+                    <div class="relative">
                         <label class="block text-xs font-bold text-slate-600 mb-1">Category</label>
-                        <select wire:model="category_id"
-                            class="block w-full rounded-xl border-slate-200 py-2 pl-3 pr-8 text-sm focus:border-indigo-500 focus:ring-indigo-500 bg-slate-50 shadow-sm">
+                        <button type="button"
+                            @click.stop="openDropdown = (openDropdown === 'category' ? null : 'category')"
+                            class="flex w-full items-center justify-between rounded-xl border py-2.5 px-3 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm text-left transition-colors hover:bg-slate-100/70 {{ $errors->has('category_id') ? 'border-rose-300 ring-1 ring-rose-500' : 'border-slate-200' }}">
+                            <span :class="selectedCat ? 'text-slate-900 font-semibold' : 'text-slate-400'"
+                                  x-text="currentCategoryName" class="truncate pr-2"></span>
+                            <svg class="h-4 w-4 text-slate-400 shrink-0 transition-transform duration-200"
+                                 :class="openDropdown === 'category' ? 'rotate-180 text-indigo-600' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        {{-- Hidden select for form bindings / accessibility --}}
+                        <select wire:model="category_id" class="sr-only" tabindex="-1" aria-hidden="true">
                             <option value="">Select a category</option>
                             @foreach ($this->categories as $cat)
                                 <option value="{{ $cat->id }}">{{ $cat->name }}</option>
                             @endforeach
                         </select>
+
+                        {{-- Category Dropdown Menu --}}
+                        <div x-show="openDropdown === 'category'"
+                            x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0 translate-y-1"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="opacity-100 translate-y-0"
+                            x-transition:leave-end="opacity-0 translate-y-1"
+                            class="absolute left-0 right-0 z-50 mt-1 max-h-52 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl custom-scrollbar"
+                            x-cloak>
+                            <template x-for="cat in categories" :key="cat.id">
+                                <button type="button"
+                                    @click="selectedCat = cat.id; openDropdown = null;"
+                                    class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold transition-colors text-left"
+                                    :class="selectedCat == cat.id ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-700 hover:bg-slate-50'">
+                                    <span class="truncate pr-2" x-text="cat.name"></span>
+                                    <span x-show="selectedCat == cat.id" class="text-indigo-600 shrink-0">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </span>
+                                </button>
+                            </template>
+                            <div x-show="categories.length === 0" class="px-3 py-2 text-xs text-slate-400 text-center">
+                                No categories available
+                            </div>
+                        </div>
                         @error('category_id')
                             <span class="text-xs text-rose-500 mt-1 block">{{ $message }}</span>
                         @enderror
                     </div>
 
-                    <div>
+                    {{-- Priority Custom Dropdown --}}
+                    <div class="relative">
                         <label class="block text-xs font-bold text-slate-600 mb-1">Priority</label>
-                        <select wire:model="priority"
-                            class="block w-full rounded-xl border-slate-200 py-2 pl-3 pr-8 text-sm focus:border-indigo-500 focus:ring-indigo-500 bg-slate-50 shadow-sm">
-                            <option value="Low">Low (No rush)</option>
-                            <option value="Medium">Medium (Affects some work)</option>
-                            <option value="High">High (Cannot perform duties)</option>
-                            <option value="Critical">Critical (System down)</option>
+                        <button type="button"
+                            @click.stop="openDropdown = (openDropdown === 'priority' ? null : 'priority')"
+                            class="flex w-full items-center justify-between rounded-xl border py-2.5 px-3 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm text-left transition-colors hover:bg-slate-100/70 {{ $errors->has('priority') ? 'border-rose-300 ring-1 ring-rose-500' : 'border-slate-200' }}">
+                            <div class="flex items-center gap-2 truncate pr-2">
+                                <span class="text-xs font-bold text-slate-900" x-text="currentPriorityObj.label"></span>
+                                <span class="text-[11px] text-slate-400 truncate font-normal" x-text="'• ' + currentPriorityObj.desc"></span>
+                            </div>
+                            <svg class="h-4 w-4 text-slate-400 shrink-0 transition-transform duration-200"
+                                 :class="openDropdown === 'priority' ? 'rotate-180 text-indigo-600' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        {{-- Hidden select for form bindings / accessibility --}}
+                        <select wire:model="priority" class="sr-only" tabindex="-1" aria-hidden="true">
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                            <option value="Critical">Critical</option>
                         </select>
+
+                        {{-- Priority Dropdown Menu --}}
+                        <div x-show="openDropdown === 'priority'"
+                            x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0 translate-y-1"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="opacity-100 translate-y-0"
+                            x-transition:leave-end="opacity-0 translate-y-1"
+                            class="absolute left-0 right-0 z-50 mt-1 w-full rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"
+                            x-cloak>
+                            <template x-for="p in priorities" :key="p.value">
+                                <button type="button"
+                                    @click="selectedPriority = p.value; openDropdown = null;"
+                                    class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs transition-colors text-left"
+                                    :class="selectedPriority === p.value ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-700 hover:bg-slate-50'">
+                                    <div class="flex items-center gap-2 truncate pr-2">
+                                        <span class="font-bold" x-text="p.label"></span>
+                                        <span class="text-slate-400 text-[11px] truncate font-normal" x-text="'• ' + p.desc"></span>
+                                    </div>
+                                    <span x-show="selectedPriority === p.value" class="text-indigo-600 shrink-0">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </span>
+                                </button>
+                            </template>
+                        </div>
                         @error('priority')
                             <span class="text-xs text-rose-500 mt-1 block">{{ $message }}</span>
                         @enderror
