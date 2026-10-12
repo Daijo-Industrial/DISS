@@ -23,6 +23,9 @@
     - **Livewire Ampersand Escaping**: Pass `escape: false` when testing strings containing literal `&` (e.g. `assertSee('Navigation & Usage', escape: false)`).
     - **HTTP Response Unescaped HTML**: Laravel `TestResponse` does not have `assertSeeHtml()`. Use `$response->assertSee('<tag ...>', false)`. `assertSeeHtml()` is strictly a Livewire test method.
     - **Indonesian Locale**: `config('app.locale')` is `'id'`. `Carbon::diffForHumans()` produces Indonesian strings; evaluate dynamically in tests instead of hardcoding English.
+    - **Database Transactions Over RefreshDatabase**: NEVER use `RefreshDatabase` in DISS test suites. The legacy database has 160+ tables and pre-existing migrations that collide on fresh migrations. Always use `DatabaseTransactions`.
+    - **Pest TestCase Scoping**: In Pest, `Feature/` tests already inherit `Tests\TestCase` via `tests/Pest.php`. Never declare `uses(Tests\TestCase::class)` in `Feature/` tests (causes fatal duplicate test case error); only declare `uses(DatabaseTransactions::class)`. In `Unit/` tests requiring database access, explicitly declare `uses(Tests\TestCase::class, DatabaseTransactions::class)`.
+    - **Model Default Reload**: When asserting or serializing immediately after `Model::create($data)` where columns rely on database defaults (e.g. `stage = 'DRAFT'`), call `$model->refresh()` before assertions to reload database defaults into memory.
 - **Responsive Drawer & Topbar Navigation Standard**:
   - **Phone Viewports (`< sm`)**: Mobile sidebar drawer opens **fullscreen** (`fixed inset-y-0 left-0 w-full z-[150]`) for an uncluttered, native mobile feel.
   - **Tablet Viewports (`sm:` to `lg:`)**: Drawer adopts the exact PC sidebar width (`sm:w-72` / 288px) over a dark backdrop blur (`bg-slate-950/60 backdrop-blur-sm`).

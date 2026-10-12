@@ -7,6 +7,9 @@ use App\Models\ProjectHistory;
 use App\Models\ProjectMaster;
 use Illuminate\Http\Request;
 
+/**
+ * @deprecated Superseded by API-first IT Projects module (\App\Http\Controllers\Api\V1\Project\ProjectController).
+ */
 class ProjectTrackerController extends Controller
 {
     public function index()
