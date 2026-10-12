@@ -31,6 +31,10 @@ class ProjectCheckpoint extends Model
         'notes',
     ];
 
+    protected $attributes = [
+        'status' => CheckpointStatus::PENDING,
+    ];
+
     protected $casts = [
         'status' => CheckpointStatus::class,
         'is_required' => 'boolean',

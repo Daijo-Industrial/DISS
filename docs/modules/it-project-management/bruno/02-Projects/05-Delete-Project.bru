@@ -10,12 +10,20 @@ delete {
   auth: inherit
 }
 
-vars:pre-request {
-  projectId: a2f64ea9-84cf-43a3-a099-123cee731690
+script:pre-request {
+  const id = bru.getEnvVar("projectId") || bru.getVar("projectId");
+  if (id && req.setUrl) {
+    const baseUrl = bru.getEnvVar("baseUrl") || bru.getVar("baseUrl") || "http://localhost";
+    req.setUrl(`${baseUrl}/api/v1/projects/${id}`);
+  }
 }
 
 tests {
   test("Status code is 200", function() {
     expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Project successfully soft-deleted", function() {
+    expect(res.body.success).to.be.true;
   });
 }
