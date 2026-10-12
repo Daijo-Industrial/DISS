@@ -1,0 +1,62 @@
+meta {
+  name: 02. Create Project
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/projects
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "MES Machine Telemetry v2",
+    "description": "Integration of factory floor PLC machines to DISS real-time telemetry dashboard.",
+    "requester_name": "Pak Budi",
+    "requester_department_id": {{departmentId}},
+    "primary_pic_id": {{picId}},
+    "priority": "HIGH",
+    "start_date": "2026-10-15",
+    "due_date": "2026-12-31"
+  }
+}
+
+tests {
+  test("Status code is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("Project code is generated (IT-YYYY-XXXX)", function() {
+    expect(res.body.success).to.be.true;
+    expect(res.body.data.project_code).to.match(/^IT-\d{4}-\d{4}$/);
+    expect(res.body.data.stage).to.equal("DRAFT");
+    expect(res.body.data.status).to.equal("ACTIVE");
+  });
+}
+
+script:pre-request {
+  const deptId = bru.getEnvVar("departmentId") || bru.getVar("departmentId");
+  if (!deptId) {
+    bru.setVar("departmentId", 1);
+  }
+  const picId = bru.getEnvVar("picId") || bru.getVar("picId");
+  if (!picId) {
+    bru.setVar("picId", 1);
+  }
+}
+
+
+script:post-response {
+  if (res.body && res.body.data && res.body.data.id) {
+    bru.setVar("projectId", res.body.data.id);
+    bru.setEnvVar("projectId", res.body.data.id);
+    console.log("Captured projectId:", res.body.data.id);
+  }
+}
+

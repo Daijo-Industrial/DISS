@@ -1,0 +1,31 @@
+meta {
+  name: 03. Get Project Detail (Composite)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/projects/{{projectId}}
+  body: none
+  auth: inherit
+}
+
+vars:pre-request {
+  projectId: a2f66269-31f8-4867-b748-bbac05ddfa18
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Composite detail includes checkpoints, extensions, stage history", function() {
+    expect(res.body.success).to.be.true;
+    expect(res.body.data.id).to.equal(bru.getVar("projectId"));
+    expect(res.body.data).to.have.property('checkpoints');
+    expect(res.body.data).to.have.property('extensions');
+    expect(res.body.data).to.have.property('stage_histories');
+    expect(res.body.data).to.have.property('health');
+  });
+}
+​

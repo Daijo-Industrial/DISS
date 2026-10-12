@@ -1,0 +1,22 @@
+meta {
+  name: 02. Stage Distribution
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/projects/dashboard/stage-distribution
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Contains stage counts", function() {
+    expect(res.body.success).to.be.true;
+    expect(res.body.data).to.be.an('array');
+  });
+}

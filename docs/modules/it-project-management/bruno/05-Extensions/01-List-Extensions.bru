@@ -1,0 +1,29 @@
+meta {
+  name: 01. List Project Extensions
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/projects/{{projectId}}/extensions
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Extensions array returned", function() {
+    expect(res.body.data).to.be.an('array');
+  });
+
+  if (res.body.data && res.body.data.length > 0) {
+    test("Extension items have reason and due dates", function() {
+      expect(res.body.data[0]).to.have.property('id');
+      expect(res.body.data[0]).to.have.property('new_due_date');
+      expect(res.body.data[0]).to.have.property('reason_category');
+    });
+  }
+}

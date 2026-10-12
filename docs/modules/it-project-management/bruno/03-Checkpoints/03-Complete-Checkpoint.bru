@@ -1,0 +1,23 @@
+meta {
+  name: 03. Mark Checkpoint Completed
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/checkpoints/{{checkpointId}}/complete
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Status updated to COMPLETED and completed_date set", function() {
+    expect(res.body.success).to.be.true;
+    expect(res.body.data.status).to.equal("COMPLETED");
+    expect(res.body.data.completed_date).to.not.be.null;
+  });
+}

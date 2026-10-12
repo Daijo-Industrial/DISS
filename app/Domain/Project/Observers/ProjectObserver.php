@@ -17,8 +17,29 @@ class ProjectObserver
     {
         if (empty($project->project_code)) {
             $year = now()->format('Y');
-            $count = Project::whereYear('created_at', $year)->count() + 1;
-            $project->project_code = sprintf('IT-%s-%04d', $year, $count);
+            $prefix = sprintf('IT-%s-', $year);
+
+            // Find the highest sequence number used for this year, including soft-deleted projects
+            $latestCode = Project::withTrashed()
+                ->where('project_code', 'like', $prefix . '%')
+                ->orderByDesc('project_code')
+                ->value('project_code');
+
+            $nextNumber = 1;
+            if ($latestCode && preg_match('/^IT-\d{4}-(\d+)$/', $latestCode, $matches)) {
+                $nextNumber = ((int) $matches[1]) + 1;
+            }
+
+            // Ensure uniqueness against all existing records (including trashed)
+            do {
+                $candidateCode = sprintf('IT-%s-%04d', $year, $nextNumber);
+                $exists = Project::withTrashed()->where('project_code', $candidateCode)->exists();
+                if ($exists) {
+                    $nextNumber++;
+                }
+            } while ($exists);
+
+            $project->project_code = $candidateCode;
         }
 
         if (empty($project->original_due_date) && ! empty($project->due_date)) {

@@ -1,0 +1,22 @@
+headers {
+  Accept: application/json
+  Authorization: Bearer {{token}}
+}
+
+auth {
+  mode: none
+}
+
+vars:pre-request {
+  baseUrl: http://localhost
+}
+
+
+script:pre-request {
+  const token = bru.getEnvVar("token") || bru.getVar("token");
+  const url = req.getUrl ? req.getUrl() : "";
+  if (token && !url.includes("/auth/login")) {
+    req.setHeader("Authorization", `Bearer ${token}`);
+  }
+}
+

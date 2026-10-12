@@ -1,0 +1,37 @@
+meta {
+  name: 04. Upload Evidence Attachment (Multipart)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/checkpoints/{{checkpointId}}/attachments
+  body: multipart-form
+  auth: inherit
+}
+
+body:multipart-form {
+  file: @file()
+}
+
+tests {
+  test("Status code is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("Attachment metadata returned", function() {
+    expect(res.body.success).to.be.true;
+    expect(res.body.data).to.have.property('id');
+    expect(res.body.data).to.have.property('file_name');
+    expect(res.body.data).to.have.property('download_url');
+  });
+}
+
+script:post-response {
+  if (res.body && res.body.data && res.body.data.id) {
+    bru.setVar("attachmentId", res.body.data.id);
+    bru.setEnvVar("attachmentId", res.body.data.id);
+    console.log("Captured attachmentId:", res.body.data.id);
+  }
+}
+

@@ -1,0 +1,47 @@
+meta {
+  name: 02. Create Checkpoint
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/projects/{{projectId}}/checkpoints
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "title": "Architecture & Network Diagram Sign-Off",
+    "description": "Approval from IT Infrastructure team on machine gateway subnet allocation.",
+    "sequence_order": 1,
+    "is_required": true,
+    "due_date": "2026-11-15",
+    "notes": "Gate requirement for development rollout."
+  }
+}
+
+tests {
+  test("Status code is 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("Checkpoint created with PENDING status", function() {
+    expect(res.body.success).to.be.true;
+    expect(res.body.data.status).to.equal("PENDING");
+    expect(res.body.data.is_required).to.be.true;
+  });
+}
+
+script:post-response {
+  if (res.body && res.body.data && res.body.data.id) {
+    bru.setVar("checkpointId", res.body.data.id);
+    bru.setEnvVar("checkpointId", res.body.data.id);
+    console.log("Captured checkpointId:", res.body.data.id);
+  }
+}
+

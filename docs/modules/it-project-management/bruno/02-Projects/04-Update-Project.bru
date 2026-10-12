@@ -1,0 +1,38 @@
+meta {
+  name: 04. Update Project Metadata
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/v1/projects/{{projectId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "MES Machine Telemetry v2 (Updated Scope)",
+    "description": "Updated scope including Line 4 sensor feeds.",
+    "priority": "CRITICAL"
+  }
+}
+
+vars:pre-request {
+  projectId: a2f64ea9-84cf-43a3-a099-123cee731690
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("Updated fields reflected", function() {
+    expect(res.body.success).to.be.true;
+    expect(res.body.data.priority).to.equal("CRITICAL");
+  });
+}
