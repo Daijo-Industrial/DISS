@@ -1,0 +1,41 @@
+meta {
+  name: 02. Get Authenticated User Profile
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/auth/me
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("User profile returned", function() {
+    expect(res.body.success).to.be.true;
+    const expectedEmail = bru.getEnvVar("email") || bru.getVar("email");
+    if (expectedEmail) {
+      expect(res.body.data.email).to.equal(expectedEmail);
+    }
+  });
+}
+
+script:post-response {
+  if (res.body && res.body.data) {
+    if (res.body.data.id) {
+      bru.setVar("picId", res.body.data.id);
+      bru.setEnvVar("picId", res.body.data.id);
+      console.log("Auto-captured picId from /auth/me:", res.body.data.id);
+    }
+    if (res.body.data.department && res.body.data.department.id) {
+      bru.setVar("departmentId", res.body.data.department.id);
+      bru.setEnvVar("departmentId", res.body.data.department.id);
+      console.log("Auto-captured departmentId from /auth/me:", res.body.data.department.id);
+    }
+  }
+}
+​

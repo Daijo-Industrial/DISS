@@ -18,7 +18,7 @@ The IT Project & KPI Management module is an API-first, headless service in DISS
   - `KpiCalculatorService`: Dual SLA metrics, real-time health, PIC performance.
   - `ProjectWorkflowService`: Sequential stage machine, hold/resume duration adjustments, cancellation, Review -> Closure approval gate.
 - **Observers**: `app/Domain/Project/Observers/`
-  - `ProjectObserver`: Auto-generates `IT-YYYY-XXXX` code; guards `original_due_date` immutability once past `PLANNING`.
+  - `ProjectObserver`: Auto-generates `IT-YYYY-XXXX` code using `Project::withTrashed()` to prevent collisions against soft-deleted records; guards `original_due_date` immutability once past `PLANNING`.
   - `ProjectCheckpointObserver`: Automatically recalculates project `progress_percent` on checkpoint mutations.
 - **Eloquent Models**: `app/Infrastructure/Persistence/Eloquent/Models/`
   (`Project`, `ProjectCheckpoint`, `CheckpointAttachment`, `ProjectDeadlineExtension`, `ProjectApproval`, `ProjectStageHistory`)
@@ -120,3 +120,61 @@ Run static analysis:
 ```bash
 ./vendor/bin/phpstan analyse app/Domain/Project/ app/Http/Controllers/Api/V1/Project/ app/Http/Requests/Api/V1/Project/ app/Http/Resources/V1/Project/ app/Infrastructure/Persistence/Eloquent/Models/Project* --memory-limit=2G
 ```
+
+---
+
+## Bruno API Testing & Git Cleanliness Conventions
+
+A complete pre-configured Bruno collection is located at `docs/modules/it-project-management/bruno/`. Follow these architectural conventions for API testing in DISS:
+
+### 1. Root Header Injection (Bypassing Fragile Folder Inheritance)
+In Bruno, subfolder `auth: inherit` can fail to cascade collection-level Bearer tokens. Configure authentication directly at the collection root in `collection.bru`:
+```bru
+headers {
+  Accept: application/json
+  Authorization: Bearer {{token}}
+}
+
+auth {
+  mode: none
+}
+
+script:pre-request {
+  const token = bru.getEnvVar("token") || bru.getVar("token");
+  const url = req.getUrl ? req.getUrl() : "";
+  if (token && !url.includes("/auth/login")) {
+    req.setHeader("Authorization", `Bearer ${token}`);
+  }
+}
+```
+
+### 2. Git Cleanliness via `vars:secret` in `Local.bru`
+Never hardcode personal developer credentials or commit tokens to Git:
+```bru
+vars {
+  baseUrl: http://localhost
+  projectId: 
+  checkpointId: 
+  attachmentId: 
+}
+vars:secret [
+  email,
+  password,
+  token,
+  picId,
+  departmentId
+]
+```
+Variables declared in `vars:secret` are stored in Bruno's local application memory and encrypted machine storage (`~/.config/bruno`), keeping `Local.bru` on disk 100% clean with zero Git diffs.
+
+### 3. Dual Variable Binding (`bru.setVar` + `bru.setEnvVar`)
+To ensure dynamic UUIDs created in one request tab (`02. Create Project`) are accessible in other request tabs (`03. Get Project Detail`) when an environment is selected in Bruno GUI, bind variables to both scopes:
+```javascript
+script:post-response {
+  if (res.body && res.body.data && res.body.data.id) {
+    bru.setVar("projectId", res.body.data.id);
+    bru.setEnvVar("projectId", res.body.data.id);
+  }
+}
+```
+List endpoints (`List Projects`, `List Checkpoints`) also include fallback auto-capture on `res.body.data[0].id` to allow immediate testing of existing records without re-running creation requests.

@@ -26,6 +26,14 @@
     - **Database Transactions Over RefreshDatabase**: NEVER use `RefreshDatabase` in DISS test suites. The legacy database has 160+ tables and pre-existing migrations that collide on fresh migrations. Always use `DatabaseTransactions`.
     - **Pest TestCase Scoping**: In Pest, `Feature/` tests already inherit `Tests\TestCase` via `tests/Pest.php`. Never declare `uses(Tests\TestCase::class)` in `Feature/` tests (causes fatal duplicate test case error); only declare `uses(DatabaseTransactions::class)`. In `Unit/` tests requiring database access, explicitly declare `uses(Tests\TestCase::class, DatabaseTransactions::class)`.
     - **Model Default Reload**: When asserting or serializing immediately after `Model::create($data)` where columns rely on database defaults (e.g. `stage = 'DRAFT'`), call `$model->refresh()` before assertions to reload database defaults into memory.
+  - **Sequential Unique Code Invariant (Soft-Deletable Models)**:
+    - When auto-generating unique sequential business codes (e.g. `IT-YYYY-XXXX`, `VND-YYYY-XXXX`) in Eloquent observers, NEVER use `Model::whereYear(...)->count() + 1` or query active records only.
+    - Database `UNIQUE` indexes include soft-deleted rows (`deleted_at IS NOT NULL`). If any record created in that time window is soft-deleted, counting active rows will produce a previously used sequence number, triggering a duplicate entry constraint violation (`SQLSTATE[23000]`).
+    - **Standard Pattern**: Always query `Model::withTrashed()`, locate the highest numeric suffix using `orderByDesc('code')->value('code')` or regex extraction, and wrap generation in a `do...while (exists)` uniqueness loop.
+  - **Documentation Link Portability (No Absolute Machine Paths)**:
+    - When authoring or editing repository documentation, specifications, or runbooks (e.g. `docs/**/*.md`, `README.md`, `.agents/**/*.md`), NEVER embed local machine absolute file URLs (`file:///home/...`, `file:///Users/...`, `file:///C:/...`).
+    - Absolute file URLs leak private developer filesystem paths and break across different machines and Git web viewers (GitHub/GitLab).
+    - Always use repository-relative paths (e.g. `[Model](app/Infrastructure/...)`) or clean inline code backticks (e.g. `AuthController`).
 - **Responsive Drawer & Topbar Navigation Standard**:
   - **Phone Viewports (`< sm`)**: Mobile sidebar drawer opens **fullscreen** (`fixed inset-y-0 left-0 w-full z-[150]`) for an uncluttered, native mobile feel.
   - **Tablet Viewports (`sm:` to `lg:`)**: Drawer adopts the exact PC sidebar width (`sm:w-72` / 288px) over a dark backdrop blur (`bg-slate-950/60 backdrop-blur-sm`).

@@ -1,0 +1,35 @@
+meta {
+  name: 04. Approve Project Closure (Review Gate)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/projects/{{projectId}}/approve-closure
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "comments": "All deliverables and machine telemetry integration verified successfully."
+  }
+}
+
+tests {
+  test("Status code is 200 or 422 if checkpoints pending", function() {
+    expect([200, 422]).to.include(res.getStatus());
+  });
+
+  if (res.getStatus() === 200) {
+    test("Project closed and completed", function() {
+      expect(res.body.success).to.be.true;
+      expect(res.body.data.stage).to.equal("CLOSURE");
+      expect(res.body.data.status).to.equal("COMPLETED");
+    });
+  }
+}

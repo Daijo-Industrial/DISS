@@ -244,4 +244,44 @@ describe('Project REST API', function () {
             ->assertOk()
             ->assertJsonPath('success', true);
     });
+
+    it('generates unique project code even when previous project was soft deleted', function () {
+        $year = now()->format('Y');
+
+        $p1 = Project::create([
+            'name' => 'Project Alpha',
+            'requester_name' => 'Requester 1',
+            'requester_department_id' => $this->department->id,
+            'primary_pic_id' => $this->user->id,
+            'priority' => ProjectPriority::MEDIUM,
+            'due_date' => Carbon::today()->addDays(15)->toDateString(),
+        ]);
+
+        $code1 = $p1->project_code;
+        expect($code1)->toStartWith("IT-{$year}-");
+
+        // Soft delete the project
+        $p1->delete();
+        expect(Project::find($p1->id))->toBeNull();
+        expect(Project::withTrashed()->find($p1->id))->not->toBeNull();
+
+        // Create second project - must not collide with $code1
+        $p2 = Project::create([
+            'name' => 'Project Beta',
+            'requester_name' => 'Requester 2',
+            'requester_department_id' => $this->department->id,
+            'primary_pic_id' => $this->user->id,
+            'priority' => ProjectPriority::HIGH,
+            'due_date' => Carbon::today()->addDays(20)->toDateString(),
+        ]);
+
+        $code2 = $p2->project_code;
+        expect($code2)->toStartWith("IT-{$year}-");
+        expect($code2)->not->toEqual($code1);
+
+        $num1 = (int) substr($code1, -4);
+        $num2 = (int) substr($code2, -4);
+        expect($num2)->toBeGreaterThan($num1);
+    });
 });
+

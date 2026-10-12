@@ -1,0 +1,53 @@
+meta {
+  name: 01. List Projects (Paginated & Filtered)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/projects?page=1&per_page=15
+  body: none
+  auth: inherit
+}
+
+params:query {
+  page: 1
+  per_page: 15
+  ~stage: DEVELOPMENT
+  ~status: ACTIVE
+  ~priority: HIGH
+  ~search: MES
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Returns paginated structure", function() {
+    expect(res.body.data).to.be.an('array');
+    expect(res.body.meta).to.have.property('current_page');
+    expect(res.body.meta).to.have.property('per_page');
+    expect(res.body.meta).to.have.property('total');
+  });
+
+  if (res.body.data && res.body.data.length > 0) {
+    test("Project items have core fields", function() {
+      expect(res.body.data[0]).to.have.property('id');
+      expect(res.body.data[0]).to.have.property('project_code');
+      expect(res.body.data[0]).to.have.property('stage');
+      expect(res.body.data[0]).to.have.property('status');
+    });
+  }
+}
+
+script:post-response {
+  if (res.body && Array.isArray(res.body.data) && res.body.data.length > 0) {
+    if (!bru.getEnvVar("projectId") && !bru.getVar("projectId")) {
+      bru.setVar("projectId", res.body.data[0].id);
+      bru.setEnvVar("projectId", res.body.data[0].id);
+      console.log("Auto-captured fallback projectId from list:", res.body.data[0].id);
+    }
+  }
+}
+

@@ -1,0 +1,25 @@
+meta {
+  name: 01. Dashboard Summary & Dual SLA
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/projects/dashboard/summary
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Returns dual SLA and counts", function() {
+    expect(res.body.success).to.be.true;
+    expect(res.body.data).to.have.property('total_projects');
+    expect(res.body.data).to.have.property('dual_sla');
+    expect(res.body.data.dual_sla).to.have.property('original_sla_rate');
+    expect(res.body.data.dual_sla).to.have.property('revised_schedule_rate');
+  });
+}
