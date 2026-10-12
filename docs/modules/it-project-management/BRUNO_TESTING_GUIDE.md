@@ -109,9 +109,19 @@ flowchart TD
   ```
 * **Post-Response Script**:
   ```javascript
-  if (res.body && res.body.data && res.body.data.token) {
-    bru.setVar("token", res.body.data.token);
-    bru.setEnvVar("token", res.body.data.token);
+  if (res.body && res.body.data) {
+    if (res.body.data.token) {
+      bru.setVar("token", res.body.data.token);
+      bru.setEnvVar("token", res.body.data.token);
+    }
+    if (res.body.data.user && res.body.data.user.id) {
+      bru.setVar("picId", res.body.data.user.id);
+      bru.setEnvVar("picId", res.body.data.user.id);
+    }
+    if (res.body.data.user && res.body.data.user.department?.id) {
+      bru.setVar("departmentId", res.body.data.user.department.id);
+      bru.setEnvVar("departmentId", res.body.data.user.department.id);
+    }
   }
   ```
 
@@ -154,8 +164,8 @@ Pre-aggregated dashboard metrics for mobile client views:
     "name": "MES Machine Telemetry v2",
     "description": "Integration of factory floor PLC machines to DISS real-time telemetry dashboard.",
     "requester_name": "Pak Budi",
-    "requester_department_id": 1,
-    "primary_pic_id": 1,
+    "requester_department_id": {{departmentId}},
+    "primary_pic_id": {{picId}},
     "priority": "HIGH",
     "start_date": "2026-10-15",
     "due_date": "2026-12-31"
@@ -163,7 +173,10 @@ Pre-aggregated dashboard metrics for mobile client views:
   ```
 * **Post-Response Script**:
   ```javascript
-  bru.setEnvVar("projectId", res.body.data.id);
+  if (res.body && res.body.data && res.body.data.id) {
+    bru.setVar("projectId", res.body.data.id);
+    bru.setEnvVar("projectId", res.body.data.id);
+  }
   ```
 
 #### `03. Get Project Detail (Composite)`
@@ -191,7 +204,10 @@ Pre-aggregated dashboard metrics for mobile client views:
   ```
 * **Post-Response Script**:
   ```javascript
-  bru.setEnvVar("checkpointId", res.body.data.id);
+  if (res.body && res.body.data && res.body.data.id) {
+    bru.setVar("checkpointId", res.body.data.id);
+    bru.setEnvVar("checkpointId", res.body.data.id);
+  }
   ```
 
 #### `03. Mark Checkpoint Completed`
@@ -205,7 +221,10 @@ Pre-aggregated dashboard metrics for mobile client views:
 * **Body**: Multipart Form (`file: @file(...)`, max 15MB, allowed formats: `jpg, jpeg, png, pdf, docx, xlsx, zip`).
 * **Post-Response Script**:
   ```javascript
-  bru.setEnvVar("attachmentId", res.body.data.id);
+  if (res.body && res.body.data && res.body.data.id) {
+    bru.setVar("attachmentId", res.body.data.id);
+    bru.setEnvVar("attachmentId", res.body.data.id);
+  }
   ```
 
 #### `05. Download Evidence Stream`
