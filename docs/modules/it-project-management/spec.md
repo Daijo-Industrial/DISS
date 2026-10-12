@@ -28,8 +28,8 @@ All business logic, role-based authorization, state machine transitions, dual-tr
 
 Rather than spinning up an isolated greenfield server, integrating directly into DISS provides immediate enterprise advantages:
 
-* **Authentication & Sanctum**: Reuses DISS's existing `auth:sanctum` pipeline and [`AuthController`](file:///home/monlay/projects/DISS/app/Http/Controllers/Api/V1/AuthController.php) (`/api/v1/auth/login`, `/logout`, `/me`).
-* **Master Data**: Links directly to DISS's existing [`Department`](file:///home/monlay/projects/DISS/app/Infrastructure/Persistence/Eloquent/Models/Department.php) and [`User`](file:///home/monlay/projects/DISS/app/Infrastructure/Persistence/Eloquent/Models/User.php) entities.
+* **Authentication & Sanctum**: Reuses DISS's existing `auth:sanctum` pipeline and `AuthController` (`/api/v1/auth/login`, `/logout`, `/me`).
+* **Master Data**: Links directly to DISS's existing `Department` and `User` entities.
 * **Roles & Permissions**: Employs DISS's configured `spatie/laravel-permission` package.
 * **Audit Logging**: Leverages DISS's configured `spatie/laravel-activitylog` package.
 * **Infrastructure**: Runs seamlessly inside DISS's existing Docker Compose / Laravel Sail environment with MySQL 8.0, Redis, and Mailpit.
@@ -248,7 +248,7 @@ The DISS database currently holds records in `project_masters` and `project_hist
 
 # RESTful API Contract
 
-All endpoints follow DISS's existing API response format established in [`App\Http\Controllers\Api\V1\Controller`](file:///home/monlay/projects/DISS/app/Http/Controllers/Api/V1/Controller.php):
+All endpoints follow DISS's existing API response format established in `App\Http\Controllers\Api\V1\Controller`:
 
 ### Success Response:
 ```json
