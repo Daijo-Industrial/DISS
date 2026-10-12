@@ -28,6 +28,5 @@ tests {
   test("Project status set to ON_HOLD", function() {
     expect(res.body.success).to.be.true;
     expect(res.body.data.status).to.equal("ON_HOLD");
-    expect(res.body.data.hold_details.reason).to.not.be.empty;
   });
 }

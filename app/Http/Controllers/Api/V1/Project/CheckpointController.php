@@ -52,6 +52,10 @@ final class CheckpointController extends Controller
             $data['sequence_order'] = $maxSequence + 1;
         }
 
+        if (empty($data['status'])) {
+            $data['status'] = CheckpointStatus::PENDING;
+        }
+
         $checkpoint = ProjectCheckpoint::create($data);
 
         return $this->successResponse(

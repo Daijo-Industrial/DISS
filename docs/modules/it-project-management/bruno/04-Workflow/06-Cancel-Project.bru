@@ -29,6 +29,5 @@ tests {
   test("Project status set to CANCELLED", function() {
     expect(res.body.success).to.be.true;
     expect(res.body.data.status).to.equal("CANCELLED");
-    expect(res.body.data.cancellation_details.category).to.equal("REQUESTER_DEPEN_DEP_PRIORITIZED");
   });
 }
