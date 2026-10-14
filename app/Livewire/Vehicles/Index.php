@@ -25,10 +25,10 @@ class Index extends Component
     public int $perPage = 10;
 
     #[Url(as: 'sort')]
-    public string $sort = 'plate_number';
+    public string $sort = 'updated_at';
 
     #[Url(as: 'dir')]
-    public string $dir = 'asc';
+    public string $dir = 'desc';
 
     #[Url(as: 'cat')]
     public string $category = 'passenger';
@@ -96,7 +96,7 @@ class Index extends Component
 
     public function sortBy(string $field): void
     {
-        $allowed = $this->canManage ? ['plate_number', 'driver_name', 'odometer', 'status', 'last_service_date'] : ['plate_number', 'driver_name'];
+        $allowed = $this->canManage ? ['updated_at', 'plate_number', 'driver_name', 'odometer', 'status', 'last_service_date'] : ['updated_at', 'plate_number', 'driver_name'];
 
         if (! in_array($field, $allowed, true)) {
             return; // ignore disallowed sorts
@@ -106,7 +106,7 @@ class Index extends Component
             $this->dir = $this->dir === 'asc' ? 'desc' : 'asc';
         } else {
             $this->sort = $field;
-            $this->dir = 'asc';
+            $this->dir = $field === 'updated_at' ? 'desc' : 'asc';
         }
         $this->resetPage();
     }
@@ -262,8 +262,8 @@ class Index extends Component
         $this->selectedStatuses = ['in_pool', 'on_trip', 'maintenance'];
         $this->category = 'passenger';
         $this->selectedCategories = ['passenger'];
-        $this->sort = 'plate_number';
-        $this->dir = 'asc';
+        $this->sort = 'updated_at';
+        $this->dir = 'desc';
         $this->resetPage();
     }
 
@@ -298,8 +298,8 @@ class Index extends Component
         return $this->hasCustomCategory
             || $this->hasCustomStatus
             || $this->q !== ''
-            || $this->sort !== 'plate_number'
-            || $this->dir !== 'asc';
+            || $this->sort !== 'updated_at'
+            || $this->dir !== 'desc';
     }
 
     public function setViewMode(string $mode): void
@@ -312,10 +312,10 @@ class Index extends Component
     public function render()
     {
         // Ensure sort field is allowed for this role
-        $allowed = $this->canManage ? ['plate_number', 'driver_name', 'odometer', 'status', 'last_service_date'] : ['plate_number', 'driver_name'];
+        $allowed = $this->canManage ? ['updated_at', 'plate_number', 'driver_name', 'odometer', 'status', 'last_service_date'] : ['updated_at', 'plate_number', 'driver_name'];
 
-        $sortField = in_array($this->sort, $allowed, true) ? $this->sort : 'plate_number';
-        $sortDir = $this->dir === 'desc' ? 'desc' : 'asc';
+        $sortField = in_array($this->sort, $allowed, true) ? $this->sort : 'updated_at';
+        $sortDir = $this->dir === 'asc' ? 'asc' : 'desc';
 
         $query = Vehicle::query()
             ->select('vehicles.*')
@@ -428,7 +428,8 @@ class Index extends Component
             ->when($this->canManage && $this->status !== 'all', function ($q) {
                 $q->where('status', VehicleStatus::from($this->status));
             })
-            ->orderBy($sortField, $sortDir);
+            ->orderBy($sortField, $sortDir)
+            ->when($sortField === 'updated_at', fn ($q) => $q->orderByDesc('id'));
 
         // Active Fleet KPI Metrics
         $baseActiveQuery = Vehicle::query()

@@ -136,7 +136,7 @@
 
                 {{-- Filter Toggle Button (Shown in Grid view, since Table view has interactive toolbar filters) --}}
                 <button type="button" x-show="viewMode === 'grid'" @click="showFilters = !showFilters"
-                    :class="showFilters ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-bold shadow-2xs' : 'bg-slate-50/80 border-slate-200/80 text-slate-600 hover:bg-slate-100 font-semibold'"
+                    :class="showFilters ? 'bg-indigo-50 text-indigo-700 font-bold border-indigo-200 shadow-2xs' : 'bg-slate-50/80 border-slate-200/80 text-slate-600 hover:bg-slate-100 font-semibold'"
                     class="inline-flex items-center gap-1.5 rounded-xl border py-2 sm:py-1.5 px-3 text-xs transition shrink-0 cursor-pointer active:scale-95">
                     <i class="bi bi-sliders text-xs"></i>
                     <span>Filter</span>
@@ -239,6 +239,7 @@
                     <div class="relative">
                         <select id="fleet-sort-filter" wire:model.live="sort"
                             class="w-full appearance-none rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 pl-3 pr-8 text-xs font-semibold text-slate-800 hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition cursor-pointer">
+                            <option value="updated_at">Terakhir Diperbarui / Ditambahkan</option>
                             <option value="plate_number">Plat Nomor</option>
                             <option value="driver_name">Driver Penanggung Jawab</option>
                             @if ($canManage)
@@ -259,8 +260,8 @@
                     <div class="relative">
                         <select wire:model.live="dir"
                             class="w-full appearance-none rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 pl-3 pr-8 text-xs font-semibold text-slate-800 hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition cursor-pointer">
-                            <option value="asc">A - Z (Naik / Terendah)</option>
-                            <option value="desc">Z - A (Turun / Tertinggi)</option>
+                            <option value="desc">Z - A (Terbaru / Tertinggi / Turun)</option>
+                            <option value="asc">A - Z (Terlama / Terendah / Naik)</option>
                         </select>
                         <i class="bi bi-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none"></i>
                     </div>
