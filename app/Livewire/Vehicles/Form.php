@@ -249,10 +249,23 @@ class Form extends Component
         $this->validate($rules, $this->messages());
     }
 
+    public function updatedOdometer($value): void
+    {
+        if (is_string($value)) {
+            $cleaned = preg_replace('/\D/', '', $value);
+            $this->odometer = $cleaned !== '' ? (int) $cleaned : 0;
+        }
+    }
+
     public function validateStep3(): void
     {
         if (! $this->canManage) {
             return;
+        }
+
+        if (is_string($this->odometer)) {
+            $cleaned = preg_replace('/\D/', '', $this->odometer);
+            $this->odometer = $cleaned !== '' ? (int) $cleaned : 0;
         }
 
         $rules = [
@@ -268,6 +281,11 @@ class Form extends Component
 
     public function save(): void
     {
+        if (is_string($this->odometer)) {
+            $cleaned = preg_replace('/\D/', '', $this->odometer);
+            $this->odometer = $cleaned !== '' ? (int) $cleaned : 0;
+        }
+
         $this->plate_number = $this->normalizePlateNumber($this->plate_number);
 
         try {

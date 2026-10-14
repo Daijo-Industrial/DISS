@@ -83,13 +83,13 @@
     border-radius: 1rem !important; /* rounded-2xl */
     border: 1px solid #e2e8f0 !important; /* border-slate-200 */
     background-color: rgba(248, 250, 252, 0.6) !important; /* bg-slate-50/60 */
-    padding: 0.625rem 0.875rem 0.625rem 2.5rem !important;
-    font-size: 0.75rem !important; /* text-xs */
+    padding: 0.75rem 1rem 0.75rem 2.75rem !important;
+    font-size: 0.875rem !important; /* text-sm 14px */
     font-weight: 500 !important;
     color: #0f172a !important; /* text-slate-900 */
     box-shadow: none !important;
     transition: all 0.15s ease-in-out !important;
-    min-height: 42px !important;
+    min-height: 48px !important;
 }
 
 .ts-fleet-driver .ts-control.focus,
@@ -106,7 +106,7 @@
     border-radius: 1rem !important; /* rounded-2xl */
     border: 1px solid #e2e8f0 !important;
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
-    font-size: 0.75rem !important;
+    font-size: 0.875rem !important;
     overflow: hidden !important;
     z-index: 50 !important;
     margin-top: 4px !important;
@@ -115,10 +115,13 @@
 
 .ts-fleet-driver .ts-dropdown .option,
 .ts-fleet-inspector .ts-dropdown .option {
-    padding: 0.5rem 0.875rem !important;
-    font-size: 0.75rem !important;
+    padding: 0.75rem 1rem !important;
+    font-size: 0.875rem !important;
     color: #334155 !important;
     transition: background-color 0.15s ease !important;
+    min-height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
 }
 
 .ts-fleet-driver .ts-dropdown .option.active,
@@ -130,21 +133,24 @@
 
 .ts-fleet-driver .ts-dropdown .create,
 .ts-fleet-inspector .ts-dropdown .create {
-    padding: 0.5rem 0.875rem !important;
-    font-size: 0.75rem !important;
+    padding: 0.75rem 1rem !important;
+    font-size: 0.875rem !important;
     color: #4f46e5 !important; /* text-indigo-600 */
     font-weight: 600 !important;
     border-top: 1px dashed #e2e8f0 !important;
+    min-height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
 }
 
 .ts-fleet-driver .ts-control .placeholder,
 .ts-fleet-inspector .ts-control .placeholder {
     color: #94a3b8 !important;
-    font-size: 0.75rem !important;
+    font-size: 0.875rem !important;
 }
 
 .ts-fleet-driver .ts-control input,
 .ts-fleet-inspector .ts-control input {
-    font-size: 0.75rem !important;
+    font-size: 0.875rem !important;
     color: #0f172a !important;
 }

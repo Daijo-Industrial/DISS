@@ -141,4 +141,22 @@ return [
         'ADI SUTRISNA',
         'A. ASRIANSAH',
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Daftar Keperluan / Tujuan Perjalanan Default (P2H)
+    |--------------------------------------------------------------------------
+    |
+    | Opsi preset untuk mempercepat pengisian keperluan trip armada pada form P2H.
+    | Pengemudi dapat memilih opsi cepat (1 sentuhan) atau mengetik tujuan kustom.
+    |
+    */
+    'trip_purposes' => [
+        'Operasional Kantor',
+        'Kunjungan Lapangan / Proyek',
+        'Antar / Jemput Tamu & Klien',
+        'Dinas Luar Kota',
+        'Servis / Perawatan Bengkel',
+        'Pengiriman Dokumen / Logistik',
+    ],
 ];
