@@ -16,7 +16,7 @@ The current process suffers from critical limitations:
 
 ### Solution: Headless, API-First DISS Module
 
-The proposed solution is an **API-first, Headless IT Project & KPI Management module built directly within the existing DISS application (`~/projects/DISS`)**.
+The proposed solution is an **API-first, Headless IT Project & KPI Management module built directly within the existing DISS application**.
 
 Frontend consumer applications—specifically a **native Android application** (and future internal portals)—will consume this module exclusively via **RESTful JSON APIs** under the existing `/api/v1/` prefix, authenticated via **Laravel Sanctum Bearer tokens**.
 
@@ -310,7 +310,7 @@ All endpoints follow DISS's existing API response format established in `App\Htt
 Following DISS's established Clean Architecture / Domain conventions:
 
 ```text
-~/projects/DISS/
+DISS/
 ├── app/
 │   ├── Domain/
 │   │   └── Project/
