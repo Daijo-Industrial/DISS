@@ -1,71 +1,52 @@
 ---
 name: supplier-evaluation
-description: Domain knowledge and runbooks for Purchasing Supplier Evaluation, SAP export data parsing, scoring criteria, and vendor table imports in DISS. Use whenever working on purchasing evaluations, SAP xls imports, vendor criteria, or scoring reports.
+description: Domain knowledge and runbooks for Purchasing Supplier Evaluation, SAP export data parsing, scoring criteria, and vendor table imports in DISS.
 ---
 
-# Purchasing Supplier Evaluation & SAP Data Import
-
-This skill provides domain knowledge, file formats, and architecture guidelines for the Supplier Evaluation module in Daijo Industrial System (DISS).
-
----
+# Purchasing Supplier Evaluation & SAP Import
 
 ## 1. SAP File Format & Streaming Ingestion
 
-Exported files from SAP have a `.xls` extension but are actually **tab-delimited text with UTF-16LE encoding and CRLF line breaks**.
-- **Encoding**: UTF-16LE with BOM `\xFF\xFE`. In PHP, must be read with stream filter `convert.iconv.UTF-16LE/UTF-8` to stream-decode in milliseconds with zero memory overhead.
-- **Date Format**: Dates from SAP are formatted as `dd.mm.yy` (e.g. `19.04.24` &rarr; `2024-04-19`). Handled via `SapEvaluationImportService::parseDate()`.
-- **Numeric Fields**: Quantities contain commas as thousands separators and 5 decimal zeros (e.g. `1,000.00000`). Commas must be stripped before casting to `int` or `float`.
-- **Timestamps**: The evaluation and master tables do not contain `created_at` or `updated_at` columns. Models must have `public $timestamps = false;` and `$guarded = ['id'];`.
+SAP exports have a `.xls` extension but are **tab-delimited UTF-16LE text with CRLF line breaks**:
+- **Encoding**: UTF-16LE with BOM `\xFF\xFE`. Read via PHP stream filter `convert.iconv.UTF-16LE/UTF-8` for zero-memory streaming.
+- **Date Format**: Formatted as `dd.mm.yy` (e.g. `19.04.24` &rarr; `2024-04-19`). Handled by `SapEvaluationImportService::parseDate()`.
+- **Numeric Fields**: Quantities contain commas and 5 decimal zeros (e.g. `1,000.00000`). Strip commas before casting.
+- **Timestamps**: Master/evaluation tables lack timestamp columns. Models set `public $timestamps = false;` and `$guarded = ['id'];`.
 
----
+## 2. SAP File to Model Mappings
 
-## 2. 8 SAP Files to Database Models Mapping
-
-| Target Model | Database Table | SAP Export File | Criteria / Purpose | Key Column Mappings |
+| Target Model | Database Table | SAP Export File | Purpose / Criteria | Key Column Mappings |
 | :--- | :--- | :--- | :--- | :--- |
-| `PurchasingListPo` | `purchasing_list_po` | `(EVALUASI) LIST GRPO.xls` | PO Master (37k+ rows, used for supplier selection & active months) | `Customer/Supplier Code` &rarr; `supplier_code`<br>`Customer/Supplier Name` &rarr; `supplier_name`<br>`Document Status` &rarr; `doc_status`<br>`Posting Date` &rarr; `posting_date` (`d.m.y`) |
-| `PurchasingVendorClaim` | `purchasing_vendor_claim` | `(EVALUASI) VENDOR CLAIM.xls` | Kriteria 1: Kualitas Barang & Kemasan | `Vendor Code` &rarr; `vendor_code`<br>`Vendor Name` &rarr; `vendor_name`<br>`Incoming Date` &rarr; `incoming_date`<br>`Quantity` &rarr; `quantity`<br>`Claim Start Date` &rarr; `claim_start_date`<br>`Claim Finished Date` &rarr; `claim_finish_date`<br>`Stop Line` &rarr; `customer_stopline` |
-| `PurchasingVendorAccuracyGood` | `purchasing_vendor_accuracy_good` | `(EVALUASI) VENDOR ACCURACY GOOD.xls` | Kriteria 2: Ketepatan Kuantitas | `Delivery Qty` &rarr; `delivery_quantity`<br>`Received Qty` &rarr; `received_quantity`<br>`Shortage Qty` &rarr; `shortage_quantity`<br>`Over Qty` &rarr; `over_quantity`<br>`Close Status` &rarr; `close_status` |
-| `PurchasingVendorOntimeDelivery` | `purchasing_vendor_ontime_delivery` | `(EVALUASI) VENDOR ONTIME DELIVERY.xls` | Kriteria 3: Ketepatan Waktu Pengiriman | `Request Date` &rarr; `request_date`<br>`Request Qty` &rarr; `request_quantity`<br>`Actual Date` &rarr; `actual_date`<br>`Actual Incoming Qty` &rarr; `actual_incoming_quantity` |
-| `PurchasingVendorUrgentRequest` | `purchasing_vendor_urgent_request` | `(EVALUASI) VENDOR URGENT REQUEST.xls` | Kriteria 4: Kerjasama Permintaan Mendadak | `PO No` &rarr; `po_no`<br>`PO Date` &rarr; `po_date`<br>`Request Date` &rarr; `request_date`<br>`Request Qty` &rarr; `request_quantity`<br>`Incoming Date` &rarr; `incoming_date`<br>`Incoming Qty` &rarr; `incoming_quantity`<br>`Special Price` &rarr; `special_price` |
-| `PurchasingVendorClaimResponse` | `purchasing_vendor_claim_response` | `(EVALUASI) VENDOR CLAIM RESPON.xls` | Kriteria 5: Respon Klaim (CPAR) | `Vendor Claim Code` &rarr; `vendor_claim_code`<br>`CPAR_NO` &rarr; `cpar_no`<br>`CPAR Sent Date` &rarr; `cpar_sent_date`<br>`CPAR Respon Date` &rarr; `cpar_response_date`<br>`Close Status` &rarr; `close_status` |
-| `PurchasingVendorListCertificate` | `purchasing_vendor_list_certificate` | `(EVALUASI) LIST VENDOR.xls` | Kriteria 6: Sertifikasi ISO / IATF | `BP Code` &rarr; `vendor_code`<br>`BP Name` &rarr; `vendor_name`<br>`ISO 9001:2015 NUM` &rarr; `iso_9001_doc`<br>`ISO 9001:2015 START/END DATE`<br>`ISO 14001:2015 NO / DATES`<br>`IATF 16949:2016 NO / DATES` |
-| `PurchasingContact` | `purchasing_contacts` | `(EVALUASI) PURCHASING CONTACT.xls` | Vendor Contacts & Purchasing PIC (`p_member`) | `BP Code` &rarr; `vendor_code`<br>`BP Name` &rarr; `vendor_name`<br>`FirstWord` &rarr; `p_member` (null when '-No')<br>`Contact Person Name` &rarr; `persontocontact` |
+| `PurchasingListPo` | `purchasing_list_po` | `(EVALUASI) LIST GRPO.xls` | PO Master (supplier selection & active months) | `Customer/Supplier Code` &rarr; `supplier_code`<br>`Customer/Supplier Name` &rarr; `supplier_name`<br>`Posting Date` &rarr; `posting_date` (`d.m.y`) |
+| `PurchasingVendorClaim` | `purchasing_vendor_claim` | `(EVALUASI) VENDOR CLAIM.xls` | Kriteria 1: Kualitas Barang & Kemasan | `Vendor Code` &rarr; `vendor_code`<br>`Incoming Date` &rarr; `incoming_date`<br>`Stop Line` &rarr; `customer_stopline` |
+| `PurchasingVendorAccuracyGood` | `purchasing_vendor_accuracy_good` | `(EVALUASI) VENDOR ACCURACY GOOD.xls` | Kriteria 2: Ketepatan Kuantitas | `Delivery Qty` &rarr; `delivery_quantity`<br>`Received Qty` &rarr; `received_quantity`<br>`Close Status` &rarr; `close_status` |
+| `PurchasingVendorOntimeDelivery` | `purchasing_vendor_ontime_delivery` | `(EVALUASI) VENDOR ONTIME DELIVERY.xls` | Kriteria 3: Ketepatan Waktu Pengiriman | `Request Date` &rarr; `request_date`<br>`Actual Date` &rarr; `actual_date`<br>`Actual Incoming Qty` &rarr; `actual_incoming_quantity` |
+| `PurchasingVendorUrgentRequest` | `purchasing_vendor_urgent_request` | `(EVALUASI) VENDOR URGENT REQUEST.xls` | Kriteria 4: Kerjasama Permintaan Mendadak | `PO No` &rarr; `po_no`<br>`Incoming Date` &rarr; `incoming_date`<br>`Special Price` &rarr; `special_price` |
+| `PurchasingVendorClaimResponse` | `purchasing_vendor_claim_response` | `(EVALUASI) VENDOR CLAIM RESPON.xls` | Kriteria 5: Respon Klaim (CPAR) | `Vendor Claim Code` &rarr; `vendor_claim_code`<br>`CPAR Sent Date` &rarr; `cpar_sent_date`<br>`CPAR Respon Date` &rarr; `cpar_response_date` |
+| `PurchasingVendorListCertificate` | `purchasing_vendor_list_certificate` | `(EVALUASI) LIST VENDOR.xls` | Kriteria 6: Sertifikasi ISO / IATF | `BP Code` &rarr; `vendor_code`<br>`ISO 9001:2015 NUM` &rarr; `iso_9001_doc`<br>`IATF 16949:2016 NO` &rarr; `iatf_16949_doc` |
+| `PurchasingContact` | `purchasing_contacts` | `(EVALUASI) PURCHASING CONTACT.xls` | Vendor Contacts & Purchasing PIC (`p_member`) | `BP Code` &rarr; `vendor_code`<br>`FirstWord` &rarr; `p_member` (null if '-No')<br>`Contact Person Name` &rarr; `persontocontact` |
 
----
+## 3. Purchasing Contact & PIC Ingestion
 
-## 3. Purchasing Contact & PIC Ingestion (`(EVALUASI) PURCHASING CONTACT.xls`)
+From `(EVALUASI) PURCHASING CONTACT.xls`:
+- **`p_member` (Purchasing PIC)**: Extracted from `FirstWord`. Values prefixed with `'-'` (e.g. `'-No'`) or blank become `null`; valid names (e.g. `ANDRIANI`, `DIAN`) are stored trimmed.
+- **`persontocontact` (Vendor Contact)**: Extracted from `Contact Person Name`.
+- In views (`foremind_detail.blade.php`, `supplier_detail.blade.php`), display `$contact->persontocontact` in `ATT` and `$contact->p_member ?? '-'` in `FR` / `PIC`.
 
-The export file `(EVALUASI) PURCHASING CONTACT.xls` fully replaces the legacy vendor list export:
-- **`p_member` (Purchasing PIC)**: Extracted directly from column `FirstWord`.
-  - Values starting with `'-'` (such as `'-No'`) or blank strings indicate no assigned PIC and are stored as `null`.
-  - Valid names (e.g. `ANDRIANI`, `DIAN`, `AYU`) are trimmed and stored directly without regex parsing.
-- **`persontocontact` (Vendor Contact Person)**: Extracted directly from column `Contact Person Name` (e.g. `MR. BENNY SISWANTO`, `HADI CAHYONO`).
-- In views (`foremind_detail.blade.php`, `foremind_detail_print_customer_excel.blade.php`, `supplier_detail.blade.php`), `$contact->persontocontact` is displayed in `ATT` and `$contact->p_member ?? '-'` in `FR` / `PIC`.
+## 4. Ingestion Pipeline & Access Control
 
----
-
-## 4. Update Strategy & Access Control
-
-- **Strategy**: Full replacement (`DELETE FROM <table>` inside `DB::transaction()` followed by batch inserts in 1,000-row chunks).
-- **Log Touch**: Updates `PurchasingUpdateLog::updateOrCreate(['id' => 1], ['updated_at' => now()])`.
-- **Authorization**: Strictly gated to users with roles `super-admin` or `admin`.
-- **UI Trigger**:
-  - Modal: `resources/views/purchasing/evaluationsupplier/partials/import_modal.blade.php`.
-  - Main button in `supplier_selection.blade.php` ("Update / Import SAP Data").
-  - Quick action buttons on each Kriteria view (`kriteria1.blade.php` &rarr; `kriteria6.blade.php`) calling `openImportModal('kriteriaX')`.
+- **Strategy**: Truncate-and-replace (`DELETE FROM <table>` in `DB::transaction()` with 1,000-row batch inserts).
+- **Log Touch**: `PurchasingUpdateLog::updateOrCreate(['id' => 1], ['updated_at' => now()])`.
+- **Authorization**: Restricted to `super-admin` or `admin`.
 - **Route**: `POST /purc/evaluationsupplier/import` &rarr; `PurchasingSupplierEvaluationController@import`.
 
----
+## 5. Scoring Logic (`SupplierScoringService`)
 
-## 5. Scoring Logic & Calculations
-
-Managed by `SupplierScoringService`:
-- **Kriteria 1 (Kualitas Barang)**: Max 20 points. Deducts 5 points per monthly claim down to min 0.
-- **Customer Stopline**: Max 10 points. Deducts 5 points per claim with `customer_stopline == 'Yes'`.
-- **Kriteria 2 (Kuantitas)**: Max 20 points. Deducts 5 points per discrepancy record.
-- **Kriteria 3 (Waktu Pengiriman)**: Max 20 points. Deducts 5 points per late delivery record.
-- **Kriteria 4 (Permintaan Mendadak)**: Max 10 points. 10 if on same date with normal price, 5 if special price.
-- **Kriteria 5 (Respon Klaim / CPAR)**: Max 10 points. Closed within 1-3 days: 10 pts, 4-5 days: 5 pts, >5 days: 0 pts.
-- **Kriteria 6 (Sertifikasi)**: Max 10 points. IATF 16949: 10 pts, ISO 9001 or 14001: 5 pts, none: 0 pts.
-- **Grade**: Average score &ge; 81 &rarr; **A** (Diteruskan), &ge; 61 &rarr; **B** (Dipertahankan), &lt; 61 &rarr; **C** (Monitoring 3 bulan).
+- **Kriteria 1 (Kualitas Barang)**: Max 20 pts. Deduct 5 pts per monthly claim (min 0).
+- **Customer Stopline**: Max 10 pts. Deduct 5 pts per claim with `customer_stopline == 'Yes'`.
+- **Kriteria 2 (Kuantitas)**: Max 20 pts. Deduct 5 pts per discrepancy record.
+- **Kriteria 3 (Waktu Pengiriman)**: Max 20 pts. Deduct 5 pts per late delivery record.
+- **Kriteria 4 (Permintaan Mendadak)**: Max 10 pts (10 if same date with normal price, 5 if special price).
+- **Kriteria 5 (Respon Klaim / CPAR)**: Max 10 pts (1-3 days: 10 pts, 4-5 days: 5 pts, >5 days: 0 pts).
+- **Kriteria 6 (Sertifikasi)**: Max 10 pts (IATF 16949: 10 pts, ISO 9001/14001: 5 pts, none: 0 pts).
+- **Grades**: $\ge 81 \rightarrow$ **A** (Diteruskan), $\ge 61 \rightarrow$ **B** (Dipertahankan), $< 61 \rightarrow$ **C** (Monitoring 3 bulan).
