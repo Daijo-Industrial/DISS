@@ -7,6 +7,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\Vehicle;
 use App\Models\VehicleInspection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -28,7 +29,7 @@ class InspectionForm extends Component
 
     public string $driver_name = '';
 
-    public int $odometer = 0;
+    public int|string|null $odometer = 0;
 
     public int|string $fuel_percentage = 100;
 
@@ -226,15 +227,15 @@ class InspectionForm extends Component
 
     protected function validateStep1(): void
     {
-        $minKm = $this->type === VehicleInspection::TYPE_CHECK_IN && $this->parentInspection
+        $minKm = max(1, (int) ($this->type === VehicleInspection::TYPE_CHECK_IN && $this->parentInspection
             ? $this->parentInspection->odometer
-            : $this->vehicle->odometer;
+            : $this->vehicle->odometer));
 
         $this->validate([
             'driver_name' => ['required', 'string', 'max:255'],
             'created_by' => ['required', 'string', 'max:255'],
             'checked_at' => ['required', 'date'],
-            'odometer' => ['required', 'integer', 'min:' . $minKm],
+            'odometer' => ['required', 'integer', 'gt:0', 'min:' . $minKm],
             'fuel_percentage' => ['required', 'integer', 'min:0', 'max:100'],
             'trip_purpose' => ['required', 'string', 'max:500'],
         ], [
@@ -242,8 +243,9 @@ class InspectionForm extends Component
             'created_by.required' => __('fleet.inspection.created_by_required'),
             'checked_at.required' => __('fleet.inspection.checked_at_required'),
             'trip_purpose.required' => __('fleet.inspection.trip_purpose_required'),
-            'odometer.required' => 'Nilai KM Odometer wajib diisi.',
-            'odometer.min' => 'KM Odometer tidak boleh lebih kecil dari KM sebelumnya (:min km).',
+            'odometer.required' => __('fleet.inspection.odometer_required'),
+            'odometer.gt' => __('fleet.inspection.odometer_gt_zero'),
+            'odometer.min' => __('fleet.inspection.odometer_min'),
             'fuel_percentage.required' => 'Level bahan bakar wajib diisi.',
         ]);
     }
@@ -334,15 +336,15 @@ class InspectionForm extends Component
 
     protected function rules(): array
     {
-        $minKm = $this->type === VehicleInspection::TYPE_CHECK_IN && $this->parentInspection
+        $minKm = max(1, (int) ($this->type === VehicleInspection::TYPE_CHECK_IN && $this->parentInspection
             ? $this->parentInspection->odometer
-            : $this->vehicle->odometer;
+            : $this->vehicle->odometer));
 
         return [
             'driver_name' => ['required', 'string', 'max:255'],
             'created_by' => ['required', 'string', 'max:255'],
             'checked_at' => ['required', 'date'],
-            'odometer' => ['required', 'integer', 'min:' . $minKm],
+            'odometer' => ['required', 'integer', 'gt:0', 'min:' . $minKm],
             'fuel_percentage' => ['required', 'integer', 'min:0', 'max:100'],
             'trip_purpose' => ['required', 'string', 'max:500'],
             'severity' => ['required', 'string', 'in:none,minor,critical_grounded'],
@@ -360,14 +362,22 @@ class InspectionForm extends Component
             'created_by.required' => __('fleet.inspection.created_by_required'),
             'checked_at.required' => __('fleet.inspection.checked_at_required'),
             'trip_purpose.required' => __('fleet.inspection.trip_purpose_required'),
-            'odometer.required' => 'Nilai KM Odometer wajib diisi.',
-            'odometer.min' => 'KM Odometer tidak boleh lebih kecil dari KM sebelumnya (:min km).',
+            'odometer.required' => __('fleet.inspection.odometer_required'),
+            'odometer.gt' => __('fleet.inspection.odometer_gt_zero'),
+            'odometer.min' => __('fleet.inspection.odometer_min'),
         ];
     }
 
     public function save()
     {
-        $this->validate();
+        try {
+            $this->validate();
+        } catch (ValidationException $e) {
+            if ($e->validator->errors()->hasAny(['driver_name', 'created_by', 'checked_at', 'odometer', 'fuel_percentage', 'trip_purpose'])) {
+                $this->currentStep = 1;
+            }
+            throw $e;
+        }
 
         $photoPaths = [];
         if (! empty($this->photos)) {

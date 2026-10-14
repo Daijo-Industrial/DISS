@@ -196,9 +196,9 @@
             <div class="rounded-xl bg-slate-50 p-3">
                 <span class="text-[10px] text-slate-400 block font-semibold">Odometer Dicatat</span>
                 <span class="font-bold text-slate-900 font-mono mt-0.5 block">
-                    {{ number_format($odometer) }} km
-                    @if ($type === 'check_in' && $parentInspection && $odometer > $parentInspection->odometer)
-                        <span class="text-emerald-700 font-sans text-[10px] ml-1">(+{{ number_format($odometer - $parentInspection->odometer) }} km)</span>
+                    {{ number_format((int) $odometer) }} km
+                    @if ($type === 'check_in' && $parentInspection && (int) $odometer > (int) $parentInspection->odometer)
+                        <span class="text-emerald-700 font-sans text-[10px] ml-1">(+{{ number_format((int) $odometer - (int) $parentInspection->odometer) }} km)</span>
                     @endif
                 </span>
             </div>

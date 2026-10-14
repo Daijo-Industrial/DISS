@@ -77,6 +77,17 @@ class Form extends Component
         }
     }
 
+    public function validatePlateNumber(): void
+    {
+        $this->plate_number = $this->normalizePlateNumber($this->plate_number);
+        $this->validateOnly('plate_number');
+    }
+
+    public function validateOnly($field, $rules = null, $messages = [], $attributes = [], $dataOverrides = [])
+    {
+        return parent::validateOnly($field, $rules, $messages, $attributes, $dataOverrides);
+    }
+
     protected function rules(): array
     {
         $plateRegex = config('fleet.plate.regex', '^[A-Z]{1,2}\s[1-9][0-9]{0,3}\s[A-Z]{1,4}$');

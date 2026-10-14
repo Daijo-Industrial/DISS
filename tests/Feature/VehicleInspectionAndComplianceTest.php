@@ -327,6 +327,23 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->set('driver_name', 'Supir Update')
             ->call('save')
             ->assertHasNoErrors();
+
+        // 5. Blur validation methods (validatePlateNumber and validateOnly) work without MethodNotFoundException
+        Livewire::test(VehicleForm::class)
+            ->set('plate_number', 'B 9999 DISS')
+            ->call('validatePlateNumber')
+            ->assertHasErrors(['plate_number' => 'unique']);
+
+        Livewire::test(VehicleForm::class)
+            ->set('plate_number', 'B 9999 DISS')
+            ->call('validateOnly', 'plate_number')
+            ->assertHasErrors(['plate_number' => 'unique']);
+
+        Livewire::test(VehicleForm::class)
+            ->set('plate_number', 'b 2345 abc')
+            ->call('validatePlateNumber')
+            ->assertHasNoErrors(['plate_number'])
+            ->assertSet('plate_number', 'B 2345 ABC');
     }
 
     public function test_vehicle_uuid_primary_key_generated_automatically()
@@ -984,6 +1001,52 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->assertHasErrors(['created_by', 'trip_purpose']);
     }
 
+    public function test_p2h_odometer_cannot_be_submitted_with_zero_default_value(): void
+    {
+        // 1. Vehicle with 0 km in database (default initial value) cannot submit with odometer 0
+        $zeroVehicle = Vehicle::create([
+            'plate_number' => 'B 1000 NUL',
+            'driver_name' => 'Driver Baru',
+            'brand' => 'Toyota',
+            'model' => 'Calya',
+            'category' => 'passenger',
+            'fuel_type' => 'petrol',
+            'requires_kir' => false,
+            'odometer' => 0,
+            'status' => VehicleStatus::ACTIVE,
+        ]);
+
+        // Attempting to advance step with default 0 odometer fails
+        Livewire::test(InspectionForm::class, ['vehicle' => $zeroVehicle, 'type' => 'check_out'])
+            ->set('driver_name', 'Driver Baru')
+            ->set('created_by', 'SABAR BASUKI')
+            ->set('trip_purpose', 'Uji Coba Armada Baru')
+            ->set('odometer', 0)
+            ->call('nextStep')
+            ->assertHasErrors(['odometer'])
+            ->assertSet('currentStep', 1);
+
+        // Attempting to save with default 0 odometer fails and routes back to step 1
+        Livewire::test(InspectionForm::class, ['vehicle' => $zeroVehicle, 'type' => 'check_out'])
+            ->set('driver_name', 'Driver Baru')
+            ->set('created_by', 'SABAR BASUKI')
+            ->set('trip_purpose', 'Uji Coba Armada Baru')
+            ->set('odometer', 0)
+            ->call('save')
+            ->assertHasErrors(['odometer'])
+            ->assertSet('currentStep', 1);
+
+        // Providing a valid > 0 odometer passes validation
+        Livewire::test(InspectionForm::class, ['vehicle' => $zeroVehicle, 'type' => 'check_out'])
+            ->set('driver_name', 'Driver Baru')
+            ->set('created_by', 'SABAR BASUKI')
+            ->set('trip_purpose', 'Uji Coba Armada Baru')
+            ->set('odometer', 150)
+            ->call('nextStep')
+            ->assertHasNoErrors(['odometer'])
+            ->assertSet('currentStep', 2);
+    }
+
     public function test_driver_name_and_created_by_support_custom_and_configured_values(): void
     {
         $configuredDrivers = config('fleet.drivers');
@@ -991,10 +1054,23 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $this->assertContains('Khumedi', $configuredDrivers);
         $this->assertContains('Endang', $configuredDrivers);
 
-        // 1. Can submit using a configured driver name
+        config(['fleet.inspectors' => ['SABAR BASUKI']]);
+        $configuredInspectors = config('fleet.inspectors');
+        $this->assertNotEmpty($configuredInspectors);
+        $this->assertContains('SABAR BASUKI', $configuredInspectors);
+
+        // Verify HTML renders TomSelect dropdown markup for both driver and created_by
+        Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
+            ->assertSeeHtml('x-ref="driverSelect"')
+            ->assertSeeHtml('x-ref="inspectorSelect"')
+            ->assertSeeHtml('window.p2hDriverSelect')
+            ->assertSeeHtml('window.p2hInspectorSelect')
+            ->assertSee('SABAR BASUKI');
+
+        // 1. Can submit using a configured driver name and configured inspector name
         Livewire::test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
             ->set('driver_name', 'Bambang supriyanto')
-            ->set('created_by', 'PIC Satpam')
+            ->set('created_by', 'SABAR BASUKI')
             ->set('trip_purpose', 'Antar barang divisi produksi ke Plant 2')
             ->set('odometer', 50200)
             ->set('fuel_percentage', 85)
@@ -1004,7 +1080,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
 
         $inspection = $this->vehicle->inspections()->latest()->first();
         $this->assertEquals('Bambang supriyanto', $inspection->driver_name);
-        $this->assertEquals('PIC Satpam', $inspection->created_by);
+        $this->assertEquals('SABAR BASUKI', $inspection->created_by);
         $this->assertEquals('Antar barang divisi produksi ke Plant 2', $inspection->trip_purpose);
 
         // Verify master vehicle driver_name was NOT overwritten by inspection
@@ -1458,8 +1534,8 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->assertSet('selectedStatuses', ['in_pool', 'on_trip', 'maintenance'])
             ->assertSet('operationalTab', 'all')
             ->assertSet('q', '')
-            ->assertSet('sort', 'plate_number')
-            ->assertSet('dir', 'asc')
+            ->assertSet('sort', 'updated_at')
+            ->assertSet('dir', 'desc')
             ->assertDontSeeHtml('wire:click="resetFilters"');
     }
 
@@ -1550,5 +1626,45 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->assertSet('currentStep', 1)
             ->call('nextStep')
             ->assertSet('currentStep', 1);
+    }
+
+    public function test_vehicles_index_orders_by_updated_at_descending_by_default(): void
+    {
+        Role::firstOrCreate(['name' => 'super-admin']);
+        $this->user->assignRole('super-admin');
+
+        // Ensure all existing vehicles have updated_at in the past
+        Vehicle::query()->update(['updated_at' => now()->subHours(10)]);
+
+        // 1. Create a newly added vehicle
+        $newestVehicle = Vehicle::create([
+            'plate_number' => 'B 3333 NEW',
+            'driver_name' => 'Driver Baru',
+            'brand' => 'Toyota',
+            'model' => 'Veloz',
+            'category' => 'passenger',
+            'fuel_type' => 'petrol',
+            'status' => VehicleStatus::ACTIVE,
+            'odometer' => 1000,
+        ]);
+        Vehicle::where('id', $newestVehicle->id)->update(['updated_at' => now()->subMinutes(5)]);
+
+        // Verify index defaults to sort = 'updated_at' and dir = 'desc'
+        $component = Livewire::actingAs($this->user)
+            ->test(VehiclesIndex::class)
+            ->assertSet('sort', 'updated_at')
+            ->assertSet('dir', 'desc');
+
+        // Check that newest vehicle appears first in paginated vehicles
+        $vehicles = $component->viewData('vehicles');
+        $this->assertEquals($newestVehicle->id, $vehicles->first()->id);
+
+        // 2. Updating an existing older vehicle moves it to the top
+        Vehicle::where('id', $this->vehicle->id)->update(['updated_at' => now()]);
+
+        $componentUpdated = Livewire::actingAs($this->user)
+            ->test(VehiclesIndex::class);
+        $vehiclesUpdated = $componentUpdated->viewData('vehicles');
+        $this->assertEquals($this->vehicle->id, $vehiclesUpdated->first()->id);
     }
 }

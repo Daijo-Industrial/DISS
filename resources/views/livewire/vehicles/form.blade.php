@@ -226,7 +226,7 @@
                             <input type="text"
                                 x-model="plate_number"
                                 @input="formatPlateInput()"
-                                @blur="normalizePlateOnBlur(); $wire.validateOnly('plate_number')"
+                                @blur="normalizePlateOnBlur(); $wire.validatePlateNumber()"
                                 placeholder="B 1234 XYZ"
                                 maxlength="16"
                                 autocomplete="off"

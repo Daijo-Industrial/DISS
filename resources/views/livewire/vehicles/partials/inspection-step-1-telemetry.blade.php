@@ -3,45 +3,46 @@
 {{-- ========================================================================= --}}
 <div class="space-y-5">
     <script>
-        if (typeof window.p2hDriverSelect !== 'function') {
-            window.p2hDriverSelect = function(initialVal) {
+        if (typeof window.p2hSelectComponent !== 'function') {
+            window.p2hSelectComponent = function(config) {
                 return {
                     tomSelect: null,
                     init() {
                         if (typeof window.TomSelect === 'undefined') {
                             return;
                         }
-                        const selectEl = this.$refs.driverSelect;
+                        const selectEl = this.$refs[config.refName];
+                        if (!selectEl) return;
 
                         this.tomSelect = new window.TomSelect(selectEl, {
                             create: true,
                             createOnBlur: true,
                             persist: false,
                             maxItems: 1,
-                            placeholder: @js(__('fleet.inspection.driver_name_placeholder')),
+                            placeholder: config.placeholder,
                             allowEmptyOption: true,
                             searchField: ['text', 'value'],
                             render: {
                                 option_create: function(data, escape) {
-                                    return '<div class="create cursor-pointer py-1.5 px-3 text-xs text-indigo-600 font-semibold bg-indigo-50/60 hover:bg-indigo-100/70 border-t border-slate-100 flex items-center gap-1.5"><i class="bi bi-plus-circle"></i> Tambahkan supir baru: <strong>' + escape(data.input) + '</strong></div>';
+                                    return '<div class="create cursor-pointer py-1.5 px-3 text-xs text-indigo-600 font-semibold bg-indigo-50/60 hover:bg-indigo-100/70 border-t border-slate-100 flex items-center gap-1.5"><i class="bi bi-plus-circle"></i> ' + config.createLabel + ': <strong>' + escape(data.input) + '</strong></div>';
                                 },
                                 no_results: function(data, escape) {
                                     return '<div class="no-results py-2 px-3 text-xs text-slate-400 italic">Tekan Enter untuk menambahkan "' + escape(data.input) + '"</div>';
                                 }
                             },
                             onChange: (value) => {
-                                this.$wire.set('driver_name', value || '');
+                                this.$wire.set(config.wireProperty, value || '');
                             }
                         });
 
-                        if (initialVal) {
-                            if (!this.tomSelect.options[initialVal]) {
-                                this.tomSelect.addOption({ value: initialVal, text: initialVal });
+                        if (config.initialVal) {
+                            if (!this.tomSelect.options[config.initialVal]) {
+                                this.tomSelect.addOption({ value: config.initialVal, text: config.initialVal });
                             }
-                            this.tomSelect.setValue(initialVal, true);
+                            this.tomSelect.setValue(config.initialVal, true);
                         }
 
-                        this.$watch('$wire.driver_name', (newVal) => {
+                        this.$watch('$wire.' + config.wireProperty, (newVal) => {
                             if (!this.tomSelect) return;
                             const current = this.tomSelect.getValue();
                             if (current !== (newVal || '')) {
@@ -62,6 +63,30 @@
                         }
                     }
                 };
+            };
+        }
+
+        if (typeof window.p2hDriverSelect !== 'function') {
+            window.p2hDriverSelect = function(initialVal) {
+                return window.p2hSelectComponent({
+                    refName: 'driverSelect',
+                    wireProperty: 'driver_name',
+                    initialVal: initialVal,
+                    placeholder: @js(__('fleet.inspection.driver_name_placeholder')),
+                    createLabel: 'Tambahkan supir baru'
+                });
+            };
+        }
+
+        if (typeof window.p2hInspectorSelect !== 'function') {
+            window.p2hInspectorSelect = function(initialVal) {
+                return window.p2hSelectComponent({
+                    refName: 'inspectorSelect',
+                    wireProperty: 'created_by',
+                    initialVal: initialVal,
+                    placeholder: @js(__('fleet.inspection.created_by_placeholder')),
+                    createLabel: 'Tambahkan pemeriksa baru'
+                });
             };
         }
     </script>
@@ -99,20 +124,22 @@
                 @enderror
             </div>
 
-            {{-- Created By (Inspector / PIC) --}}
-            <div>
+            {{-- Created By (Inspector / PIC) (TomSelect with Custom Creation & Presets) --}}
+            <div class="ts-fleet-driver ts-fleet-inspector">
                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">
                     {{ __('fleet.inspection.created_by') }} <span class="text-rose-500">*</span>
                 </label>
-                <div class="flex items-center rounded-2xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs focus-within:bg-white focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-100 transition">
-                    <i class="bi bi-person-check text-slate-400 mr-2.5 text-base"></i>
-                    <input type="text" list="inspector-suggestions" wire:model.defer="created_by" placeholder="{{ __('fleet.inspection.created_by_placeholder') }}" autocomplete="off"
-                        class="w-full border-0 p-0 text-xs font-medium text-slate-900 bg-transparent focus:outline-none">
-                    <datalist id="inspector-suggestions">
+                <div wire:ignore x-data="window.p2hInspectorSelect(@js($created_by))" class="relative">
+                    <i class="bi bi-person-check absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-base pointer-events-none z-10"></i>
+                    <select x-ref="inspectorSelect" class="w-full">
+                        <option value="">{{ __('fleet.inspection.created_by_placeholder') }}</option>
                         @foreach ($inspectors as $insp)
-                            <option value="{{ $insp }}"></option>
+                            <option value="{{ $insp }}" @selected($created_by === $insp)>{{ $insp }}</option>
                         @endforeach
-                    </datalist>
+                        @if ($created_by && !in_array($created_by, $inspectors, true))
+                            <option value="{{ $created_by }}" selected>{{ $created_by }}</option>
+                        @endif
+                    </select>
                 </div>
                 @error('created_by')
                     <p class="mt-1 text-[11px] text-rose-600 font-semibold">{{ $message }}</p>
@@ -126,7 +153,7 @@
                 </label>
                 <div class="flex items-center rounded-2xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-xs focus-within:bg-white focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-100 transition">
                     <i class="bi bi-speedometer text-slate-400 mr-2.5 text-base"></i>
-                    <input type="number" wire:model.live.debounce.300ms="odometer" placeholder="{{ $vehicle->odometer }}"
+                    <input type="number" min="1" wire:model.live.debounce.300ms="odometer" placeholder="{{ $vehicle->odometer > 0 ? $vehicle->odometer : 'contoh: 45000' }}"
                         class="w-full border-0 p-0 text-xs font-mono font-black text-slate-900 bg-transparent focus:outline-none">
                     <span class="text-xs font-bold text-slate-400 font-mono">KM</span>
                 </div>
