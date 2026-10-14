@@ -149,7 +149,7 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
    - Scoped styling in `resources/css/app.css` (`.ts-fleet-driver`).
 3. **Mandatory Header Fields**:
    - `created_by`: Required string for the inspector/creator name.
-   - `trip_purpose`: Required string for route and business trip purpose.
+   - `trip_purpose`: Required string for route and business trip purpose. Centralized presets in `config('fleet.trip_purposes')` provide 1-tap suggestion chips on mobile alongside `<datalist id="trip_purposes_list">`, never restricting arbitrary custom text.
    - `checked_at`: Required datetime (`Y-m-d\TH:i`, initial default: `now()`). Allows inspectors to explicitly specify departure time (for check-out) or return time (for check-in) instead of relying solely on system `created_at`.
 4. **Auto-Detect & Switching**:
    - On load, automatically detects if the vehicle is currently on a trip (`$vehicle->is_out_on_trip`). If out, defaults to `check_in`; otherwise `check_out`.
@@ -159,10 +159,26 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
 6. **Check-in (Kepulangan)**:
    - Mencatat Odometer akhir & BBM sisa.
    - Otomatis menghitung jarak tempuh (`trip_distance = odometer_kembali - odometer_berangkat`) dan menautkan ke `parent_inspection_id`.
-7. **Critical Defect Grounding**:
-   - Jika terdapat temuan `critical_grounded`, status kendaraan otomatis dikunci menjadi `VehicleStatus::MAINTENANCE`, mencegah keberangkatan baru sampai diservis.
-8. **Handover ke Bengkel**:
-   - Temuan P2H dapat langsung dialihkan ke form servis (`App\Livewire\Services\Form`) dengan pre-fill otomatis via query params `?vehicle_id=X&defect=Y`.
+7. **Odometer UI-Only Formatting Invariant**:
+   - UI input uses Alpine.js real-time thousand separator formatting (e.g. `50.000` via `.replace(/\B(?=(\d{3})+(?!\d))/g, '.')`).
+   - **Backend Invariant**: Livewire model `$odometer` and database column `odometer` strictly store pure integer values.
+   - `InspectionForm.php` sanitizes inputs defensively via `(int) preg_replace('/\D/', '', $value)` before validation to ensure commas, dots, or spaces never corrupt database records or trip distance calculations.
+8. **Non-Digital & Analog Fuel Dashboard Assistant**:
+   - Accommodates vehicles with analog needle gauges or non-standard digital fuel segments.
+   - **Auto-Open Rule**: If `$vehicle->fuel_type === 'petrol'` or `'bensin'`, the assistant automatically opens on load (`showBarHelper: true`).
+   - **Analog Needle Presets**: 1-tap quick buttons for $E$ (0%), $1/4$ (25%), $1/2$ (50%), $3/4$ (75%), and $F$ (100%).
+   - **Custom Max Bar Segment Grid**:
+     - Quick preset buttons for standard 6 and 8 bars (presets 4, 10, and 12 were removed).
+     - User-customizable max bar number input (`totalBars`, `min="2" max="24"`), allowing drivers to match the exact physical bar count of any dashboard.
+     - Formula: `fuel_percentage = round((selectedBar / totalBars) * 100)`.
+9. **Zero-Friction Defect Severity Evaluation**:
+   - In Step 3 (Defect Evaluation), defects default to `severity = 'minor'` ("Tetap Boleh Beroperasi").
+   - Drivers are not forced to configure complex defect settings for typical minor scratches or wear.
+   - `critical_grounded` is hidden behind an explicit toggle ("Tandai Kerusakan Kritis / Grounded") to eliminate accidental groundings while keeping critical escalations straightforward.
+10. **Critical Defect Grounding**:
+    - Jika terdapat temuan `critical_grounded`, status kendaraan otomatis dikunci menjadi `VehicleStatus::MAINTENANCE`, mencegah keberangkatan baru sampai diservis.
+11. **Handover ke Bengkel**:
+    - Temuan P2H dapat langsung dialihkan ke form servis (`App\Livewire\Services\Form`) dengan pre-fill otomatis via query params `?vehicle_id=X&defect=Y`.
 
 ---
 
@@ -212,6 +228,17 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
   - **Document Archive (`Arsip Dokumen`)**: Complete historical renewal audit trail table.
 - **Unified Modal (`show-modals.blade.php`)**:
   - Dynamically switches to dual expiration date pickers (`stnk_annual_expired_date` & `stnk_five_year_expired_date`) when `stnk` is selected, pre-populating existing dates and sharing a single file attachment.
+### P2H Field Ergonomics & Outdoor Usability (KISS & Mobile-First)
+- **Pure Linear Vertical Stack (Step 1)**:
+  - Eliminates multi-column Z-flow grids on mobile inspection forms.
+  - Form fields (`checked_at`, `driver_name`, `trip_purpose`, `odometer`, `fuel_percentage`) are stacked in a single vertical stream (`space-y-5`) with prominent labels and large typography (`text-base` / `text-lg`).
+  - Interactive touch targets (stepper buttons, suggestion chips, radio cards) adhere to minimum sizes of $\ge 44\text{px}-48\text{px}$ for easy tapping outdoors or with work gloves.
+- **100% Bilingual Parity Standard**:
+  - All P2H form steps, buttons, labels, hints, and error messages MUST be fully translated with paired keys in:
+    - `lang/id/fleet.php` (Indonesian default)
+    - `lang/en/fleet.php` (English parity)
+  - Dynamic UI copy must always use `__('fleet.inspection.key_name')` instead of hardcoded strings.
+
 ### Universal Photo Lightbox (`resources/views/components/universal-lightbox.blade.php`)
 - **Reactive 0ms Alpine.js Modal**: Replaces direct storage URLs (`target="_blank"`) across all vehicle views.
 - **Trigger**: Dispatched anywhere via `@click="$dispatch('open-lightbox', { src: url, title: caption, subtitle: sub })"`.
@@ -236,7 +263,7 @@ Managed by `App\Livewire\Vehicles\InspectionForm` (`resources/views/livewire/veh
 All tests and tools run inside the Docker Sail container (`diss-laravel.test-1`):
 
 ```bash
-# Run fleet inspection and compliance test suite (31 tests, 334 assertions)
+# Run fleet inspection and compliance test suite (37 tests, 522 assertions)
 docker exec diss-laravel.test-1 php artisan test --filter=VehicleInspectionAndComplianceTest
 
 # Check document reminders manually

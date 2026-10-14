@@ -225,8 +225,21 @@ class InspectionForm extends Component
         }
     }
 
+    public function updatedOdometer($value): void
+    {
+        if (is_string($value)) {
+            $cleaned = preg_replace('/\D/', '', $value);
+            $this->odometer = $cleaned !== '' ? (int) $cleaned : null;
+        }
+    }
+
     protected function validateStep1(): void
     {
+        if (is_string($this->odometer)) {
+            $cleaned = preg_replace('/\D/', '', $this->odometer);
+            $this->odometer = $cleaned !== '' ? (int) $cleaned : null;
+        }
+
         $minKm = max(1, (int) ($this->type === VehicleInspection::TYPE_CHECK_IN && $this->parentInspection
             ? $this->parentInspection->odometer
             : $this->vehicle->odometer));
@@ -246,7 +259,7 @@ class InspectionForm extends Component
             'odometer.required' => __('fleet.inspection.odometer_required'),
             'odometer.gt' => __('fleet.inspection.odometer_gt_zero'),
             'odometer.min' => __('fleet.inspection.odometer_min'),
-            'fuel_percentage.required' => 'Level bahan bakar wajib diisi.',
+            'fuel_percentage.required' => __('fleet.inspection.fuel_percentage_required'),
         ]);
     }
 
@@ -370,6 +383,11 @@ class InspectionForm extends Component
 
     public function save()
     {
+        if (is_string($this->odometer)) {
+            $cleaned = preg_replace('/\D/', '', $this->odometer);
+            $this->odometer = $cleaned !== '' ? (int) $cleaned : null;
+        }
+
         try {
             $this->validate();
         } catch (ValidationException $e) {
@@ -441,6 +459,7 @@ class InspectionForm extends Component
         return view('livewire.vehicles.inspection-form', [
             'drivers' => config('fleet.drivers', []),
             'inspectors' => config('fleet.inspectors', []),
+            'trip_purposes' => config('fleet.trip_purposes', []),
         ])->layout('new.layouts.app');
     }
 }

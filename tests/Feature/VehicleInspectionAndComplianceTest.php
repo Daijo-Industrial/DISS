@@ -683,6 +683,15 @@ class VehicleInspectionAndComplianceTest extends TestCase
         ]);
         $this->assertEquals('Aman (Fit to Drive)', $inspection->severity_label);
 
+        // Verify P2H form renders Indonesian
+        Livewire::actingAs($this->user)
+            ->test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
+            ->assertSee('1. Telemetri')
+            ->assertSee('Driver & Telemetri Armada')
+            ->assertSee('Lanjut ke Checklist Fisik')
+            ->assertSee('Operasional Kantor')
+            ->assertSee('Kunjungan Lapangan / Proyek');
+
         // English (Switched)
         app()->setLocale('en');
         $this->assertEquals('Passenger Car / Small', $this->vehicle->category_label);
@@ -692,6 +701,15 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $this->assertEquals('Periodic KIR Inspection', $doc->type_label);
         $this->assertStringContainsString('Renewal Due', $doc->status_label);
         $this->assertEquals('Safe (Fit to Drive)', $inspection->severity_label);
+
+        // Verify P2H form renders English
+        Livewire::actingAs($this->user)
+            ->test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
+            ->assertSee('1. Telemetry')
+            ->assertSee('Driver & Fleet Telemetry')
+            ->assertSee('Proceed to Physical Checklist')
+            ->assertSee('Office Operations')
+            ->assertSee('Field / Project Visit');
 
         // Reset back to id
         app()->setLocale('id');
@@ -1666,5 +1684,68 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->test(VehiclesIndex::class);
         $vehiclesUpdated = $componentUpdated->viewData('vehicles');
         $this->assertEquals($this->vehicle->id, $vehiclesUpdated->first()->id);
+    }
+
+    public function test_p2h_form_mobile_ergonomics_progressive_disclosure_and_non_digital_fuel(): void
+    {
+        // 1. Step 1: Uniform linear vertical stack, non-digital fuel bar assistant, 48px touch targets
+        $component = Livewire::actingAs($this->user)
+            ->test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
+            ->assertSet('currentStep', 1)
+            ->assertSeeHtml('min-h-[48px]')
+            ->assertSeeHtml('totalBars: 8')
+            ->assertSeeHtml('barOptions: [6, 8]')
+            ->assertDontSeeHtml('4 Bar')
+            ->assertDontSeeHtml('10 Bar')
+            ->assertDontSeeHtml('12 Bar')
+            ->assertSeeHtml('placeholder="Max"')
+            ->assertSeeHtml('showBarHelper: true')
+            ->assertSeeHtml('trip-purposes-datalist')
+            ->assertSeeHtml('Operasional Kantor')
+            ->assertSeeHtml('Kunjungan Lapangan / Proyek');
+
+        // Diesel vehicle initializes showBarHelper to false
+        $dieselVehicle = Vehicle::create([
+            'plate_number' => 'B 8888 DSL',
+            'driver_name' => 'Driver Diesel',
+            'brand' => 'Toyota',
+            'model' => 'Fortuner 2.8',
+            'category' => 'passenger',
+            'fuel_type' => 'diesel',
+            'requires_kir' => false,
+            'odometer' => 30000,
+            'status' => VehicleStatus::ACTIVE,
+        ]);
+        Livewire::actingAs($this->user)
+            ->test(InspectionForm::class, ['vehicle' => $dieselVehicle, 'type' => 'check_out'])
+            ->assertSeeHtml('showBarHelper: false');
+
+        // Fill Step 1 and proceed to Step 2 (supporting formatted odometer with thousand separator)
+        $component->set('driver_name', 'Bambang supriyanto')
+            ->set('created_by', 'SABAR BASUKI')
+            ->set('checked_at', now()->format('Y-m-d\TH:i'))
+            ->set('odometer', '50.500')
+            ->set('fuel_percentage', 75)
+            ->set('trip_purpose', 'Kunjungan Lapangan Pabrik')
+            ->call('nextStep')
+            ->assertSet('currentStep', 2)
+            ->assertSet('odometer', 50500);
+
+        // 2. Step 2: Progressive disclosure and haptic feedback
+        $component->assertSeeHtml('navigator.vibrate')
+            ->assertSeeHtml('showOptional')
+            ->assertSeeHtml('Semua OK')
+            ->assertSeeHtml('+ Tambah Catatan / Foto');
+
+        // Set one defect item: should auto switch to issue and step 3 should default to minor severity
+        $component->call('setChecklistStatus', 'headlights', 'issue')
+            ->call('nextStep')
+            ->assertSet('currentStep', 3);
+
+        // 3. Step 3: Zero friction severity (default minor without mandatory grounding configuration)
+        $component->assertSet('severity', 'minor')
+            ->assertSeeHtml('showGroundingOption')
+            ->assertSee('Status Kelayakan: Tetap Boleh Beroperasi (Minor)')
+            ->assertSeeHtml('min-h-[52px]');
     }
 }
