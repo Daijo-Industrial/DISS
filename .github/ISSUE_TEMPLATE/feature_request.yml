@@ -1,0 +1,84 @@
+name: "💡 Feature Request"
+description: Suggest a new feature, workflow enhancement, or module improvement for DISS
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Thank you for contributing your ideas!
+        Please describe the feature proposal, the business need, and the anticipated workflow.
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Target Module / Subsystem
+      description: Which area of DISS does this feature request impact?
+      options:
+        - Fleet Management (P2H / Vehicle / KIR & STNK)
+        - Procurement & Purchasing (PO, PR, Vendor)
+        - SAP Synchronization & Forecast
+        - Purchasing Supplier Evaluation
+        - IT Project & KPI Management
+        - Finance & Invoices / Budget Reports
+        - HR & Locker Management
+        - Quality & Compliance
+        - User Management & Authentication
+        - New Module / Platform-Wide
+    validations:
+      required: true
+
+  - type: input
+    id: persona
+    attributes:
+      label: Primary User / Stakeholder
+      description: Who will use this feature or benefit from it?
+      placeholder: "e.g. Fleet Dispatcher, Warehouse Driver, Purchasing Manager, IT Lead"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Business Priority / Impact
+      description: How critical is this request to operational workflows?
+      options:
+        - High (Blocks operations, critical deadline, or compliance requirement)
+        - Medium (Frequent manual workaround or significant efficiency loss)
+        - Low (Nice-to-have, visual polish, or minor convenience)
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem_statement
+    attributes:
+      label: Business Problem or Operational Inefficiency
+      description: What problem are you trying to solve? Please explain the current pain point.
+      placeholder: "Currently, when we need to [...] we have to [...], which causes [...]"
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution & Desired Workflow
+      description: Describe your proposed solution, screen changes, or step-by-step workflow.
+      placeholder: "I would like DISS to allow users to [...] with fields [...]"
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives or Workarounds Considered
+      description: Have you considered any alternative solutions, third-party tools, or manual workarounds?
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context / Mockups
+      description: Attach UI sketches, spreadsheet samples, data flow diagrams, or reference screenshots.
+    validations:
+      required: false
