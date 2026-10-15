@@ -137,5 +137,116 @@
         </button>
 
 
+        {{-- Login Help Link --}}
+        <div class="pt-3 text-center">
+            <button type="button" onclick="openLoginHelpModal()"
+                class="text-xs font-semibold text-slate-500 hover:text-indigo-600 transition-colors inline-flex items-center gap-1.5 focus:outline-none">
+                <svg class="h-3.5 w-3.5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                Can't sign in? Request IT Support Help
+            </button>
+        </div>
+
     </form>
 @endsection
+
+@push('modals')
+    {{-- Login Assistance Modal --}}
+    <div id="loginHelpModal" class="fixed inset-0 z-[999] hidden items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm transition-opacity duration-200">
+        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 space-y-4 relative">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-2.5">
+                    <div class="h-9 w-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900">IT Login Assistance</h3>
+                        <p class="text-[11px] text-slate-500">Submit a support request to the IT team</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeLoginHelpModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <form method="POST" action="{{ route('support.login-assistance') }}" class="space-y-4">
+                @csrf
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Employee NIK or Company Email <span class="text-rose-500">*</span></label>
+                    <input type="text" name="nik_or_email" required placeholder="e.g. 12345 or your.name@daijo.co.id"
+                        class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Issue Type <span class="text-rose-500">*</span></label>
+                    <select name="issue_type" required
+                        class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">
+                        <option value="Password Reset / Account Locked">Password Reset / Account Locked</option>
+                        <option value="New Employee Account Setup">New Employee Account Setup</option>
+                        <option value="Login Error / Access Denied">Login Error / Access Denied</option>
+                        <option value="Other Login Issue">Other Login Issue</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">WhatsApp / Phone Number (Optional)</label>
+                    <input type="text" name="contact_number" placeholder="e.g. 081234567890"
+                        class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Problem Details <span class="text-rose-500">*</span></label>
+                    <textarea name="description" rows="3" required placeholder="Describe what happens when you attempt to log in..."
+                        class="block w-full rounded-xl border border-slate-200 py-2 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm"></textarea>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-2">
+                    <button type="button" onclick="closeLoginHelpModal()"
+                        class="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-colors">
+                        Submit Assistance Request
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+@endpush
+
+@push('scripts')
+    <script>
+        function openLoginHelpModal() {
+            const modal = document.getElementById('loginHelpModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        }
+        function closeLoginHelpModal() {
+            const modal = document.getElementById('loginHelpModal');
+            if (modal) {
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
+        }
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeLoginHelpModal();
+            }
+        });
+        document.getElementById('loginHelpModal')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeLoginHelpModal();
+            }
+        });
+    </script>
+@endpush

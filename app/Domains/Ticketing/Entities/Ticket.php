@@ -6,6 +6,7 @@ use App\Domains\Ticketing\Enums\TicketPriority;
 use App\Domains\Ticketing\Enums\TicketStatus;
 use App\Infrastructure\Persistence\Eloquent\Models\Employee;
 use App\Infrastructure\Persistence\Eloquent\Models\User;
+use Carbon\CarbonInterval;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,10 +22,14 @@ class Ticket extends Model
     protected $fillable = [
         'ticket_number',
         'reporter_id',
+        'reporter_email',
         'assigned_to',
         'category_id',
         'title',
         'description',
+        'current_url',
+        'screenshot_path',
+        'device_info',
         'status',
         'priority',
         'first_response_at',
@@ -32,6 +37,7 @@ class Ticket extends Model
         'on_hold_since',
         'total_hold_time_minutes',
         'reopen_count',
+        'github_issue_url',
     ];
 
     protected $casts = [
@@ -81,6 +87,6 @@ class Ticket extends Model
             return '0m';
         }
 
-        return \Carbon\CarbonInterval::minutes($minutes)->cascade()->forHumans(['short' => true]);
+        return CarbonInterval::minutes($minutes)->cascade()->forHumans(['short' => true]);
     }
 }

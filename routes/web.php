@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\LoginAssistanceController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\JobProgressController;
@@ -27,6 +28,11 @@ Route::get('/', fn () => Auth::check() ? redirect()->intended('/home') : redirec
 
 // Laravel Authentication Routes
 Auth::routes();
+
+// Public Support & Login Assistance
+Route::post('/support/login-assistance', [LoginAssistanceController::class, 'store'])
+    ->middleware(['throttle:5,1'])
+    ->name('support.login-assistance');
 
 // Core Application Routes
 Route::middleware('auth')->group(function () {

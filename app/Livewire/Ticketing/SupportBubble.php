@@ -6,11 +6,16 @@ use App\Domains\Ticketing\Actions\CreateTicket;
 use App\Domains\Ticketing\Entities\Ticket;
 use App\Domains\Ticketing\Entities\TicketCategory;
 use App\Domains\Ticketing\Enums\TicketPriority;
+use Database\Seeders\TicketCategorySeeder;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class SupportBubble extends Component
 {
+    use WithFileUploads;
+
     public bool $isOpen = false;
 
     public string $activeTab = 'new'; // 'new' or 'my_tickets'
@@ -24,10 +29,19 @@ class SupportBubble extends Component
 
     public string $priority = 'Medium';
 
+    public string $current_url = '';
+
+    public $screenshot = null;
+
     // Notification Polling State
     public bool $hasUnreadUpdates = false;
 
-    #[\Livewire\Attributes\On('open-support-bubble')]
+    public function mount()
+    {
+        $this->current_url = url()->current();
+    }
+
+    #[On('open-support-bubble')]
     public function openBubble($data = [])
     {
         $this->isOpen = true;
@@ -35,12 +49,29 @@ class SupportBubble extends Component
         if (isset($data['tab'])) {
             $this->activeTab = $data['tab'];
         }
+        if (isset($data['url']) && ! empty($data['url'])) {
+            $this->current_url = $data['url'];
+        } elseif (empty($this->current_url)) {
+            $this->current_url = url()->previous() ?: url()->current();
+        }
     }
 
-    // We can pull categories dynamically
+    public function removeScreenshot()
+    {
+        $this->screenshot = null;
+    }
+
+    // We pull categories dynamically and self-heal defaults if empty
     public function getCategoriesProperty()
     {
-        return TicketCategory::where('is_active', true)->get();
+        $categories = TicketCategory::where('is_active', true)->get();
+
+        if ($categories->isEmpty()) {
+            (new TicketCategorySeeder)->run();
+            $categories = TicketCategory::where('is_active', true)->get();
+        }
+
+        return $categories;
     }
 
     public function getMyTicketsProperty()
@@ -62,6 +93,8 @@ class SupportBubble extends Component
             'description' => 'required|string',
             'category_id' => 'required|exists:ticket_categories,id',
             'priority' => 'required|in:Low,Medium,High,Critical',
+            'current_url' => 'nullable|string|max:1000',
+            'screenshot' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         $user = Auth::user();
@@ -71,6 +104,12 @@ class SupportBubble extends Component
             return;
         }
 
+        $screenshotPath = null;
+        if ($this->screenshot) {
+            $screenshotPath = $this->screenshot->store('tickets/screenshots', 'public');
+        }
+
+        $deviceInfo = request()->header('User-Agent');
         $priorityEnum = TicketPriority::from($this->priority);
 
         $action->execute(
@@ -78,10 +117,14 @@ class SupportBubble extends Component
             $this->category_id,
             $this->title,
             $this->description,
-            $priorityEnum
+            $priorityEnum,
+            $user->email,
+            $this->current_url ?: null,
+            $screenshotPath,
+            $deviceInfo
         );
 
-        $this->reset(['title', 'description', 'category_id', 'priority']);
+        $this->reset(['title', 'description', 'category_id', 'priority', 'screenshot']);
         $this->activeTab = 'my_tickets';
 
         session()->flash('success', 'Ticket submitted successfully!');

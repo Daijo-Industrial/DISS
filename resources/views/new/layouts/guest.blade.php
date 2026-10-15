@@ -151,6 +151,7 @@
         </p>
     </div>
 
+    @stack('modals')
     @stack('scripts')
 </body>
 

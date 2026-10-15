@@ -30,6 +30,7 @@ class DatabaseSeeder extends Seeder
             // SpecificationSeeder::class,
             DepartmentSeeder::class,
             PurchaseOrderCategorySeeder::class,
+            TicketCategorySeeder::class,
         ]);
 
         /*

@@ -2,6 +2,9 @@
         open: @entangle('isOpen').live,
         toggle() {
             this.open = !this.open;
+            if (this.open && !$wire.current_url) {
+                $wire.set('current_url', window.location.href);
+            }
         },
         close() {
             this.open = false;
@@ -16,7 +19,7 @@
     x-transition:leave-end="opacity-0 scale-90"
     @click.outside="close()"
     @keydown.escape.window="close()"
-    @open-support-bubble.window="$nextTick(() => { open = true; })"
+    @open-support-bubble.window="$nextTick(() => { open = true; if (!$wire.current_url) { $wire.set('current_url', window.location.href); } })"
     class="fixed bottom-6 right-6 z-[100]"
     x-cloak>
     {{-- Bubble Button --}}
@@ -251,6 +254,50 @@
                             placeholder="Please provide steps to reproduce or any error messages..."
                             class="block w-full rounded-xl border-slate-200 py-2 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500 bg-slate-50 shadow-sm"></textarea>
                         @error('description')
+                            <span class="text-xs text-rose-500 mt-1 block">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    {{-- Page URL / Route --}}
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Page URL / Route</label>
+                        <input type="text" wire:model="current_url" placeholder="https://..."
+                            class="block w-full rounded-xl border-slate-200 py-2 px-3 text-xs focus:border-indigo-500 focus:ring-indigo-500 bg-slate-50 shadow-sm text-slate-700">
+                        @error('current_url')
+                            <span class="text-xs text-rose-500 mt-1 block">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    {{-- Screenshot Upload --}}
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Screenshot / Photo (Optional)</label>
+                        @if ($screenshot)
+                            <div class="relative rounded-xl border border-indigo-200 bg-indigo-50/50 p-2.5 flex items-center justify-between">
+                                <div class="flex items-center gap-2.5 overflow-hidden">
+                                    <img src="{{ $screenshot->temporaryUrl() }}" alt="Preview" class="h-10 w-10 object-cover rounded-lg border border-slate-200 shrink-0">
+                                    <span class="text-xs text-slate-700 truncate font-medium">{{ $screenshot->getClientOriginalName() }}</span>
+                                </div>
+                                <button type="button" wire:click="removeScreenshot" class="text-rose-500 hover:text-rose-700 p-1 shrink-0" title="Remove image">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        @else
+                            <label class="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/60 p-3 hover:bg-slate-50 cursor-pointer transition-colors">
+                                <div class="flex items-center gap-2 text-slate-500 text-xs font-medium">
+                                    <svg class="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <span>Attach screenshot (Max 5MB)</span>
+                                </div>
+                                <input type="file" wire:model="screenshot" accept="image/png,image/jpeg,image/webp" class="sr-only">
+                            </label>
+                        @endif
+                        <div wire:loading wire:target="screenshot" class="text-xs text-indigo-600 mt-1 font-medium">
+                            Uploading screenshot...
+                        </div>
+                        @error('screenshot')
                             <span class="text-xs text-rose-500 mt-1 block">{{ $message }}</span>
                         @enderror
                     </div>

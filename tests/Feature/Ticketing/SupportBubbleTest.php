@@ -56,4 +56,15 @@ class SupportBubbleTest extends TestCase
             ->assertSeeHtml('truncate pr-2')
             ->assertStatus(200);
     }
+
+    public function test_support_bubble_loads_and_displays_category_options()
+    {
+        Livewire::test(SupportBubble::class)
+            ->set('isOpen', true)
+            ->assertSee('Software / Application Bug')
+            ->assertSee('Fleet Management & P2H')
+            ->assertSee('Procurement & SAP Sync')
+            ->assertSee('Access & Permissions')
+            ->assertStatus(200);
+    }
 }

@@ -11,29 +11,58 @@ class TicketCategorySeeder extends Seeder
     {
         $categories = [
             [
-                'name' => 'Hardware Issue',
-                'description' => 'Issues related to physical devices like laptops, printers, etc.',
-                'sla_hours' => 24, // 1 business day
-            ],
-            [
                 'name' => 'Software / Application Bug',
-                'description' => 'Errors or crashes in internal or official software.',
-                'sla_hours' => 48, // 2 business days
+                'description' => 'Errors, crashes, or broken UI across DISS modules.',
+                'sla_hours' => 24,
+                'is_active' => true,
             ],
             [
-                'name' => 'Network & Connectivity',
-                'description' => 'Internet dropping, VPN issues, or LAN disconnected.',
-                'sla_hours' => 8, // Very urgent, 1 business day
+                'name' => 'Fleet Management & P2H',
+                'description' => 'Vehicle inspection (P2H), QR stickers, KIR & STNK compliance issues.',
+                'sla_hours' => 24,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Procurement & SAP Sync',
+                'description' => 'Purchase requests, purchase orders, SAP synchronization, and forecast errors.',
+                'sla_hours' => 24,
+                'is_active' => true,
             ],
             [
                 'name' => 'Access & Permissions',
-                'description' => 'Requests for new accounts, password resets, or system permissions.',
+                'description' => 'Password reset, account unlock, missing user roles or permissions.',
                 'sla_hours' => 12,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Hardware & Peripheral',
+                'description' => 'Issues with PC, laptop, monitor, barcode scanner, or printer.',
+                'sla_hours' => 24,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Network & Connectivity',
+                'description' => 'Wi-Fi disconnections, LAN cable faults, VPN, or internet slowness.',
+                'sla_hours' => 8,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'IT Project & KPI',
+                'description' => 'Project tracking, task approvals, or KPI dashboard inquiries.',
+                'sla_hours' => 48,
+                'is_active' => true,
             ],
             [
                 'name' => 'Feature Request',
-                'description' => 'Requests for new features in internal applications (ERP, HRIS).',
-                'sla_hours' => 120, // 5 business days
+                'description' => 'Suggestions for new features, workflows, or report exports.',
+                'sla_hours' => 120,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'General Inquiry / Other',
+                'description' => 'Questions, user guidance, or general technical assistance.',
+                'sla_hours' => 48,
+                'is_active' => true,
             ],
         ];
 

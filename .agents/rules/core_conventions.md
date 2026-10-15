@@ -26,6 +26,11 @@
   - **Database Transactions**: NEVER use `RefreshDatabase` (160+ legacy tables collide). Always use `DatabaseTransactions`.
   - **Pest Scoping**: In Pest, `Feature/` tests inherit `Tests\TestCase` via `tests/Pest.php`. Never declare `uses(Tests\TestCase::class)` in `Feature/` (causes fatal duplicate test case error); declare only `uses(DatabaseTransactions::class)`. In `Unit/` tests needing DB, declare `uses(Tests\TestCase::class, DatabaseTransactions::class)`.
   - **Model Default Reload**: Call `$model->refresh()` before asserting fields backed by DB defaults (e.g. `stage = 'DRAFT'`).
+  - **Employee Fixture Linkage**: `Employee` has `public $incrementing = false;`. In tests linking `User::employee_id`, always create employee rows via `DB::table('employees')->insertGetId([...])` so the MySQL auto-increment ID is captured. Enforce `grade_level` as an integer and `organization_structure` $\le 6$ characters (`char(6)` column).
+- **Critical Lookup Self-Healing**:
+  - Category and lookup tables powering essential UI components (e.g. `ticket_categories`) must be seeded via migrations or contain self-healing fallbacks (calling seeder if empty) to prevent unseeded environments from breaking frontend dropdowns.
+- **Two-Tier Issue Escalation**:
+  - GitHub Issue Forms reside in `.github/ISSUE_TEMPLATE/*.yml` and must be committed to VCS. For non-technical internal users who lack GitHub accounts, intake is centralized via the in-app Support Bubble, with IT administrators escalating validated bugs/features into GitHub via pre-filled URL query parameters.
 - **Sequential Unique Code Invariant (Soft-Deletable Models)**:
   - When auto-generating sequential codes (`IT-YYYY-XXXX`, `VND-YYYY-XXXX`) in observers, NEVER count active rows (`whereYear()->count() + 1`). DB `UNIQUE` indexes include soft-deleted rows. Always query `Model::withTrashed()`, find the highest numeric suffix, and wrap generation in a `do...while (exists)` uniqueness loop.
 - **Documentation Link Portability**:
