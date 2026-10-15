@@ -6,6 +6,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\JobProgressController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\NavPinController;
+use App\Http\Controllers\Support\TrackTicketController;
 use App\Livewire\Account\AccountSettingsPage;
 use App\Livewire\Approval\ApprovalsPage;
 use App\Livewire\Auth\NotificationSettingsPage;
@@ -33,6 +34,10 @@ Auth::routes();
 Route::post('/support/login-assistance', [LoginAssistanceController::class, 'store'])
     ->middleware(['throttle:5,1'])
     ->name('support.login-assistance');
+
+Route::match(['get', 'post'], '/support/track', [TrackTicketController::class, 'index'])
+    ->middleware(['throttle:30,1'])
+    ->name('support.track');
 
 // Core Application Routes
 Route::middleware('auth')->group(function () {

@@ -127,7 +127,16 @@
 
     {{-- Top-right Language Switcher --}}
     <div class="absolute top-5 right-5 z-30">
-        <x-locale-switcher />
+        <div class="inline-flex items-center rounded-xl border border-slate-200/80 bg-white/90 backdrop-blur-sm p-1 shadow-xs">
+            <a href="{{ route('locale.switch', 'id') }}"
+               class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all {{ app()->getLocale() === 'id' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900' }}">
+                🇮🇩 ID
+            </a>
+            <a href="{{ route('locale.switch', 'en') }}"
+               class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all {{ app()->getLocale() === 'en' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900' }}">
+                🇬🇧 EN
+            </a>
+        </div>
     </div>
 
     <div class="w-full max-w-md relative z-10">
@@ -141,7 +150,7 @@
                 {{ config('app.name') }}
             </h1>
             <p class="text-xs font-bold text-blue-600 uppercase tracking-[0.3em]">
-                Authentication Portal
+                {{ __('auth.portal_subtitle') }}
             </p>
         </div>
 

@@ -325,4 +325,177 @@ class NonTechnicalSupportWorkflowTest extends TestCase
             'new_state' => 'Critical',
         ]);
     }
+
+    public function test_it_support_teams_and_super_admin_can_update_sla_target_on_ticket_detail(): void
+    {
+        [$employee, $reporter] = $this->createEmployeeAndUser();
+        $catBug = $this->getOrCreateCategory('Software / Application Bug');
+
+        $ticket = Ticket::create([
+            'ticket_number' => 'IT-' . rand(100000, 999999),
+            'reporter_id' => $employee->nik,
+            'reporter_email' => $reporter->email,
+            'category_id' => $catBug->id,
+            'title' => 'SLA Target Triage Test in Minutes',
+            'description' => 'Verify IT Team can customize SLA target minutes without presets',
+            'status' => TicketStatus::OPEN,
+            'priority' => TicketPriority::HIGH,
+            'sla_minutes' => null,
+        ]);
+
+        // 1. Regular reporter cannot manage or update SLA target
+        $this->actingAs($reporter);
+        Livewire::test(TicketDetail::class, ['ticket' => $ticket])
+            ->assertSet('canManage', false);
+
+        // 2. IT Admin / Super Admin can set SLA target in minutes
+        $admin = User::factory()->create(['name' => 'IT SLA Manager']);
+        $adminRole = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
+        $admin->assignRole('super-admin');
+
+        $this->actingAs($admin);
+
+        // Test update in minutes (e.g. 120 minutes = 2 hours)
+        Livewire::test(TicketDetail::class, ['ticket' => $ticket])
+            ->assertSet('canManage', true)
+            ->call('updateSlaMinutes', 120)
+            ->assertHasNoErrors()
+            ->assertSee(__('ticketing.detail.sla_minutes_updated', ['minutes' => 120]));
+
+        $ticket->refresh();
+        $this->assertEquals(120, $ticket->sla_minutes);
+        $this->assertEquals(120, $ticket->getEffectiveSlaMinutes());
+        $this->assertEquals(2.0, $ticket->getEffectiveSlaHours());
+        $this->assertEquals('2 ' . __('ticketing.detail.hours'), $ticket->getFormattedSlaTarget());
+
+        // Test custom minutes input and saveSlaMinutes (e.g. 45 minutes)
+        Livewire::test(TicketDetail::class, ['ticket' => $ticket])
+            ->set('customSlaMinutes', 45)
+            ->call('saveSlaMinutes')
+            ->assertHasNoErrors()
+            ->assertSee(__('ticketing.detail.sla_minutes_updated', ['minutes' => 45]));
+
+        $ticket->refresh();
+        $this->assertEquals(45, $ticket->sla_minutes);
+        $this->assertEquals(45, $ticket->getEffectiveSlaMinutes());
+        $this->assertEquals('45 ' . __('ticketing.detail.minutes'), $ticket->getFormattedSlaTarget());
+
+        // Verify activity log recorded the SLA change in minutes
+        $this->assertDatabaseHas('ticket_activities', [
+            'ticket_id' => $ticket->id,
+            'user_id' => $admin->id,
+            'new_state' => '45 ' . __('ticketing.detail.minutes'),
+            'reason' => 'SLA target adjusted by IT Support.',
+        ]);
+
+        // Test Indonesian locale rendering for SLA target update
+        app()->setLocale('id');
+        Livewire::test(TicketDetail::class, ['ticket' => $ticket])
+            ->call('updateSlaMinutes', 30)
+            ->assertHasNoErrors()
+            ->assertSee(__('ticketing.detail.sla_minutes_updated', ['minutes' => 30]));
+
+        // Test validation rejects out-of-range minutes (min: 1, max: 43200)
+        Livewire::test(TicketDetail::class, ['ticket' => $ticket])
+            ->set('customSlaMinutes', 0)
+            ->call('saveSlaMinutes')
+            ->assertHasErrors(['customSlaMinutes']);
+    }
+
+    public function test_user_can_switch_language_in_login_screen(): void
+    {
+        // 1. Visit login in English
+        $responseEn = $this->get(route('locale.switch', 'en'));
+        $responseEn->assertRedirect();
+
+        $loginEn = $this->get(route('login'));
+        $loginEn->assertStatus(200);
+        $loginEn->assertSee('Welcome Back');
+        $loginEn->assertSee('Sign in to access your dashboard');
+        $loginEn->assertSee('🇮🇩 ID');
+        $loginEn->assertSee('🇬🇧 EN');
+
+        // 2. Switch to Indonesian
+        $responseId = $this->get(route('locale.switch', 'id'));
+        $responseId->assertRedirect();
+
+        $loginId = $this->get(route('login'));
+        $loginId->assertStatus(200);
+        $loginId->assertSee('Selamat Datang Kembali');
+        $loginId->assertSee('Masuk untuk mengakses dashboard Anda');
+        $loginId->assertSee('Bantuan Login IT');
+    }
+
+    public function test_login_assistance_rejects_corporate_email_and_strictly_requires_nik(): void
+    {
+        [$employee, $user] = $this->createEmployeeAndUser();
+        $this->getOrCreateCategory('Access & Permissions');
+
+        // Attempting submission with email instead of NIK must fail
+        $response = $this->from(route('login'))->post(route('support.login-assistance'), [
+            'nik' => $user->email,
+            'issue_type' => 'Password Reset / Account Locked',
+            'description' => 'Trying to use company email instead of NIK',
+        ]);
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHasErrors(['nik']);
+    }
+
+    public function test_public_ticket_tracking_page_allows_employee_to_view_progress_with_ticket_number_and_nik(): void
+    {
+        [$employee, $user] = $this->createEmployeeAndUser();
+        $category = $this->getOrCreateCategory('Software / Application Bug');
+
+        $ticket = Ticket::create([
+            'ticket_number' => 'IT-TRACK-' . rand(10000, 99999),
+            'reporter_id' => $employee->nik,
+            'reporter_email' => $user->email,
+            'category_id' => $category->id,
+            'title' => 'Cannot Access Procurement Module',
+            'description' => 'System gives 403 Forbidden when clicking Procurement.',
+            'status' => TicketStatus::IN_PROGRESS,
+            'priority' => TicketPriority::HIGH,
+            'sla_minutes' => 60,
+        ]);
+
+        // 1. Visit tracking page with matching Ticket Number and Employee NIK
+        $response = $this->get(route('support.track', [
+            'ticket' => $ticket->ticket_number,
+            'nik' => $employee->nik,
+        ]));
+
+        $response->assertStatus(200);
+        $response->assertSee($ticket->ticket_number);
+        $response->assertSee('Cannot Access Procurement Module');
+        $response->assertSee('In Progress');
+        $response->assertSee($ticket->getFormattedSlaTarget());
+    }
+
+    public function test_public_ticket_tracking_rejects_unauthorized_or_mismatched_nik_iso27001(): void
+    {
+        [$employee, $user] = $this->createEmployeeAndUser();
+        $category = $this->getOrCreateCategory('Software / Application Bug');
+
+        $ticket = Ticket::create([
+            'ticket_number' => 'IT-SEC-' . rand(10000, 99999),
+            'reporter_id' => $employee->nik,
+            'reporter_email' => $user->email,
+            'category_id' => $category->id,
+            'title' => 'Sensitive Payroll Issue',
+            'description' => 'Private information about discrepancy.',
+            'status' => TicketStatus::OPEN,
+            'priority' => TicketPriority::CRITICAL,
+        ]);
+
+        // Wrong NIK attempt must be rejected (ISO 27001 data isolation)
+        $response = $this->post(route('support.track'), [
+            'ticket' => $ticket->ticket_number,
+            'nik' => 'WRONG_NIK_999',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertSee(__('ticketing.track.not_found'));
+        $response->assertDontSee('Sensitive Payroll Issue');
+    }
 }

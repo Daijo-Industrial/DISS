@@ -6,6 +6,7 @@ use App\Domains\Ticketing\Actions\TransitionTicketStatus;
 use App\Domains\Ticketing\Entities\Ticket;
 use App\Domains\Ticketing\Enums\TicketStatus;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class TicketStatusModal extends Component
@@ -18,9 +19,25 @@ class TicketStatusModal extends Component
 
     public bool $isOpen = false;
 
-    #[\Livewire\Attributes\On('openStatusModal')]
+    private function canManageTicket(): bool
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return false;
+        }
+
+        return $user->hasRole('super-admin')
+            || $user->hasRole('admin')
+            || $user->hasAnyPermission(['ticketing.manage', 'ticketing.admin', 'system.admin']);
+    }
+
+    #[On('openStatusModal')]
     public function open($ticket)
     {
+        if (! $this->canManageTicket()) {
+            return;
+        }
+
         $this->ticket = Ticket::find($ticket);
         if (! $this->ticket) {
             return;
@@ -33,6 +50,10 @@ class TicketStatusModal extends Component
 
     public function save(TransitionTicketStatus $action)
     {
+        if (! $this->canManageTicket()) {
+            abort(403);
+        }
+
         $this->validate([
             'newStatus' => 'required',
             'reason' => 'required_if:newStatus,On Hold',

@@ -6,7 +6,6 @@ use App\Domains\Ticketing\Actions\CreateTicket;
 use App\Domains\Ticketing\Entities\Ticket;
 use App\Domains\Ticketing\Entities\TicketCategory;
 use App\Domains\Ticketing\Enums\TicketPriority;
-use Database\Seeders\TicketCategorySeeder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
@@ -80,25 +79,13 @@ class SupportBubble extends Component
             $category = TicketCategory::where('is_active', true)->first();
         }
 
-        if (! $category) {
-            (new TicketCategorySeeder)->run();
-            $category = TicketCategory::where('is_active', true)->first();
-        }
-
         return $category ? $category->id : 1;
     }
 
-    // We pull categories dynamically and self-heal defaults if empty
+    // We pull categories dynamically
     public function getCategoriesProperty()
     {
-        $categories = TicketCategory::where('is_active', true)->get();
-
-        if ($categories->isEmpty()) {
-            (new TicketCategorySeeder)->run();
-            $categories = TicketCategory::where('is_active', true)->get();
-        }
-
-        return $categories;
+        return TicketCategory::where('is_active', true)->get();
     }
 
     public function getMyTicketsProperty()
@@ -110,6 +97,7 @@ class SupportBubble extends Component
 
         return Ticket::with('category')->where('reporter_id', $user->employee->nik)
             ->latest('updated_at')
+            ->take(15)
             ->get();
     }
 
@@ -122,7 +110,7 @@ class SupportBubble extends Component
             'description' => 'required|string',
             'category_id' => 'nullable|exists:ticket_categories,id',
             'priority' => 'nullable|in:Low,Medium,High,Critical',
-            'current_url' => 'nullable|string|max:1000',
+            'current_url' => ['nullable', 'string', 'max:1000', 'regex:/^(https?:\/\/|\/)[^\s]+$/i'],
             'screenshot' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 

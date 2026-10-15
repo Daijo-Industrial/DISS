@@ -15,37 +15,44 @@ class LoginAssistanceController extends Controller
 {
     public function store(Request $request, CreateTicket $createTicket): RedirectResponse
     {
+        $rawNik = $request->input('nik') ?? $request->input('nik_or_email');
+        if (! $rawNik) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['nik' => __('validation.required', ['attribute' => 'NIK'])]);
+        }
+
+        $input = trim((string) $rawNik);
+
+        // Corporate email disabled: strictly enforce NIK
+        if (str_contains($input, '@') || filter_var($input, FILTER_VALIDATE_EMAIL)) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors([
+                    'nik' => __('ticketing.login_help.corporate_email_disabled'),
+                    'nik_or_email' => __('ticketing.login_help.corporate_email_disabled'),
+                ]);
+        }
+
         $validated = $request->validate([
-            'nik_or_email' => ['required', 'string', 'max:100'],
             'issue_type' => ['required', 'string', 'max:100'],
             'description' => ['required', 'string', 'max:1000'],
             'contact_number' => ['nullable', 'string', 'max:30'],
         ]);
 
-        $input = trim($validated['nik_or_email']);
-        $reporterId = $input;
-        $reporterEmail = null;
-
-        if (filter_var($input, FILTER_VALIDATE_EMAIL)) {
-            $user = User::where('email', $input)->first();
-            $reporterEmail = $input;
-            if ($user && $user->employee) {
-                $reporterId = $user->employee->nik ?? $user->employee->NIK;
-            }
-        } else {
-            $employee = Employee::where('nik', $input)->first();
-            if (! $employee) {
-                return redirect()->back()
-                    ->withInput()
-                    ->withErrors(['nik_or_email' => __('ticketing.login_help.nik_not_found')]);
-            }
-
-            $reporterId = $employee->nik;
-            $user = User::where('employee_id', $employee->id)->orWhere('employee_id', $employee->nik)->first();
-            if ($user && $user->email) {
-                $reporterEmail = $user->email;
-            }
+        $employee = Employee::where('nik', $input)->first();
+        if (! $employee) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors([
+                    'nik' => __('ticketing.login_help.nik_not_found'),
+                    'nik_or_email' => __('ticketing.login_help.nik_not_found'),
+                ]);
         }
+
+        $reporterId = $employee->nik;
+        $user = User::where('employee_id', $employee->id)->orWhere('employee_id', $employee->nik)->first();
+        $reporterEmail = $user?->email;
 
         // Locate Access & Permissions category or fallback
         $category = TicketCategory::where('name', 'like', '%Access%')
@@ -73,9 +80,9 @@ class LoginAssistanceController extends Controller
             deviceInfo: $deviceInfo
         );
 
-        return redirect()->route('login')->with(
-            'status',
-            __('ticketing.login_help.success_status', ['ticket' => $ticket->ticket_number])
-        );
+        return redirect()->route('login')
+            ->with('status', __('ticketing.login_help.success_status', ['ticket' => $ticket->ticket_number]))
+            ->with('submitted_ticket_number', $ticket->ticket_number)
+            ->with('submitted_ticket_nik', $employee->nik);
     }
 }

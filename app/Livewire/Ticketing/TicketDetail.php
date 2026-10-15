@@ -26,21 +26,51 @@ class TicketDetail extends Component
 
     public bool $canManage = false;
 
+    public ?int $customSlaMinutes = null;
+
     public function mount(Ticket $ticket)
     {
         $this->ticket = $ticket;
-        $this->githubIssueUrlInput = $ticket->github_issue_url ?? '';
         $this->canManage = $this->canManageTicket();
+
+        $user = Auth::user();
+        $isReporter = $user && (
+            ($user->employee && $user->employee->nik === $ticket->reporter_id)
+            || ($ticket->reporter_email && $user->email === $ticket->reporter_email)
+            || ($user->id === $ticket->assigned_to)
+        );
+
+        if (! $isReporter && ! $this->canManage) {
+            abort(403);
+        }
+
+        $this->githubIssueUrlInput = $ticket->github_issue_url ?? '';
+        $this->customSlaMinutes = $this->ticket->getEffectiveSlaMinutes();
     }
 
     public function assignToMe(AssignTicketToPIC $action)
     {
+        if (! $this->canManageTicket()) {
+            abort(403);
+        }
+
         $action->execute($this->ticket, Auth::user(), Auth::id());
         $this->ticket->refresh();
     }
 
     public function postComment(AddTicketComment $action)
     {
+        $user = Auth::user();
+        $isReporter = $user && (
+            ($user->employee && $user->employee->nik === $this->ticket->reporter_id)
+            || ($this->ticket->reporter_email && $user->email === $this->ticket->reporter_email)
+            || ($user->id === $this->ticket->assigned_to)
+        );
+
+        if (! $isReporter && ! $this->canManageTicket()) {
+            abort(403);
+        }
+
         $this->validate(['newComment' => 'required|string']);
 
         $action->execute($this->ticket, Auth::id(), $this->newComment);
@@ -51,8 +81,24 @@ class TicketDetail extends Component
 
     public function saveGithubIssueUrl()
     {
+        $user = Auth::user();
+        $isReporter = $user && (
+            ($user->employee && $user->employee->nik === $this->ticket->reporter_id)
+            || ($this->ticket->reporter_email && $user->email === $this->ticket->reporter_email)
+            || ($user->id === $this->ticket->assigned_to)
+        );
+
+        if (! $isReporter && ! $this->canManageTicket()) {
+            abort(403);
+        }
+
         $this->validate([
-            'githubIssueUrlInput' => 'nullable|url|max:255',
+            'githubIssueUrlInput' => [
+                'nullable',
+                'url',
+                'max:255',
+                'regex:/^https:\/\/github\.com\/[a-zA-Z0-9_\-\.\/]+$/',
+            ],
         ]);
 
         $this->ticket->github_issue_url = $this->githubIssueUrlInput ?: null;
@@ -163,6 +209,49 @@ class TicketDetail extends Component
 
         $this->ticket->refresh();
         session()->flash('success', __('ticketing.detail.priority_updated', ['priority' => $priorityEnum->value]));
+    }
+
+    public function updateSlaMinutes(int $slaMinutes)
+    {
+        if (! $this->canManageTicket()) {
+            abort(403);
+        }
+
+        if ($slaMinutes < 1 || $slaMinutes > 43200) {
+            $this->addError('customSlaMinutes', __('ticketing.detail.invalid_sla_minutes'));
+
+            return;
+        }
+
+        $oldSla = $this->ticket->sla_minutes;
+        $this->ticket->sla_minutes = $slaMinutes;
+        $this->ticket->save();
+        $this->customSlaMinutes = $slaMinutes;
+
+        TicketActivity::create([
+            'ticket_id' => $this->ticket->id,
+            'user_id' => Auth::id(),
+            'type' => ActivityType::STATUS_CHANGE,
+            'old_state' => $oldSla ? "{$oldSla} " . __('ticketing.detail.minutes') : __('ticketing.detail.not_set'),
+            'new_state' => "{$slaMinutes} " . __('ticketing.detail.minutes'),
+            'reason' => 'SLA target adjusted by IT Support.',
+        ]);
+
+        $this->ticket->refresh();
+        session()->flash('success', __('ticketing.detail.sla_minutes_updated', ['minutes' => $slaMinutes]));
+    }
+
+    public function saveSlaMinutes()
+    {
+        if (! $this->canManageTicket()) {
+            abort(403);
+        }
+
+        $this->validate([
+            'customSlaMinutes' => 'required|integer|min:1|max:43200',
+        ]);
+
+        $this->updateSlaMinutes((int) $this->customSlaMinutes);
     }
 
     #[Layout('new.layouts.app')]
