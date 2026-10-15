@@ -2,6 +2,7 @@
 
 namespace App\Infrastructure\Persistence\Eloquent\Models;
 
+use App\Domains\Ticketing\Entities\Ticket;
 use App\Infrastructure\Common\PermissionRegistry;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -75,6 +76,11 @@ class User extends Authenticatable
     public function signatures(): HasMany
     {
         return $this->hasMany(UserSignature::class, 'user_id', 'id');
+    }
+
+    public function assignedTickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class, 'assigned_to');
     }
 
     public function hasDefaultSignature(): bool

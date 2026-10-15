@@ -5,6 +5,7 @@ namespace App\Livewire\Ticketing;
 use App\Domains\Ticketing\Entities\Ticket;
 use App\Domains\Ticketing\Enums\TicketPriority;
 use App\Domains\Ticketing\Enums\TicketStatus;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -42,7 +43,24 @@ class TicketList extends Component
     #[Layout('new.layouts.app')]
     public function render()
     {
+        $user = Auth::user();
+        $canManage = $user && (
+            $user->hasRole('super-admin')
+            || $user->hasRole('admin')
+            || $user->hasAnyPermission(['ticketing.manage', 'ticketing.admin', 'system.admin'])
+        );
+
         $query = Ticket::with(['reporter', 'assignee', 'category'])
+            ->when(! $canManage, function ($q) use ($user) {
+                $q->where(function ($sub) use ($user) {
+                    if ($user?->employee?->nik) {
+                        $sub->where('reporter_id', $user->employee->nik);
+                    }
+                    if ($user?->email) {
+                        $sub->orWhere('reporter_email', $user->email);
+                    }
+                });
+            })
             ->when($this->search, function ($q) {
                 $q->where(function ($sub) {
                     $sub->where('title', 'like', "%{$this->search}%")
@@ -57,6 +75,7 @@ class TicketList extends Component
             'tickets' => $query->paginate(15),
             'statuses' => TicketStatus::cases(),
             'priorities' => TicketPriority::cases(),
+            'canManage' => $canManage,
         ]);
     }
 }

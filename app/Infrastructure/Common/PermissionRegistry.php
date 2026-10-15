@@ -177,6 +177,21 @@ class PermissionRegistry
                     'manager' => ['compliance.view'],
                 ],
             ],
+            'IT Support & Helpdesk' => [
+                'permissions' => [
+                    'ticketing.view',
+                    'ticketing.manage',
+                    'ticketing.admin',
+                ],
+                'roles' => [
+                    'super-admin' => ['*'],
+                    'admin' => ['ticketing.view', 'ticketing.manage', 'ticketing.admin'],
+                    'staff' => ['ticketing.view'],
+                    'department-head' => ['ticketing.view'],
+                    'general-manager' => ['ticketing.view'],
+                    'director' => ['ticketing.view'],
+                ],
+            ],
         ];
     }
 

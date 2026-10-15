@@ -4,6 +4,7 @@ namespace App\Livewire\Ticketing\Admin;
 
 use App\Domains\Ticketing\Actions\CalculateKpiMetrics;
 use App\Infrastructure\Persistence\Eloquent\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -13,9 +14,10 @@ class KpiDashboard extends Component
 
     public function mount(CalculateKpiMetrics $calculator)
     {
-        // For the Admin Dashboard, we calculate metrics for all IT PICs.
-        // In a real app, this would be scoped by a role, e.g., Spatie's Role::whereName('IT Support')->get()
-        // Here we just grab all users who have tickets assigned to them to demonstrate.
+        $user = Auth::user();
+        if (! $user || ! ($user->hasRole('super-admin') || $user->hasRole('admin') || $user->hasAnyPermission(['ticketing.admin', 'system.admin']))) {
+            abort(403);
+        }
 
         $pics = User::whereHas('assignedTickets')->get();
 
