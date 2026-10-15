@@ -67,8 +67,8 @@
                     </svg>
                 </div>
                 <div>
-                    <h3 class="text-sm font-black text-white">IT Concierge</h3>
-                    <p class="text-[11px] text-slate-400 font-medium mt-0.5">We typically reply in < 5 mins</p>
+                    <h3 class="text-sm font-black text-white">{{ __('ticketing.concierge.title') }}</h3>
+                    <p class="text-[11px] text-slate-400 font-medium mt-0.5">{{ __('ticketing.concierge.subtitle') }}</p>
                 </div>
             </div>
             <button type="button" @click="close()" class="text-slate-400 hover:text-white transition-colors" aria-label="Close IT Concierge">
@@ -82,11 +82,11 @@
         <div class="flex border-b border-slate-100 bg-slate-50/50">
             <button wire:click="$set('activeTab', 'new')"
                 class="flex-1 py-3 text-xs font-bold uppercase tracking-widest {{ $activeTab === 'new' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-white' : 'text-slate-400 hover:text-slate-600' }}">
-                New Ticket
+                {{ __('ticketing.concierge.tabs.new') }}
             </button>
             <button wire:click="$set('activeTab', 'my_tickets')"
                 class="flex-1 py-3 text-xs font-bold uppercase tracking-widest {{ $activeTab === 'my_tickets' ? 'text-indigo-600 border-b-2 border-indigo-600 bg-white' : 'text-slate-400 hover:text-slate-600' }}">
-                My Tickets
+                {{ __('ticketing.concierge.tabs.my_tickets') }}
             </button>
         </div>
 
@@ -109,175 +109,74 @@
             @endif
 
             @if ($activeTab === 'new')
-                {{-- Tab A: New Ticket Form --}}
-                <div class="space-y-4" x-data="{
-                    openDropdown: null,
-                    selectedCat: @entangle('category_id').live,
-                    selectedPriority: @entangle('priority').live,
-                    categories: @js($this->categories->map(fn($c) => ['id' => $c->id, 'name' => $c->name])),
-                    priorities: [
-                        { value: 'Low', label: 'Low', desc: 'No rush' },
-                        { value: 'Medium', label: 'Medium', desc: 'Affects some work' },
-                        { value: 'High', label: 'High', desc: 'Cannot perform duties' },
-                        { value: 'Critical', label: 'Critical', desc: 'System down' }
-                    ],
-                    get currentCategoryName() {
-                        const found = this.categories.find(c => c.id == this.selectedCat);
-                        return found ? found.name : 'Select a category';
-                    },
-                    get currentPriorityObj() {
-                        return this.priorities.find(p => p.value === this.selectedPriority) || this.priorities[1];
-                    }
-                }" @click.outside="openDropdown = null">
+                {{-- Tab A: Simplified Ticket Form --}}
+                <div class="space-y-4">
+                    {{-- 1. Request Type Selector --}}
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Issue Overview</label>
-                        <input type="text" wire:model="title" placeholder="e.g. Printer is jammed"
-                            class="block w-full rounded-xl border-slate-200 py-2 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500 bg-slate-50 shadow-sm">
-                        @error('title')
-                            <span class="text-xs text-rose-500 mt-1 block">{{ $message }}</span>
-                        @enderror
-                    </div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1.5">{{ __('ticketing.concierge.form.request_type') }}</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button type="button" wire:click="$set('request_type', 'bug')"
+                                class="flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all cursor-pointer {{ $request_type === 'bug' ? 'border-rose-300 bg-rose-50 text-rose-700 font-bold shadow-sm ring-1 ring-rose-400' : 'border-slate-200 bg-slate-50/70 text-slate-600 hover:bg-slate-100 font-semibold' }}">
+                                <svg class="h-5 w-5 mb-1 {{ $request_type === 'bug' ? 'text-rose-600' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <span class="text-xs leading-tight">{{ __('ticketing.concierge.form.type_bug') }}</span>
+                            </button>
 
-                    {{-- Category Custom Dropdown --}}
-                    <div class="relative">
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Category</label>
-                        <button type="button"
-                            @click.stop="openDropdown = (openDropdown === 'category' ? null : 'category')"
-                            class="flex w-full items-center justify-between rounded-xl border py-2.5 px-3 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm text-left transition-colors hover:bg-slate-100/70 {{ $errors->has('category_id') ? 'border-rose-300 ring-1 ring-rose-500' : 'border-slate-200' }}">
-                            <span :class="selectedCat ? 'text-slate-900 font-semibold' : 'text-slate-400'"
-                                  x-text="currentCategoryName" class="truncate pr-2"></span>
-                            <svg class="h-4 w-4 text-slate-400 shrink-0 transition-transform duration-200"
-                                 :class="openDropdown === 'category' ? 'rotate-180 text-indigo-600' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
+                            <button type="button" wire:click="$set('request_type', 'feature')"
+                                class="flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all cursor-pointer {{ $request_type === 'feature' ? 'border-indigo-300 bg-indigo-50 text-indigo-700 font-bold shadow-sm ring-1 ring-indigo-400' : 'border-slate-200 bg-slate-50/70 text-slate-600 hover:bg-slate-100 font-semibold' }}">
+                                <svg class="h-5 w-5 mb-1 {{ $request_type === 'feature' ? 'text-indigo-600' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                </svg>
+                                <span class="text-xs leading-tight">{{ __('ticketing.concierge.form.type_feature') }}</span>
+                            </button>
 
-                        {{-- Hidden select for form bindings / accessibility --}}
-                        <select wire:model="category_id" class="sr-only" tabindex="-1" aria-hidden="true">
-                            <option value="">Select a category</option>
-                            @foreach ($this->categories as $cat)
-                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                            @endforeach
-                        </select>
-
-                        {{-- Category Dropdown Menu --}}
-                        <div x-show="openDropdown === 'category'"
-                            x-transition:enter="transition ease-out duration-150"
-                            x-transition:enter-start="opacity-0 translate-y-1"
-                            x-transition:enter-end="opacity-100 translate-y-0"
-                            x-transition:leave="transition ease-in duration-100"
-                            x-transition:leave-start="opacity-100 translate-y-0"
-                            x-transition:leave-end="opacity-0 translate-y-1"
-                            class="absolute left-0 right-0 z-50 mt-1 max-h-52 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl custom-scrollbar"
-                            x-cloak>
-                            <template x-for="cat in categories" :key="cat.id">
-                                <button type="button"
-                                    @click="selectedCat = cat.id; openDropdown = null;"
-                                    class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold transition-colors text-left"
-                                    :class="selectedCat == cat.id ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-700 hover:bg-slate-50'">
-                                    <span class="truncate pr-2" x-text="cat.name"></span>
-                                    <span x-show="selectedCat == cat.id" class="text-indigo-600 shrink-0">
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                                        </svg>
-                                    </span>
-                                </button>
-                            </template>
-                            <div x-show="categories.length === 0" class="px-3 py-2 text-xs text-slate-400 text-center">
-                                No categories available
-                            </div>
+                            <button type="button" wire:click="$set('request_type', 'other')"
+                                class="flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all cursor-pointer {{ $request_type === 'other' ? 'border-sky-300 bg-sky-50 text-sky-700 font-bold shadow-sm ring-1 ring-sky-400' : 'border-slate-200 bg-slate-50/70 text-slate-600 hover:bg-slate-100 font-semibold' }}">
+                                <svg class="h-5 w-5 mb-1 {{ $request_type === 'other' ? 'text-sky-600' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span class="text-xs leading-tight">{{ __('ticketing.concierge.form.type_other') }}</span>
+                            </button>
                         </div>
-                        @error('category_id')
-                            <span class="text-xs text-rose-500 mt-1 block">{{ $message }}</span>
-                        @enderror
                     </div>
 
-                    {{-- Priority Custom Dropdown --}}
-                    <div class="relative">
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Priority</label>
-                        <button type="button"
-                            @click.stop="openDropdown = (openDropdown === 'priority' ? null : 'priority')"
-                            class="flex w-full items-center justify-between rounded-xl border py-2.5 px-3 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm text-left transition-colors hover:bg-slate-100/70 {{ $errors->has('priority') ? 'border-rose-300 ring-1 ring-rose-500' : 'border-slate-200' }}">
-                            <div class="flex items-center gap-2 truncate pr-2">
-                                <span class="text-xs font-bold text-slate-900" x-text="currentPriorityObj.label"></span>
-                                <span class="text-[11px] text-slate-400 truncate font-normal" x-text="'• ' + currentPriorityObj.desc"></span>
-                            </div>
-                            <svg class="h-4 w-4 text-slate-400 shrink-0 transition-transform duration-200"
-                                 :class="openDropdown === 'priority' ? 'rotate-180 text-indigo-600' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
-
-                        {{-- Hidden select for form bindings / accessibility --}}
-                        <select wire:model="priority" class="sr-only" tabindex="-1" aria-hidden="true">
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                            <option value="Critical">Critical</option>
-                        </select>
-
-                        {{-- Priority Dropdown Menu --}}
-                        <div x-show="openDropdown === 'priority'"
-                            x-transition:enter="transition ease-out duration-150"
-                            x-transition:enter-start="opacity-0 translate-y-1"
-                            x-transition:enter-end="opacity-100 translate-y-0"
-                            x-transition:leave="transition ease-in duration-100"
-                            x-transition:leave-start="opacity-100 translate-y-0"
-                            x-transition:leave-end="opacity-0 translate-y-1"
-                            class="absolute left-0 right-0 z-50 mt-1 w-full rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"
-                            x-cloak>
-                            <template x-for="p in priorities" :key="p.value">
-                                <button type="button"
-                                    @click="selectedPriority = p.value; openDropdown = null;"
-                                    class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs transition-colors text-left"
-                                    :class="selectedPriority === p.value ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-700 hover:bg-slate-50'">
-                                    <div class="flex items-center gap-2 truncate pr-2">
-                                        <span class="font-bold" x-text="p.label"></span>
-                                        <span class="text-slate-400 text-[11px] truncate font-normal" x-text="'• ' + p.desc"></span>
-                                    </div>
-                                    <span x-show="selectedPriority === p.value" class="text-indigo-600 shrink-0">
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                                        </svg>
-                                    </span>
-                                </button>
-                            </template>
-                        </div>
-                        @error('priority')
-                            <span class="text-xs text-rose-500 mt-1 block">{{ $message }}</span>
-                        @enderror
-                    </div>
-
+                    {{-- 2. Optional Manual Topic / Title Field --}}
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Details</label>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">
+                            {{ __('ticketing.concierge.form.custom_title') }}
+                        </label>
+                        <input type="text" wire:model="custom_title"
+                            placeholder="{{ $request_type === 'other' ? __('ticketing.concierge.form.custom_title_other_placeholder') : __('ticketing.concierge.form.custom_title_placeholder') }}"
+                            class="block w-full rounded-xl border-slate-200 py-2.5 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500 bg-slate-50 shadow-sm">
+                        @error('custom_title')
+                            <span class="text-xs text-rose-500 mt-1 block">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    {{-- 3. Description (Required) --}}
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">
+                            {{ __('ticketing.concierge.form.details') }} <span class="text-rose-500">*</span>
+                        </label>
                         <textarea wire:model="description" rows="3"
-                            placeholder="Please provide steps to reproduce or any error messages..."
-                            class="block w-full rounded-xl border-slate-200 py-2 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500 bg-slate-50 shadow-sm"></textarea>
+                            placeholder="{{ __('ticketing.concierge.form.details_placeholder') }}"
+                            class="block w-full rounded-xl border-slate-200 py-2.5 px-3 text-sm focus:border-indigo-500 focus:ring-indigo-500 bg-slate-50 shadow-sm"></textarea>
                         @error('description')
                             <span class="text-xs text-rose-500 mt-1 block">{{ $message }}</span>
                         @enderror
                     </div>
 
-                    {{-- Page URL / Route --}}
+                    {{-- 4. Screenshot Upload (Optional) --}}
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Page URL / Route</label>
-                        <input type="text" wire:model="current_url" placeholder="https://..."
-                            class="block w-full rounded-xl border-slate-200 py-2 px-3 text-xs focus:border-indigo-500 focus:ring-indigo-500 bg-slate-50 shadow-sm text-slate-700">
-                        @error('current_url')
-                            <span class="text-xs text-rose-500 mt-1 block">{{ $message }}</span>
-                        @enderror
-                    </div>
-
-                    {{-- Screenshot Upload --}}
-                    <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Screenshot / Photo (Optional)</label>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">{{ __('ticketing.concierge.form.screenshot') }}</label>
                         @if ($screenshot)
                             <div class="relative rounded-xl border border-indigo-200 bg-indigo-50/50 p-2.5 flex items-center justify-between">
                                 <div class="flex items-center gap-2.5 overflow-hidden">
                                     <img src="{{ $screenshot->temporaryUrl() }}" alt="Preview" class="h-10 w-10 object-cover rounded-lg border border-slate-200 shrink-0">
                                     <span class="text-xs text-slate-700 truncate font-medium">{{ $screenshot->getClientOriginalName() }}</span>
                                 </div>
-                                <button type="button" wire:click="removeScreenshot" class="text-rose-500 hover:text-rose-700 p-1 shrink-0" title="Remove image">
+                                <button type="button" wire:click="removeScreenshot" class="text-rose-500 hover:text-rose-700 p-1 shrink-0" title="{{ __('ticketing.concierge.form.remove_screenshot') }}">
                                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                     </svg>
@@ -289,23 +188,24 @@
                                     <svg class="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
-                                    <span>Attach screenshot (Max 5MB)</span>
+                                    <span>{{ __('ticketing.concierge.form.attach_screenshot') }}</span>
                                 </div>
                                 <input type="file" wire:model="screenshot" accept="image/png,image/jpeg,image/webp" class="sr-only">
                             </label>
                         @endif
                         <div wire:loading wire:target="screenshot" class="text-xs text-indigo-600 mt-1 font-medium">
-                            Uploading screenshot...
+                            {{ __('ticketing.concierge.form.uploading') }}
                         </div>
                         @error('screenshot')
                             <span class="text-xs text-rose-500 mt-1 block">{{ $message }}</span>
                         @enderror
                     </div>
 
+                    {{-- 5. Submit Button --}}
                     <div class="pt-2">
                         <button wire:click="submitTicket"
                             class="w-full flex justify-center items-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-black text-white shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-colors">
-                            <span>Submit Request</span>
+                            <span>{{ __('ticketing.concierge.form.submit') }}</span>
                             <div wire:loading wire:target="submitTicket"
                                 class="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin">
                             </div>
@@ -329,15 +229,17 @@
                                         'Closed' => 'bg-slate-100 text-slate-400',
                                     ];
                                     $color = $statusColors[$ticket->status->value] ?? 'bg-slate-100 text-slate-700';
+                                    $statusKey = strtolower(str_replace(' ', '_', $ticket->status->value));
+                                    $localizedStatus = __('ticketing.status.' . $statusKey);
                                 @endphp
                                 <span
                                     class="inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider {{ $color }}">
-                                    {{ $ticket->status->value }}
+                                    {{ $localizedStatus !== 'ticketing.status.' . $statusKey ? $localizedStatus : $ticket->status->value }}
                                 </span>
                             </div>
                             <div class="flex items-center justify-between text-xs font-medium text-slate-500">
                                 <span>{{ $ticket->ticket_number }}</span>
-                                <span>Updated {{ $ticket->updated_at->diffForHumans() }}</span>
+                                <span>{{ __('ticketing.concierge.my_tickets.updated', ['time' => $ticket->updated_at->diffForHumans()]) }}</span>
                             </div>
                         </div>
                     @empty
@@ -347,7 +249,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                             </svg>
-                            <p class="text-sm font-semibold">No active tickets.</p>
+                            <p class="text-sm font-semibold">{{ __('ticketing.concierge.my_tickets.empty') }}</p>
                         </div>
                     @endforelse
                 </div>

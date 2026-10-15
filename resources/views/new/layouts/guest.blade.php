@@ -122,8 +122,13 @@
     @stack('head')
 </head>
 
-<body class="min-h-screen flex items-center justify-center px-4 py-8 font-sans antialiased">
+<body class="min-h-screen flex items-center justify-center px-4 py-8 font-sans antialiased relative">
     <div class="gradient-mesh"></div>
+
+    {{-- Top-right Language Switcher --}}
+    <div class="absolute top-5 right-5 z-30">
+        <x-locale-switcher />
+    </div>
 
     <div class="w-full max-w-md relative z-10">
         {{-- Logo Section --}}

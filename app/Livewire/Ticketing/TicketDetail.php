@@ -5,6 +5,10 @@ namespace App\Livewire\Ticketing;
 use App\Domains\Ticketing\Actions\AddTicketComment;
 use App\Domains\Ticketing\Actions\AssignTicketToPIC;
 use App\Domains\Ticketing\Entities\Ticket;
+use App\Domains\Ticketing\Entities\TicketActivity;
+use App\Domains\Ticketing\Entities\TicketCategory;
+use App\Domains\Ticketing\Enums\ActivityType;
+use App\Domains\Ticketing\Enums\TicketPriority;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -20,10 +24,13 @@ class TicketDetail extends Component
 
     public string $newComment = '';
 
+    public bool $canManage = false;
+
     public function mount(Ticket $ticket)
     {
         $this->ticket = $ticket;
         $this->githubIssueUrlInput = $ticket->github_issue_url ?? '';
+        $this->canManage = $this->canManageTicket();
     }
 
     public function assignToMe(AssignTicketToPIC $action)
@@ -51,11 +58,16 @@ class TicketDetail extends Component
         $this->ticket->github_issue_url = $this->githubIssueUrlInput ?: null;
         $this->ticket->save();
 
-        session()->flash('success', 'GitHub issue link updated successfully.');
+        session()->flash('success', __('ticketing.detail.github_url_updated'));
     }
 
     public function getGitHubIssueUrl(): string
     {
+        $repoUrl = config('services.github.repo_url');
+        if (! $repoUrl) {
+            return '#';
+        }
+
         $categoryName = $this->ticket->category->name ?? '';
         $isFeature = str_contains(strtolower($categoryName), 'feature');
 
@@ -90,7 +102,67 @@ class TicketDetail extends Component
             ];
         }
 
-        return 'https://github.com/Daijo-Industrial/DISS/issues/new?' . http_build_query($params);
+        return rtrim($repoUrl, '/') . '/issues/new?' . http_build_query($params);
+    }
+
+    public function canManageTicket(): bool
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return false;
+        }
+
+        return $user->hasRole('super-admin')
+            || $user->hasRole('admin')
+            || $user->hasAnyPermission(['ticketing.manage', 'ticketing.admin', 'system.admin']);
+    }
+
+    public function updateCategory(int $newCategoryId)
+    {
+        if (! $this->canManageTicket()) {
+            abort(403);
+        }
+
+        $category = TicketCategory::findOrFail($newCategoryId);
+        $oldCategory = $this->ticket->category->name ?? 'None';
+        $this->ticket->category_id = $category->id;
+        $this->ticket->save();
+
+        TicketActivity::create([
+            'ticket_id' => $this->ticket->id,
+            'user_id' => Auth::id(),
+            'type' => ActivityType::STATUS_CHANGE,
+            'old_state' => $oldCategory,
+            'new_state' => $category->name,
+            'reason' => 'Category triaged by IT Support.',
+        ]);
+
+        $this->ticket->refresh();
+        session()->flash('success', __('ticketing.detail.category_updated', ['category' => $category->name]));
+    }
+
+    public function updatePriority(string $newPriority)
+    {
+        if (! $this->canManageTicket()) {
+            abort(403);
+        }
+
+        $priorityEnum = TicketPriority::from($newPriority);
+        $oldPriority = $this->ticket->priority->value;
+        $this->ticket->priority = $priorityEnum;
+        $this->ticket->save();
+
+        TicketActivity::create([
+            'ticket_id' => $this->ticket->id,
+            'user_id' => Auth::id(),
+            'type' => ActivityType::STATUS_CHANGE,
+            'old_state' => $oldPriority,
+            'new_state' => $priorityEnum->value,
+            'reason' => 'Priority triaged by IT Support.',
+        ]);
+
+        $this->ticket->refresh();
+        session()->flash('success', __('ticketing.detail.priority_updated', ['priority' => $priorityEnum->value]));
     }
 
     #[Layout('new.layouts.app')]
@@ -99,6 +171,8 @@ class TicketDetail extends Component
         return view('livewire.ticketing.ticket-detail', [
             'ticketData' => Ticket::with(['reporter', 'assignee', 'category', 'activities.user'])
                 ->findOrFail($this->ticket->id),
+            'allCategories' => TicketCategory::where('is_active', true)->get(),
+            'canManage' => $this->canManageTicket(),
         ]);
     }
 }

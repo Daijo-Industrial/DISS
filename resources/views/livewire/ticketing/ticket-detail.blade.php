@@ -12,14 +12,18 @@
             <div>
                 <h1 class="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
                     {{ $ticketData->ticket_number }}
+                    @php
+                        $statusKey = strtolower(str_replace(' ', '_', $ticketData->status->value));
+                        $localizedStatus = __('ticketing.status.' . $statusKey);
+                    @endphp
                     <span
                         class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold bg-slate-100 text-slate-600 border-slate-200">
-                        {{ $ticketData->status->value }}
+                        {{ $localizedStatus !== 'ticketing.status.' . $statusKey ? $localizedStatus : $ticketData->status->value }}
                     </span>
                 </h1>
-                <p class="text-sm font-medium text-slate-500 mt-1">Reported by
-                    {{ optional($ticketData->reporter)->name ?? 'Unknown' }} •
-                    {{ $ticketData->created_at->format('M d, Y H:i') }}</p>
+                <p class="text-sm font-medium text-slate-500 mt-1">
+                    {{ __('ticketing.detail.reported_by', ['name' => optional($ticketData->reporter)->name ?? 'Unknown', 'time' => $ticketData->created_at->format('M d, Y H:i')]) }}
+                </p>
             </div>
         </div>
         <div>
@@ -30,7 +34,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    <span>Update Status</span>
+                    <span>{{ __('ticketing.detail.update_status') }}</span>
                 </button>
             @endif
         </div>
@@ -55,7 +59,7 @@
 
                     @if ($ticketData->current_url)
                         <div class="mt-4 pt-4 border-t border-slate-100 flex items-center gap-2 text-xs">
-                            <span class="font-bold text-slate-500 uppercase tracking-wider shrink-0">Page / Route:</span>
+                            <span class="font-bold text-slate-500 uppercase tracking-wider shrink-0">{{ __('ticketing.detail.page_url') }}</span>
                             <a href="{{ $ticketData->current_url }}" target="_blank"
                                 class="text-indigo-600 hover:text-indigo-800 underline truncate inline-flex items-center gap-1">
                                 <span>{{ $ticketData->current_url }}</span>
@@ -68,7 +72,7 @@
 
                     @if ($ticketData->screenshot_path)
                         <div class="mt-4 pt-4 border-t border-slate-100">
-                            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">Attached Screenshot:</span>
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">{{ __('ticketing.detail.attached_screenshot') }}</span>
                             <a href="{{ asset('storage/' . $ticketData->screenshot_path) }}" target="_blank" class="inline-block group">
                                 <img src="{{ asset('storage/' . $ticketData->screenshot_path) }}" alt="Ticket Screenshot"
                                     class="max-h-72 rounded-xl border border-slate-200 shadow-sm object-contain group-hover:opacity-90 transition-opacity">
@@ -80,13 +84,13 @@
 
             {{-- Activity Timeline --}}
             <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+                <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/50">
                     <h3 class="text-sm font-black text-slate-800 tracking-wide flex items-center gap-2">
                         <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        Activity Log
+                        {{ __('ticketing.detail.activity_log') }}
                     </h3>
                 </div>
                 <div class="p-6">
@@ -94,7 +98,7 @@
                         <ul role="list" class="-mb-8">
                             @foreach ($ticketData->activities as $index => $activity)
                                 <li>
-                                    <div class="relative pb-8">
+                                    <div class="relative pb-4">
                                         @if (!$loop->last)
                                             <span class="absolute left-5 top-5 -ml-px h-full w-[2px] bg-slate-100"
                                                 aria-hidden="true"></span>
@@ -150,7 +154,7 @@
                                                             class="text-[11px] font-medium text-slate-400">{{ $activity->created_at->diffForHumans() }}</span>
                                                     </div>
                                                     <div
-                                                        class="rounded-2xl rounded-tl-none bg-indigo-50 border border-indigo-100 p-4 text-sm text-indigo-900 shadow-sm inline-block max-w-full">
+                                                        class="rounded-2xl rounded-tl-none bg-indigo-50 border border-indigo-100 p-3 text-sm text-indigo-900 shadow-sm inline-block max-w-full">
                                                         {!! nl2br(e($activity->reason)) !!}
                                                     </div>
                                                 @else
@@ -203,8 +207,7 @@
                                         </div>
                                         <div class="min-w-0 flex-1 py-1">
                                             <div class="flex items-center justify-between text-sm text-slate-500">
-                                                <span>Ticket reported by <span
-                                                        class="font-medium text-slate-800">{{ optional($ticketData->reporter)->name ?? 'Unknown' }}</span></span>
+                                                <span>{{ __('ticketing.detail.ticket_reported_by', ['name' => optional($ticketData->reporter)->name ?? 'Unknown']) }}</span>
                                                 <span
                                                     class="text-[11px] font-medium text-slate-400">{{ $ticketData->created_at->format('M d, H:i') }}</span>
                                             </div>
@@ -217,14 +220,14 @@
                 </div>
 
                 {{-- Post Comment Input --}}
-                <div class="px-6 py-5 border-t border-slate-100 bg-slate-50/50">
+                <div class="px-4 py-3 border-t border-slate-100 bg-slate-50/50">
                     <form wire:submit.prevent="postComment" class="flex items-start gap-4">
                         <div
                             class="h-10 w-10 shrink-0 rounded-full flex items-center justify-center bg-indigo-600 text-white font-bold text-xs uppercase shadow-sm">
                             {{ substr(auth()->user()->name ?? 'U', 0, 2) }}
                         </div>
                         <div class="flex-1">
-                            <textarea wire:model="newComment" rows="2" placeholder="Reply to this ticket or add internal notes..."
+                            <textarea wire:model="newComment" rows="2" placeholder="{{ __('ticketing.detail.reply_placeholder') }}"
                                 class="block w-full rounded-2xl border-slate-200 py-3 px-4 text-sm focus:border-indigo-500 focus:ring-indigo-500 bg-white shadow-sm resize-none"></textarea>
                             @error('newComment')
                                 <span class="text-xs text-rose-500 mt-1 block">{{ $message }}</span>
@@ -232,7 +235,7 @@
                             <div class="mt-3 flex justify-end">
                                 <button type="submit"
                                     class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow-md hover:bg-slate-800 transition-colors">
-                                    <span>Post Reply</span>
+                                    <span>{{ __('ticketing.detail.post_reply') }}</span>
                                     <div wire:loading wire:target="postComment"
                                         class="h-3 w-3 rounded-full border border-white border-t-transparent animate-spin">
                                     </div>
@@ -250,20 +253,48 @@
 
             {{-- Properties --}}
             <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
-                    <h3 class="text-sm font-black text-slate-800 tracking-wide">Ticket Properties</h3>
+                <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/50">
+                    <h3 class="text-sm font-black text-slate-800 tracking-wide">{{ __('ticketing.detail.properties') }}</h3>
                 </div>
                 <div class="p-6 space-y-4">
 
-                    {{-- Priority --}}
+                    {{-- Category (Editable by IT Support / Admins) --}}
                     <div>
-                        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Priority</div>
-                        <div class="font-bold text-slate-900">{{ $ticketData->priority->value }}</div>
+                        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{{ __('ticketing.detail.change_category') }}</div>
+                        @if ($canManage)
+                            <select wire:change="updateCategory($event.target.value)"
+                                class="text-xs font-bold text-slate-800 rounded-xl border-slate-200 py-2 px-3 bg-slate-50 w-full focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition-colors hover:bg-white cursor-pointer">
+                                @foreach ($allCategories as $cat)
+                                    <option value="{{ $cat->id }}" {{ $ticketData->category_id == $cat->id ? 'selected' : '' }}>
+                                        {{ $cat->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        @else
+                            <div class="font-bold text-slate-900">{{ $ticketData->category->name }}</div>
+                        @endif
+                    </div>
+
+                    {{-- Priority (Editable by IT Support / Admins) --}}
+                    <div>
+                        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{{ __('ticketing.detail.change_priority') }}</div>
+                        @if ($canManage)
+                            <select wire:change="updatePriority($event.target.value)"
+                                class="text-xs font-bold text-slate-800 rounded-xl border-slate-200 py-2 px-3 bg-slate-50 w-full focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition-colors hover:bg-white cursor-pointer">
+                                @foreach (\App\Domains\Ticketing\Enums\TicketPriority::cases() as $pCase)
+                                    <option value="{{ $pCase->value }}" {{ $ticketData->priority->value === $pCase->value ? 'selected' : '' }}>
+                                        {{ $pCase->value }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        @else
+                            <div class="font-bold text-slate-900">{{ $ticketData->priority->value }}</div>
+                        @endif
                     </div>
 
                     {{-- Assignee --}}
                     <div>
-                        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Assignee</div>
+                        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{{ __('ticketing.detail.assignee') }}</div>
                         @if ($ticketData->assignee)
                             <div class="flex items-center gap-2">
                                 <div
@@ -274,33 +305,30 @@
                             </div>
                         @else
                             <div class="flex items-center justify-between">
-                                <span class="font-bold text-slate-400">Unassigned</span>
+                                <span class="font-bold text-slate-400">{{ __('ticketing.detail.unassigned') }}</span>
                                 <button wire:click="assignToMe"
-                                    class="text-xs font-bold text-indigo-600 hover:text-indigo-800">Assign to
-                                    me</button>
+                                    class="text-xs font-bold text-indigo-600 hover:text-indigo-800">{{ __('ticketing.detail.assign_to_me') }}</button>
                             </div>
                         @endif
                     </div>
 
                     {{-- SLA Timer --}}
                     <div>
-                        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">SLA Target
-                        </div>
+                        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{{ __('ticketing.detail.sla_target') }}</div>
                         <div class="flex items-center gap-2 text-sm">
                             <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24"
                                 stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            <span class="font-bold text-slate-700">{{ $ticketData->category->sla_hours }} Hours</span>
+                            <span class="font-bold text-slate-700">{{ $ticketData->category->sla_hours }} {{ __('ticketing.detail.hours') }}</span>
                         </div>
                     </div>
 
                     {{-- Time on Hold --}}
                     @if ($ticketData->total_hold_time_minutes > 0 || $ticketData->status->value === 'On Hold')
                         <div>
-                            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Time On
-                                Hold</div>
+                            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{{ __('ticketing.detail.time_on_hold') }}</div>
                             <div class="flex items-center gap-2">
                                 <span class="text-sm font-bold text-amber-600">
                                     {{ $ticketData->getFormattedHoldTime() }}
@@ -316,17 +344,18 @@
             </div>
 
             {{-- GitHub Escalation Card --}}
+            @if (config('services.github.repo_url'))
             <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                     <div class="flex items-center gap-2">
                         <svg class="h-4 w-4 text-slate-800" fill="currentColor" viewBox="0 0 24 24">
                             <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
                         </svg>
-                        <h3 class="text-sm font-black text-slate-800 tracking-wide">GitHub Integration</h3>
+                        <h3 class="text-sm font-black text-slate-800 tracking-wide">{{ __('ticketing.detail.github_integration') }}</h3>
                     </div>
                     @if ($ticketData->github_issue_url)
                         <span class="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-purple-700">
-                            Escalated
+                            {{ __('ticketing.detail.escalated') }}
                         </span>
                     @endif
                 </div>
@@ -339,7 +368,7 @@
 
                     @if ($ticketData->github_issue_url)
                         <div>
-                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">Linked Issue</span>
+                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1">{{ __('ticketing.detail.linked_issue') }}</span>
                             <a href="{{ $ticketData->github_issue_url }}" target="_blank"
                                 class="text-xs font-bold text-indigo-600 hover:text-indigo-800 break-all inline-flex items-center gap-1">
                                 <span>{{ $ticketData->github_issue_url }}</span>
@@ -356,18 +385,18 @@
                         <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                             <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
                         </svg>
-                        <span>{{ $ticketData->github_issue_url ? 'Open GitHub Issue Form' : 'Escalate to GitHub Issue' }}</span>
+                        <span>{{ $ticketData->github_issue_url ? __('ticketing.detail.open_github_form') : __('ticketing.detail.escalate_to_github') }}</span>
                     </a>
 
                     {{-- Save / Update Linked GitHub URL --}}
                     <div class="pt-2 border-t border-slate-100">
-                        <label class="text-[11px] font-bold text-slate-500 block mb-1">Record GitHub Issue URL</label>
+                        <label class="text-[11px] font-bold text-slate-500 block mb-1">{{ __('ticketing.detail.record_github_url') }}</label>
                         <div class="flex items-center gap-2">
                             <input type="url" wire:model="githubIssueUrlInput" placeholder="https://github.com/..."
                                 class="flex-1 rounded-xl border border-slate-200 py-1.5 px-2.5 text-xs focus:border-indigo-500 bg-slate-50">
                             <button type="button" wire:click="saveGithubIssueUrl"
                                 class="rounded-xl bg-slate-100 hover:bg-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 transition-colors">
-                                Save
+                                {{ __('ticketing.detail.save') }}
                             </button>
                         </div>
                         @error('githubIssueUrlInput')
@@ -376,6 +405,7 @@
                     </div>
                 </div>
             </div>
+            @endif
 
         </div>
     </div>

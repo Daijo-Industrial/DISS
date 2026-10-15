@@ -145,7 +145,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
-                Can't sign in? Request IT Support Help
+                {{ __('ticketing.login_help.trigger') }}
             </button>
         </div>
 
@@ -165,8 +165,8 @@
                         </svg>
                     </div>
                     <div>
-                        <h3 class="text-sm font-bold text-slate-900">IT Login Assistance</h3>
-                        <p class="text-[11px] text-slate-500">Submit a support request to the IT team</p>
+                        <h3 class="text-sm font-bold text-slate-900">{{ __('ticketing.login_help.modal_title') }}</h3>
+                        <p class="text-[11px] text-slate-500">{{ __('ticketing.login_help.modal_subtitle') }}</p>
                     </div>
                 </div>
                 <button type="button" onclick="closeLoginHelpModal()" class="text-slate-400 hover:text-slate-600 p-1">
@@ -179,42 +179,48 @@
             <form method="POST" action="{{ route('support.login-assistance') }}" class="space-y-4">
                 @csrf
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Employee NIK or Company Email <span class="text-rose-500">*</span></label>
-                    <input type="text" name="nik_or_email" required placeholder="e.g. 12345 or your.name@daijo.co.id"
+                    <label class="block text-xs font-bold text-slate-700 mb-1">{{ __('ticketing.login_help.nik_or_email') }} <span class="text-rose-500">*</span></label>
+                    <input type="text" name="nik_or_email" id="nik_or_email_input" required value="{{ old('nik_or_email') }}"
+                        placeholder="{{ __('ticketing.login_help.nik_or_email_placeholder') }}"
                         class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">
+                    <div id="nik-feedback" class="mt-1.5 min-h-[1.25rem] text-[11px] font-medium transition-all duration-200"></div>
+                    @error('nik_or_email')
+                        <span class="text-xs text-rose-500 mt-1 block font-semibold">{{ $message }}</span>
+                    @enderror
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Issue Type <span class="text-rose-500">*</span></label>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">{{ __('ticketing.login_help.issue_type') }} <span class="text-rose-500">*</span></label>
                     <select name="issue_type" required
                         class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">
-                        <option value="Password Reset / Account Locked">Password Reset / Account Locked</option>
-                        <option value="New Employee Account Setup">New Employee Account Setup</option>
-                        <option value="Login Error / Access Denied">Login Error / Access Denied</option>
-                        <option value="Other Login Issue">Other Login Issue</option>
+                        <option value="Password Reset / Account Locked">{{ __('ticketing.login_help.options.password_reset') }}</option>
+                        <option value="New Employee Account Setup">{{ __('ticketing.login_help.options.account_setup') }}</option>
+                        <option value="Login Error / Access Denied">{{ __('ticketing.login_help.options.login_error') }}</option>
+                        <option value="Other Login Issue">{{ __('ticketing.login_help.options.other') }}</option>
                     </select>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">WhatsApp / Phone Number (Optional)</label>
-                    <input type="text" name="contact_number" placeholder="e.g. 081234567890"
+                    <label class="block text-xs font-bold text-slate-700 mb-1">{{ __('ticketing.login_help.phone') }}</label>
+                    <input type="text" name="contact_number" value="{{ old('contact_number') }}"
+                        placeholder="{{ __('ticketing.login_help.phone_placeholder') }}"
                         class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Problem Details <span class="text-rose-500">*</span></label>
-                    <textarea name="description" rows="3" required placeholder="Describe what happens when you attempt to log in..."
-                        class="block w-full rounded-xl border border-slate-200 py-2 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm"></textarea>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">{{ __('ticketing.login_help.details') }} <span class="text-rose-500">*</span></label>
+                    <textarea name="description" rows="3" required placeholder="{{ __('ticketing.login_help.details_placeholder') }}"
+                        class="block w-full rounded-xl border border-slate-200 py-2 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">{{ old('description') }}</textarea>
                 </div>
 
                 <div class="pt-2 flex items-center justify-end gap-2">
                     <button type="button" onclick="closeLoginHelpModal()"
                         class="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
-                        Cancel
+                        {{ __('ticketing.login_help.cancel') }}
                     </button>
                     <button type="submit"
                         class="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-colors">
-                        Submit Assistance Request
+                        {{ __('ticketing.login_help.submit') }}
                     </button>
                 </div>
             </form>
@@ -248,5 +254,48 @@
                 closeLoginHelpModal();
             }
         });
+
+        @if ($errors->has('nik_or_email') || $errors->has('issue_type') || $errors->has('description'))
+            openLoginHelpModal();
+        @endif
+
+        // Client-side format validation (Option 1: Zero public network requests / anti-enumeration)
+        (function() {
+            const input = document.getElementById('nik_or_email_input');
+            const feedback = document.getElementById('nik-feedback');
+            if (!input || !feedback) return;
+
+            input.addEventListener('input', function() {
+                const val = input.value.trim();
+
+                if (!val) {
+                    feedback.replaceChildren();
+                    return;
+                }
+
+                // If user is entering an email
+                if (val.includes('@')) {
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    feedback.replaceChildren();
+                    if (emailRegex.test(val)) {
+                        const span = document.createElement('span');
+                        span.className = 'inline-flex items-center gap-1 text-emerald-600 font-semibold';
+                        span.textContent = '✓ ' + @json(__('ticketing.login_help.email_format_valid'));
+                        feedback.appendChild(span);
+                    }
+                    return;
+                }
+
+                // If user is entering an NIK: check syntax (alphanumeric, length 3 to 20, no spaces)
+                const nikRegex = /^[a-zA-Z0-9]{3,20}$/;
+                feedback.replaceChildren();
+                if (nikRegex.test(val)) {
+                    const span = document.createElement('span');
+                    span.className = 'inline-flex items-center gap-1 text-emerald-600 font-semibold';
+                    span.textContent = '✓ ' + @json(__('ticketing.login_help.nik_format_valid'));
+                    feedback.appendChild(span);
+                }
+            });
+        })();
     </script>
 @endpush

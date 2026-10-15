@@ -43,4 +43,8 @@ return [
         'username' => env('SAP_USERNAME'),
         'password' => env('SAP_PASSWORD'),
     ],
+
+    'github' => [
+        'repo_url' => env('GITHUB_REPO_URL', 'https://github.com/your-org/your-repo'),
+    ],
 ];

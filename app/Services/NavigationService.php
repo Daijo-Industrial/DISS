@@ -88,6 +88,35 @@ class NavigationService
                     ],
                 ],
             ],
+            [
+                'type' => 'group',
+                'label' => 'IT Support',
+                'icon' => 'lifebuoy',
+                'priority' => 88,
+                'children' => [
+                    [
+                        'label' => 'Support Tickets',
+                        'route' => 'ticketing.list',
+                        'icon' => 'ticket',
+                        'active' => request()->routeIs('ticketing.list') || request()->routeIs('ticketing.show'),
+                        'permission' => ['ticketing.view', 'dashboard.view'],
+                    ],
+                    [
+                        'label' => 'Queue & Operations',
+                        'route' => 'ticketing.dashboard',
+                        'icon' => 'computer-desktop',
+                        'active' => request()->routeIs('ticketing.dashboard'),
+                        'permission' => ['ticketing.manage', 'system.admin'],
+                    ],
+                    [
+                        'label' => 'KPI & SLA Analytics',
+                        'route' => 'ticketing.admin.kpi',
+                        'icon' => 'chart-bar',
+                        'active' => request()->routeIs('ticketing.admin.kpi'),
+                        'permission' => ['ticketing.admin', 'system.admin'],
+                    ],
+                ],
+            ],
 
             // Section: Operations & Assets
             ['type' => 'divider', 'label' => 'Operations'],

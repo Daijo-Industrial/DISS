@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class NonTechnicalSupportWorkflowTest extends TestCase
@@ -93,7 +94,7 @@ class NonTechnicalSupportWorkflowTest extends TestCase
             ->call('submitTicket')
             ->assertHasNoErrors()
             ->assertSet('activeTab', 'my_tickets')
-            ->assertSee('Ticket submitted successfully!');
+            ->assertSee(__('ticketing.concierge.messages.ticket_submitted'));
 
         $ticket = Ticket::where('title', 'Vehicle inspection form crashes on submit')->latest()->first();
         $this->assertNotNull($ticket);
@@ -119,8 +120,8 @@ class NonTechnicalSupportWorkflowTest extends TestCase
         // Check login page renders help trigger
         $response = $this->get(route('login'));
         $response->assertStatus(200);
-        $response->assertSee('Request IT Support Help', false);
-        $response->assertSee('IT Login Assistance');
+        $response->assertSee(__('ticketing.login_help.trigger'), false);
+        $response->assertSee(__('ticketing.login_help.modal_title'), false);
 
         // Post unauthenticated login assistance request
         $postResponse = $this->post(route('support.login-assistance'), [
@@ -144,6 +145,32 @@ class NonTechnicalSupportWorkflowTest extends TestCase
         Mail::assertSent(NewTicketSubmittedMail::class, function ($mail) use ($ticket) {
             return $mail->ticket->id === $ticket->id;
         });
+    }
+
+    public function test_login_assistance_fails_when_employee_nik_is_invalid(): void
+    {
+        $nonExistentNik = 'NON_EXISTENT_NIK_' . rand(10000, 99999);
+        $this->getOrCreateCategory('Access & Permissions');
+
+        $response = $this->from(route('login'))->post(route('support.login-assistance'), [
+            'nik_or_email' => $nonExistentNik,
+            'issue_type' => 'Password Reset / Account Locked',
+            'description' => 'Cannot log in with bad NIK',
+        ]);
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHasErrors('nik_or_email');
+
+        $ticket = Ticket::where('reporter_id', $nonExistentNik)->first();
+        $this->assertNull($ticket);
+    }
+
+    public function test_public_verify_nik_route_does_not_exist_to_prevent_user_enumeration_iso27001(): void
+    {
+        // ISO 27001 Control A.8.26 Anti-Enumeration requirement:
+        // Ensure unauthenticated NIK lookup endpoint does not exist on public web routes
+        $response = $this->postJson('/support/verify-nik', ['nik' => '12345']);
+        $response->assertStatus(404);
     }
 
     public function test_ticket_resolution_triggers_status_updated_email_to_reporter(): void
@@ -191,23 +218,111 @@ class NonTechnicalSupportWorkflowTest extends TestCase
 
         $this->actingAs($user);
 
-        $test = Livewire::test(TicketDetail::class, ['ticket' => $ticket]);
-        $test->assertSee('Escalate to GitHub Issue');
-        $test->assertSee('Record GitHub Issue URL');
+        Config::set('services.github.repo_url', 'https://github.com/your-org/your-repo');
 
-        $githubUrl = $test->instance()->getGitHubIssueUrl();
-        $this->assertStringContainsString('https://github.com/Daijo-Industrial/DISS/issues/new?', $githubUrl);
+        // Test English locale rendering
+        app()->setLocale('en');
+        $testEn = Livewire::test(TicketDetail::class, ['ticket' => $ticket]);
+        $testEn->assertSee(__('ticketing.detail.escalate_to_github'));
+        $testEn->assertSee(__('ticketing.detail.record_github_url'));
+
+        // Test Indonesian locale rendering
+        app()->setLocale('id');
+        $testId = Livewire::test(TicketDetail::class, ['ticket' => $ticket]);
+        $testId->assertSee(__('ticketing.detail.escalate_to_github'));
+        $testId->assertSee(__('ticketing.detail.record_github_url'));
+
+        $githubUrl = $testId->instance()->getGitHubIssueUrl();
+        $this->assertStringContainsString('https://github.com/your-org/your-repo/issues/new?', $githubUrl);
         $this->assertStringContainsString('template=bug_report.yml', $githubUrl);
         $this->assertStringContainsString(urlencode('[Bug]: DataTables search throws uncaught syntax error'), $githubUrl);
         $this->assertStringContainsString(urlencode('http://localhost/procurement/orders'), $githubUrl);
 
         // Test saving the linked GitHub Issue URL
-        $test->set('githubIssueUrlInput', 'https://github.com/Daijo-Industrial/DISS/issues/105')
+        $testId->set('githubIssueUrlInput', 'https://github.com/your-org/your-repo/issues/105')
             ->call('saveGithubIssueUrl')
             ->assertHasNoErrors()
-            ->assertSee('GitHub issue link updated successfully.');
+            ->assertSee(__('ticketing.detail.github_url_updated'));
 
         $ticket->refresh();
-        $this->assertEquals('https://github.com/Daijo-Industrial/DISS/issues/105', $ticket->github_issue_url);
+        $this->assertEquals('https://github.com/your-org/your-repo/issues/105', $ticket->github_issue_url);
+    }
+
+    public function test_simplified_support_bubble_submission_auto_categorizes_and_captures_url(): void
+    {
+        [$employee, $user] = $this->createEmployeeAndUser();
+        $this->getOrCreateCategory('Feature Request');
+
+        $this->actingAs($user);
+
+        Livewire::test(SupportBubble::class)
+            ->set('isOpen', true)
+            ->set('request_type', 'feature')
+            ->set('custom_title', 'Export PR to CSV format')
+            ->set('description', 'Need a button to export all purchase requests into CSV')
+            ->set('current_url', 'http://localhost/purchase-requests')
+            ->call('submitTicket')
+            ->assertHasNoErrors()
+            ->assertSet('activeTab', 'my_tickets')
+            ->assertSee(__('ticketing.concierge.messages.ticket_submitted'));
+
+        $ticket = Ticket::where('title', 'Export PR to CSV format')->latest()->first();
+        $this->assertNotNull($ticket);
+        $this->assertStringContainsString('Feature', $ticket->category->name);
+        $this->assertEquals(TicketPriority::MEDIUM, $ticket->priority);
+        $this->assertEquals('http://localhost/purchase-requests', $ticket->current_url);
+    }
+
+    public function test_it_support_teams_and_super_admin_can_update_category_and_priority_on_ticket_detail(): void
+    {
+        [$employee, $reporter] = $this->createEmployeeAndUser();
+        $catBug = $this->getOrCreateCategory('Software / Application Bug');
+        $catFeature = $this->getOrCreateCategory('Feature Request');
+
+        $ticket = Ticket::create([
+            'ticket_number' => 'IT-' . rand(100000, 999999),
+            'reporter_id' => $employee->nik,
+            'reporter_email' => $reporter->email,
+            'category_id' => $catBug->id,
+            'title' => 'Sample Triage Ticket',
+            'description' => 'Awaiting triage from IT support',
+            'status' => TicketStatus::OPEN,
+            'priority' => TicketPriority::MEDIUM,
+        ]);
+
+        // 1. Regular reporter cannot manage or triage
+        $this->actingAs($reporter);
+        Livewire::test(TicketDetail::class, ['ticket' => $ticket])
+            ->assertSet('canManage', false);
+
+        // 2. Super Administrator / IT Support can update category & priority
+        $admin = User::factory()->create(['name' => 'IT Admin Lead']);
+        $adminRole = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
+        $admin->assignRole('super-admin');
+
+        $this->actingAs($admin);
+
+        Livewire::test(TicketDetail::class, ['ticket' => $ticket])
+            ->assertSet('canManage', true)
+            ->call('updateCategory', $catFeature->id)
+            ->assertHasNoErrors()
+            ->call('updatePriority', 'Critical')
+            ->assertHasNoErrors();
+
+        $ticket->refresh();
+        $this->assertEquals($catFeature->id, $ticket->category_id);
+        $this->assertEquals(TicketPriority::CRITICAL, $ticket->priority);
+
+        // Verify activities were recorded
+        $this->assertDatabaseHas('ticket_activities', [
+            'ticket_id' => $ticket->id,
+            'user_id' => $admin->id,
+            'new_state' => 'Feature Request',
+        ]);
+        $this->assertDatabaseHas('ticket_activities', [
+            'ticket_id' => $ticket->id,
+            'user_id' => $admin->id,
+            'new_state' => 'Critical',
+        ]);
     }
 }

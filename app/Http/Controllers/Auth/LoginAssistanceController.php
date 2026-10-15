@@ -34,12 +34,16 @@ class LoginAssistanceController extends Controller
             }
         } else {
             $employee = Employee::where('nik', $input)->first();
-            if ($employee) {
-                $reporterId = $employee->nik;
-                $user = User::where('employee_id', $employee->id)->orWhere('employee_id', $employee->nik)->first();
-                if ($user && $user->email) {
-                    $reporterEmail = $user->email;
-                }
+            if (! $employee) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors(['nik_or_email' => __('ticketing.login_help.nik_not_found')]);
+            }
+
+            $reporterId = $employee->nik;
+            $user = User::where('employee_id', $employee->id)->orWhere('employee_id', $employee->nik)->first();
+            if ($user && $user->email) {
+                $reporterEmail = $user->email;
             }
         }
 
@@ -71,7 +75,7 @@ class LoginAssistanceController extends Controller
 
         return redirect()->route('login')->with(
             'status',
-            "Your login assistance request has been submitted as Ticket #{$ticket->ticket_number}. IT support will follow up with you shortly."
+            __('ticketing.login_help.success_status', ['ticket' => $ticket->ticket_number])
         );
     }
 }
