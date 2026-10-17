@@ -87,9 +87,9 @@ class TicketingSecurityAndReliabilityTest extends TestCase
         // 2. Owner CAN access ticket detail
         $this->actingAs($ownerUser);
         Livewire::test(TicketDetail::class, ['ticket' => $ticket])
-            ->assertStatus(200)
             ->assertSee('Confidential Executive Issue')
-            ->assertSet('canManage', false);
+            ->assertSet('canManage', false)
+            ->assertStatus(200);
 
         // 3. Super Admin CAN access ticket detail
         $admin = User::factory()->create(['name' => 'IT Super Admin']);
@@ -98,9 +98,9 @@ class TicketingSecurityAndReliabilityTest extends TestCase
 
         $this->actingAs($admin);
         Livewire::test(TicketDetail::class, ['ticket' => $ticket])
-            ->assertStatus(200)
             ->assertSee('Confidential Executive Issue')
-            ->assertSet('canManage', true);
+            ->assertSet('canManage', true)
+            ->assertStatus(200);
     }
 
     public function test_unauthorized_user_cannot_transition_status_via_modal(): void

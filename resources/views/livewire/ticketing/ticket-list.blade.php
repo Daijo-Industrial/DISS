@@ -90,7 +90,7 @@
                     class="rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/80 py-1.5 pl-2.5 pr-7 text-xs text-slate-700 font-medium focus:bg-white focus:border-slate-400 focus:outline-none transition-colors cursor-pointer">
                     <option value="">{{ __('ticketing.list.all_priorities') }}</option>
                     @foreach ($priorities as $pri)
-                        <option value="{{ $pri->value }}">{{ $pri->value }}</option>
+                        <option value="{{ $pri->value }}">{{ __('ticketing.concierge.priorities.' . strtolower($pri->value)) }}</option>
                     @endforeach
                 </select>
 
@@ -250,7 +250,7 @@
 
                         {{-- Assignee Avatar or Unassigned Tag --}}
                         @if ($ticket->assignee)
-                            <div class="flex items-center gap-1.5" title="Assigned to {{ $ticket->assignee->name }}">
+                            <div class="flex items-center gap-1.5" title="{{ __('ticketing.detail.assignee') }}: {{ $ticket->assignee->name }}">
                                 <div class="h-6 w-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold uppercase shrink-0">
                                     {{ substr($ticket->assignee->name, 0, 2) }}
                                 </div>

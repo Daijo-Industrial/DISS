@@ -9,7 +9,9 @@ use App\Domains\Ticketing\Enums\TicketPriority;
 use App\Domains\Ticketing\Enums\TicketStatus;
 use App\Infrastructure\Persistence\Eloquent\Models\Employee;
 use App\Infrastructure\Persistence\Eloquent\Models\User;
+use App\Livewire\Ticketing\Admin\KpiDashboard;
 use App\Livewire\Ticketing\SupportBubble;
+use App\Livewire\Ticketing\TicketDashboard;
 use App\Livewire\Ticketing\TicketDetail;
 use App\Livewire\Ticketing\TicketList;
 use App\Mail\NewTicketSubmittedMail;
@@ -566,7 +568,7 @@ class NonTechnicalSupportWorkflowTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee($ticket->ticket_number);
         $response->assertSee('Cannot Access Procurement Module');
-        $response->assertSee('In Progress');
+        $response->assertSee(__('ticketing.status.in_progress'));
         $response->assertSee($ticket->getFormattedSlaTarget());
     }
 
@@ -784,5 +786,87 @@ class NonTechnicalSupportWorkflowTest extends TestCase
             ->assertSet('scopeFilter', 'all')
             ->assertSee($ticketOpen->ticket_number)
             ->assertSee($ticketResolved->ticket_number);
+    }
+
+    public function test_dashboards_support_full_bilingual_localization_en_and_id(): void
+    {
+        // Setup Super Admin User
+        $superAdminRole = Role::firstOrCreate(['name' => 'super-admin']);
+        $adminUser = User::factory()->create();
+        $adminUser->assignRole($superAdminRole);
+
+        // Assign at least one ticket to the adminUser so picMetrics has data
+        $category = $this->getOrCreateCategory('Hardware / Computer / Printer');
+        Ticket::create([
+            'ticket_number' => 'IT-KPI-' . rand(10000, 99999),
+            'reporter_id' => 'EMP999',
+            'category_id' => $category->id,
+            'title' => 'Localized KPI Test Ticket',
+            'description' => 'Testing KPI Dashboard localization.',
+            'status' => TicketStatus::RESOLVED,
+            'priority' => TicketPriority::MEDIUM,
+            'assigned_to' => $adminUser->id,
+            'resolved_at' => now(),
+            'sla_minutes' => 120,
+        ]);
+
+        $this->actingAs($adminUser);
+
+        // 1. English Verification
+        app()->setLocale('en');
+
+        Livewire::test(TicketDashboard::class)
+            ->assertSee('IT Performance KPIs')
+            ->assertSee('Auditing metrics for ' . $adminUser->name)
+            ->assertSee('View All Tickets')
+            ->assertSee('Throughput')
+            ->assertSee('Tickets resolved this month')
+            ->assertSee('SLA Compliance')
+            ->assertSee('Target > 90%')
+            ->assertSee('Re-open Rate')
+            ->assertSee('Lower is better')
+            ->assertSee('WIP / Utilization')
+            ->assertSee('Concurrent active tickets')
+            ->assertSee('Productivity Trends');
+
+        Livewire::test(KpiDashboard::class)
+            ->assertSee('IT Department KPIs')
+            ->assertSee('Aggregated performance and support metrics across all IT staff.')
+            ->assertSee('Back to Tickets')
+            ->assertSee('Resolved')
+            ->assertSee('SLA Targets')
+            ->assertSee('Re-open Rate')
+            ->assertSee('Active WIP')
+            ->assertSee('Period:');
+
+        // 2. Indonesian Verification
+        app()->setLocale('id');
+
+        Livewire::test(TicketDashboard::class)
+            ->assertSee('KPI Kinerja IT')
+            ->assertSee('Audit metrik kinerja untuk ' . $adminUser->name)
+            ->assertSee('Lihat Semua Tiket')
+            ->assertSee('Throughput')
+            ->assertSee('Tiket terselesaikan bulan ini')
+            ->assertSee('Kepatuhan SLA')
+            ->assertSee('Target > 90%')
+            ->assertSee('Rasio Buka Ulang')
+            ->assertSee('Semakin rendah semakin baik')
+            ->assertSee('WIP / Utilisasi')
+            ->assertSee('Tiket aktif yang sedang ditangani')
+            ->assertSee('Tren Produktivitas');
+
+        Livewire::test(KpiDashboard::class)
+            ->assertSee('KPI Departemen IT')
+            ->assertSee('Agregasi metrik kinerja dan dukungan dari seluruh staf IT.')
+            ->assertSee('Kembali ke Tiket')
+            ->assertSee('Terselesaikan')
+            ->assertSee('Target SLA')
+            ->assertSee('Rasio Buka Ulang')
+            ->assertSee('WIP Aktif')
+            ->assertSee('Periode:');
+
+        // Reset locale back to default
+        app()->setLocale('en');
     }
 }

@@ -29,10 +29,12 @@
                         'Closed' => 'bg-slate-100 text-slate-500 border-slate-200',
                     ];
                     $badgeStyle = $statusStyles[$ticket->status->value] ?? 'bg-slate-100 text-slate-700 border-slate-200';
+                    $statusKey = strtolower(str_replace(' ', '_', $ticket->status->value));
+                    $localizedStatus = __('ticketing.status.' . $statusKey);
                 @endphp
 
                 <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold {{ $badgeStyle }} shrink-0">
-                    {{ $ticket->status->value }}
+                    {{ $localizedStatus !== 'ticketing.status.' . $statusKey ? $localizedStatus : $ticket->status->value }}
                 </span>
             </div>
 
@@ -45,7 +47,7 @@
 
                 <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-3">
                     <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{{ __('ticketing.detail.priority') }}</div>
-                    <div class="font-bold text-slate-800">{{ $ticket->priority->value }}</div>
+                    <div class="font-bold text-slate-800">{{ __('ticketing.concierge.priorities.' . strtolower($ticket->priority->value)) }}</div>
                 </div>
 
                 <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-3">
