@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Livewire\Ticketing;
 
 use App\Domains\Ticketing\Actions\AddTicketComment;
@@ -9,8 +11,12 @@ use App\Domains\Ticketing\Entities\TicketActivity;
 use App\Domains\Ticketing\Entities\TicketCategory;
 use App\Domains\Ticketing\Enums\ActivityType;
 use App\Domains\Ticketing\Enums\TicketPriority;
+use App\Infrastructure\Persistence\Eloquent\Models\User;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Locked;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class TicketDetail extends Component
@@ -19,16 +25,21 @@ class TicketDetail extends Component
 
     public string $githubIssueUrlInput = '';
 
-    // Refresh when modal updates status
-    protected $listeners = ['ticketUpdated' => '$refresh'];
-
     public string $newComment = '';
 
+    #[Locked]
     public bool $canManage = false;
 
     public ?int $customSlaMinutes = null;
 
-    public function mount(Ticket $ticket)
+    #[On('ticketUpdated')]
+    public function onTicketUpdated(): void
+    {
+        $this->ticket->refresh();
+        $this->dispatch('chat-scrolled');
+    }
+
+    public function mount(Ticket $ticket): void
     {
         $this->ticket = $ticket;
         $this->canManage = $this->canManageTicket();
@@ -48,17 +59,18 @@ class TicketDetail extends Component
         $this->customSlaMinutes = $this->ticket->getEffectiveSlaMinutes();
     }
 
-    public function assignToMe(AssignTicketToPIC $action)
+    public function assignToMe(AssignTicketToPIC $action): void
     {
         if (! $this->canManageTicket()) {
             abort(403);
         }
 
-        $action->execute($this->ticket, Auth::user(), Auth::id());
+        $action->execute($this->ticket, Auth::user(), (int) Auth::id());
         $this->ticket->refresh();
+        $this->dispatch('chat-scrolled');
     }
 
-    public function postComment(AddTicketComment $action)
+    public function postComment(AddTicketComment $action): void
     {
         $user = Auth::user();
         $isReporter = $user && (
@@ -73,22 +85,16 @@ class TicketDetail extends Component
 
         $this->validate(['newComment' => 'required|string']);
 
-        $action->execute($this->ticket, Auth::id(), $this->newComment);
+        $action->execute($this->ticket, (int) Auth::id(), $this->newComment);
 
         $this->newComment = '';
         $this->ticket->refresh();
+        $this->dispatch('chat-scrolled');
     }
 
-    public function saveGithubIssueUrl()
+    public function saveGithubIssueUrl(): void
     {
-        $user = Auth::user();
-        $isReporter = $user && (
-            ($user->employee && $user->employee->nik === $this->ticket->reporter_id)
-            || ($this->ticket->reporter_email && $user->email === $this->ticket->reporter_email)
-            || ($user->id === $this->ticket->assigned_to)
-        );
-
-        if (! $isReporter && ! $this->canManageTicket()) {
+        if (! $this->canManageTicket()) {
             abort(403);
         }
 
@@ -109,6 +115,10 @@ class TicketDetail extends Component
 
     public function getGitHubIssueUrl(): string
     {
+        if (! $this->canManageTicket()) {
+            return '#';
+        }
+
         $repoUrl = config('services.github.repo_url');
         if (! $repoUrl) {
             return '#';
@@ -163,7 +173,7 @@ class TicketDetail extends Component
             || $user->hasAnyPermission(['ticketing.manage', 'ticketing.admin', 'system.admin']);
     }
 
-    public function updateCategory(int $newCategoryId)
+    public function updateCategory(int $newCategoryId): void
     {
         if (! $this->canManageTicket()) {
             abort(403);
@@ -184,10 +194,11 @@ class TicketDetail extends Component
         ]);
 
         $this->ticket->refresh();
+        $this->dispatch('chat-scrolled');
         session()->flash('success', __('ticketing.detail.category_updated', ['category' => $category->name]));
     }
 
-    public function updatePriority(string $newPriority)
+    public function updatePriority(string $newPriority): void
     {
         if (! $this->canManageTicket()) {
             abort(403);
@@ -208,10 +219,11 @@ class TicketDetail extends Component
         ]);
 
         $this->ticket->refresh();
+        $this->dispatch('chat-scrolled');
         session()->flash('success', __('ticketing.detail.priority_updated', ['priority' => $priorityEnum->value]));
     }
 
-    public function updateSlaMinutes(int $slaMinutes)
+    public function updateSlaMinutes(int $slaMinutes): void
     {
         if (! $this->canManageTicket()) {
             abort(403);
@@ -238,10 +250,11 @@ class TicketDetail extends Component
         ]);
 
         $this->ticket->refresh();
+        $this->dispatch('chat-scrolled');
         session()->flash('success', __('ticketing.detail.sla_minutes_updated', ['minutes' => $slaMinutes]));
     }
 
-    public function saveSlaMinutes()
+    public function saveSlaMinutes(): void
     {
         if (! $this->canManageTicket()) {
             abort(403);
@@ -254,13 +267,44 @@ class TicketDetail extends Component
         $this->updateSlaMinutes((int) $this->customSlaMinutes);
     }
 
-    #[Layout('new.layouts.app')]
-    public function render()
+    public function setSlaPreset(int $minutes): void
     {
+        $this->updateSlaMinutes($minutes);
+    }
+
+    public function reassignToUser(int $userId, AssignTicketToPIC $action): void
+    {
+        if (! $this->canManageTicket()) {
+            abort(403);
+        }
+
+        $newAssignee = User::findOrFail($userId);
+        $action->execute($this->ticket, $newAssignee, (int) Auth::id());
+        $this->ticket->refresh();
+        $this->dispatch('chat-scrolled');
+        session()->flash('success', __('ticketing.detail.reassigned_success', ['name' => $newAssignee->name]));
+    }
+
+    #[Layout('new.layouts.app')]
+    public function render(): View
+    {
+        $itStaff = collect();
+        if ($this->canManageTicket()) {
+            $itStaff = User::query()
+                ->where('is_active', true)
+                ->where(function ($q) {
+                    $q->role(['super-admin', 'admin'])
+                        ->orWhere(fn ($sq) => $sq->permission(['ticketing.manage', 'ticketing.admin', 'system.admin']));
+                })
+                ->orderBy('name')
+                ->get();
+        }
+
         return view('livewire.ticketing.ticket-detail', [
-            'ticketData' => Ticket::with(['reporter', 'assignee', 'category', 'activities.user'])
+            'ticketData' => Ticket::with(['reporter.department', 'assignee', 'category', 'activities.user'])
                 ->findOrFail($this->ticket->id),
             'allCategories' => TicketCategory::where('is_active', true)->get(),
+            'itStaff' => $itStaff,
             'canManage' => $this->canManageTicket(),
         ]);
     }

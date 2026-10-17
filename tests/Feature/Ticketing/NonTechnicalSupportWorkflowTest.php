@@ -11,6 +11,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\Employee;
 use App\Infrastructure\Persistence\Eloquent\Models\User;
 use App\Livewire\Ticketing\SupportBubble;
 use App\Livewire\Ticketing\TicketDetail;
+use App\Livewire\Ticketing\TicketList;
 use App\Mail\NewTicketSubmittedMail;
 use App\Mail\TicketStatusUpdatedMail;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -73,6 +74,18 @@ class NonTechnicalSupportWorkflowTest extends TestCase
         );
     }
 
+    private function createSuperAdminUser(?string $name = null): User
+    {
+        $admin = User::factory()->create([
+            'name' => $name ?? ('IT Admin ' . rand(1000, 9999)),
+            'is_active' => true,
+        ]);
+        Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
+        $admin->assignRole('super-admin');
+
+        return $admin;
+    }
+
     public function test_support_bubble_submits_ticket_with_url_and_screenshot_and_dispatches_mail(): void
     {
         Config::set('mail.support_address', 'it-support@daijo.co.id');
@@ -117,11 +130,15 @@ class NonTechnicalSupportWorkflowTest extends TestCase
         [$employee, $user] = $this->createEmployeeAndUser($uniqueNik, 'locked.out.' . rand(1000, 9999) . '@daijo.co.id');
         $this->getOrCreateCategory('Access & Permissions');
 
-        // Check login page renders help trigger
+        // Check login page renders help trigger and floating guest concierge bubble with tabs
         $response = $this->get(route('login'));
         $response->assertStatus(200);
         $response->assertSee(__('ticketing.login_help.trigger'), false);
         $response->assertSee(__('ticketing.login_help.modal_title'), false);
+        $response->assertSee('guestConciergeToggleBtn', false);
+        $response->assertSee(__('ticketing.concierge.tabs.new'), false);
+        $response->assertSee(__('ticketing.login_help.check_status'), false);
+        $response->assertSee('track_ticket', false);
 
         // Post unauthenticated login assistance request
         $postResponse = $this->post(route('support.login-assistance'), [
@@ -163,6 +180,74 @@ class NonTechnicalSupportWorkflowTest extends TestCase
 
         $ticket = Ticket::where('reporter_id', $nonExistentNik)->first();
         $this->assertNull($ticket);
+
+        // Verify page renders error cleanly inside modal without duplicate handling on login card
+        $loginPage = $this->followRedirects($response);
+        $loginPage->assertStatus(200);
+        $loginPage->assertDontSee(__('auth.errors_title'));
+        $errorMsg = __('ticketing.login_help.nik_not_found');
+        $this->assertEquals(1, substr_count($loginPage->getContent(), $errorMsg));
+    }
+
+    public function test_login_form_credentials_failure_renders_login_error_box(): void
+    {
+        $response = $this->from(route('login'))->post(route('login'), [
+            'email' => 'nonexistent.user.' . rand(1000, 9999) . '@daijo.co.id',
+            'password' => 'wrong-password',
+        ]);
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHasErrors('email');
+
+        $loginPage = $this->followRedirects($response);
+        $loginPage->assertStatus(200);
+        $loginPage->assertSee(__('auth.errors_title'));
+        $loginPage->assertSee(__('auth.failed'));
+    }
+
+    public function test_login_assistance_field_validation_failure_isolates_error_to_modal(): void
+    {
+        $uniqueNik = 'EML' . rand(100000, 999999);
+        $this->createEmployeeAndUser($uniqueNik);
+
+        $response = $this->from(route('login'))->post(route('support.login-assistance'), [
+            'nik' => $uniqueNik,
+            'issue_type' => 'Software / Application Issue',
+            'description' => '', // missing required description
+            'contact_number' => str_repeat('9', 35), // invalid contact number > 30 characters
+        ]);
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHasErrors(['description', 'contact_number']);
+
+        $loginPage = $this->followRedirects($response);
+        $loginPage->assertStatus(200);
+        $loginPage->assertDontSee(__('auth.errors_title'));
+        $loginPage->assertSee('openLoginHelpModal();', false);
+    }
+
+    public function test_support_ticket_submission_resolves_generalized_categories_dynamically(): void
+    {
+        Mail::fake();
+        $uniqueNik = 'HWK' . rand(100000, 999999);
+        [$employee, $user] = $this->createEmployeeAndUser($uniqueNik);
+        $hwCategory = $this->getOrCreateCategory('Hardware & Peripheral');
+
+        $response = $this->post(route('support.login-assistance'), [
+            'nik' => $uniqueNik,
+            'issue_type' => 'Hardware / Computer / Printer',
+            'description' => 'Monitor is flickering and printer is offline.',
+            'contact_number' => '081234567899',
+        ]);
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHas('status');
+
+        $ticket = Ticket::where('reporter_id', $uniqueNik)->latest()->first();
+        $this->assertNotNull($ticket);
+        $this->assertEquals($hwCategory->id, $ticket->category_id);
+        $this->assertStringContainsString('[IT Support]', $ticket->title);
+        $this->assertStringContainsString('Hardware / Computer / Printer', $ticket->title);
     }
 
     public function test_public_verify_nik_route_does_not_exist_to_prevent_user_enumeration_iso27001(): void
@@ -216,17 +301,30 @@ class NonTechnicalSupportWorkflowTest extends TestCase
             'priority' => TicketPriority::CRITICAL,
         ]);
 
-        $this->actingAs($user);
-
         Config::set('services.github.repo_url', 'https://github.com/your-org/your-repo');
 
-        // Test English locale rendering
+        // 1. Standard user (ticket creator) must NOT see GitHub card and cannot call saveGithubIssueUrl
+        $this->actingAs($user);
+        $userTest = Livewire::test(TicketDetail::class, ['ticket' => $ticket]);
+        $this->assertEquals('#', $userTest->instance()->getGitHubIssueUrl());
+        $userTest->assertDontSee(__('ticketing.detail.escalate_to_github'))
+            ->assertDontSee(__('ticketing.detail.record_github_url'))
+            ->call('saveGithubIssueUrl')
+            ->assertStatus(403);
+
+        // 2. IT staff / admin CAN see GitHub card, generate URL, and save linked URL
+        Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web']);
+        $admin = User::factory()->create(['name' => 'IT Admin User']);
+        $admin->assignRole('super-admin');
+        $this->actingAs($admin);
+
+        // Test English locale rendering for IT staff
         app()->setLocale('en');
         $testEn = Livewire::test(TicketDetail::class, ['ticket' => $ticket]);
         $testEn->assertSee(__('ticketing.detail.escalate_to_github'));
         $testEn->assertSee(__('ticketing.detail.record_github_url'));
 
-        // Test Indonesian locale rendering
+        // Test Indonesian locale rendering for IT staff
         app()->setLocale('id');
         $testId = Livewire::test(TicketDetail::class, ['ticket' => $ticket]);
         $testId->assertSee(__('ticketing.detail.escalate_to_github'));
@@ -423,7 +521,7 @@ class NonTechnicalSupportWorkflowTest extends TestCase
         $loginId->assertStatus(200);
         $loginId->assertSee('Selamat Datang Kembali');
         $loginId->assertSee('Masuk untuk mengakses dashboard Anda');
-        $loginId->assertSee('Bantuan Login IT');
+        $loginId->assertSee(__('ticketing.login_help.modal_title'));
     }
 
     public function test_login_assistance_rejects_corporate_email_and_strictly_requires_nik(): void
@@ -497,5 +595,194 @@ class NonTechnicalSupportWorkflowTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee(__('ticketing.track.not_found'));
         $response->assertDontSee('Sensitive Payroll Issue');
+    }
+
+    public function test_it_specialist_can_claim_ticket_from_ticket_list_and_filter_by_scope(): void
+    {
+        [$employee, $user] = $this->createEmployeeAndUser();
+        $admin = $this->createSuperAdminUser();
+        $category = $this->getOrCreateCategory('Software / Application Bug');
+
+        $ticket = Ticket::create([
+            'ticket_number' => 'IT-CLAIM-' . rand(10000, 99999),
+            'reporter_id' => $employee->nik,
+            'reporter_email' => $user->email,
+            'category_id' => $category->id,
+            'title' => 'Need help with Excel add-in',
+            'description' => 'Add-in is not loading.',
+            'status' => TicketStatus::OPEN,
+            'priority' => TicketPriority::MEDIUM,
+        ]);
+
+        $this->assertNull($ticket->assigned_to);
+
+        // Claim ticket from list component as admin
+        Livewire::actingAs($admin)
+            ->test(TicketList::class)
+            ->call('claimTicket', $ticket->id)
+            ->assertSee(__('ticketing.list.claimed_success', ['ticket' => $ticket->ticket_number]))
+            ->call('setScope', 'assigned_to_me')
+            ->assertSee($ticket->ticket_number);
+
+        $ticket->refresh();
+        $this->assertEquals($admin->id, $ticket->assigned_to);
+    }
+
+    public function test_ticket_detail_supports_quick_sla_presets_and_staff_reassignment(): void
+    {
+        [$employee, $user] = $this->createEmployeeAndUser();
+        $admin1 = $this->createSuperAdminUser();
+        $admin2 = $this->createSuperAdminUser();
+        $category = $this->getOrCreateCategory('Software / Application Bug');
+
+        $ticket = Ticket::create([
+            'ticket_number' => 'IT-PRESET-' . rand(10000, 99999),
+            'reporter_id' => $employee->nik,
+            'reporter_email' => $user->email,
+            'category_id' => $category->id,
+            'title' => 'Network slowdown',
+            'description' => 'Internet is slow.',
+            'status' => TicketStatus::OPEN,
+            'priority' => TicketPriority::MEDIUM,
+            'assigned_to' => $admin1->id,
+        ]);
+
+        Livewire::actingAs($admin1)
+            ->test(TicketDetail::class, ['ticket' => $ticket])
+            ->call('setSlaPreset', 120)
+            ->assertSee(__('ticketing.detail.sla_minutes_updated', ['minutes' => 120]))
+            ->call('reassignToUser', $admin2->id)
+            ->assertSee(__('ticketing.detail.reassigned_success', ['name' => $admin2->name]));
+
+        $ticket->refresh();
+        $this->assertEquals(120, $ticket->sla_minutes);
+        $this->assertEquals($admin2->id, $ticket->assigned_to);
+    }
+
+    public function test_ticket_model_contact_phone_whatsapp_url_and_sla_status_badges(): void
+    {
+        [$employee, $user] = $this->createEmployeeAndUser();
+        $category = $this->getOrCreateCategory('General IT Support');
+
+        $ticket = Ticket::create([
+            'ticket_number' => 'IT-CONTACT-' . rand(10000, 99999),
+            'reporter_id' => $employee->nik,
+            'reporter_email' => $user->email,
+            'category_id' => $category->id,
+            'title' => 'Printer issue',
+            'description' => "Printer on 2nd floor jammed.\n\nContact Number: 081234567890",
+            'status' => TicketStatus::OPEN,
+            'priority' => TicketPriority::MEDIUM,
+            'sla_minutes' => 240,
+        ]);
+
+        $this->assertEquals('081234567890', $ticket->contact_phone);
+        $this->assertNotNull($ticket->whatsapp_url);
+        $this->assertStringContainsString('wa.me/6281234567890', $ticket->whatsapp_url);
+
+        $sla = $ticket->getSlaStatus();
+        $this->assertIsArray($sla);
+        $this->assertArrayHasKey('state', $sla);
+        $this->assertArrayHasKey('badge', $sla);
+        $this->assertArrayHasKey('label', $sla);
+        $this->assertArrayHasKey('remaining', $sla);
+    }
+
+    public function test_ticket_list_status_pill_filters_and_toggle_behavior(): void
+    {
+        [$employee, $user] = $this->createEmployeeAndUser();
+        $admin = $this->createSuperAdminUser();
+        $category = $this->getOrCreateCategory('Software / Application Bug');
+
+        $ticketOpen = Ticket::create([
+            'ticket_number' => 'IT-FILTER-OPEN-' . rand(1000, 9999),
+            'reporter_id' => $employee->nik,
+            'reporter_email' => $user->email,
+            'category_id' => $category->id,
+            'title' => 'Open Ticket Title',
+            'description' => 'Open issue description',
+            'status' => TicketStatus::OPEN,
+            'priority' => TicketPriority::MEDIUM,
+        ]);
+
+        $ticketResolved = Ticket::create([
+            'ticket_number' => 'IT-FILTER-RES-' . rand(1000, 9999),
+            'reporter_id' => $employee->nik,
+            'reporter_email' => $user->email,
+            'category_id' => $category->id,
+            'title' => 'Resolved Ticket Title',
+            'description' => 'Resolved issue description',
+            'status' => TicketStatus::RESOLVED,
+            'priority' => TicketPriority::LOW,
+        ]);
+
+        $ticketCritical = Ticket::create([
+            'ticket_number' => 'IT-FILTER-CRIT-' . rand(1000, 9999),
+            'reporter_id' => $employee->nik,
+            'reporter_email' => $user->email,
+            'category_id' => $category->id,
+            'title' => 'Critical Server Outage',
+            'description' => 'Production database crashed',
+            'status' => TicketStatus::OPEN,
+            'priority' => TicketPriority::CRITICAL,
+        ]);
+
+        // Test as Admin:
+        $component = Livewire::actingAs($admin)
+            ->test(TicketList::class);
+
+        // Initially, all 3 tickets should be visible
+        $component->assertSee($ticketOpen->ticket_number)
+            ->assertSee($ticketResolved->ticket_number)
+            ->assertSee($ticketCritical->ticket_number);
+
+        // 1. Click "Open" status pill: only Open tickets should appear
+        $component->call('setStatusFilter', 'Open')
+            ->assertSet('statusFilter', 'Open')
+            ->assertSee($ticketOpen->ticket_number)
+            ->assertSee($ticketCritical->ticket_number)
+            ->assertDontSee($ticketResolved->ticket_number);
+
+        // 2. Click "Open" again: should toggle OFF back to empty/all
+        $component->call('setStatusFilter', 'Open')
+            ->assertSet('statusFilter', '')
+            ->assertSee($ticketOpen->ticket_number)
+            ->assertSee($ticketResolved->ticket_number)
+            ->assertSee($ticketCritical->ticket_number);
+
+        // 3. Click "Resolved" status pill
+        $component->call('setStatusFilter', 'Resolved')
+            ->assertSet('statusFilter', 'Resolved')
+            ->assertSee($ticketResolved->ticket_number)
+            ->assertDontSee($ticketOpen->ticket_number)
+            ->assertDontSee($ticketCritical->ticket_number);
+
+        // 4. Click "All Statuses" (empty string): clears status filter
+        $component->call('setStatusFilter', '')
+            ->assertSet('statusFilter', '')
+            ->assertSee($ticketOpen->ticket_number)
+            ->assertSee($ticketResolved->ticket_number)
+            ->assertSee($ticketCritical->ticket_number);
+
+        // 5. Click "Critical" priority pill: toggles on and off
+        $component->call('setPriorityFilter', 'Critical')
+            ->assertSet('priorityFilter', 'Critical')
+            ->assertSee($ticketCritical->ticket_number)
+            ->assertDontSee($ticketOpen->ticket_number)
+            ->assertDontSee($ticketResolved->ticket_number)
+            ->call('setPriorityFilter', 'Critical')
+            ->assertSet('priorityFilter', '')
+            ->assertSee($ticketOpen->ticket_number)
+            ->assertSee($ticketResolved->ticket_number);
+
+        // 6. Reset filters clears everything
+        $component->call('setStatusFilter', 'Open')
+            ->call('setPriorityFilter', 'Critical')
+            ->call('resetFilters')
+            ->assertSet('statusFilter', '')
+            ->assertSet('priorityFilter', '')
+            ->assertSet('scopeFilter', 'all')
+            ->assertSee($ticketOpen->ticket_number)
+            ->assertSee($ticketResolved->ticket_number);
     }
 }

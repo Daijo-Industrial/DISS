@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Auth;
 
 use App\Domains\Ticketing\Actions\CreateTicket;
@@ -11,7 +13,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
-class LoginAssistanceController extends Controller
+final class LoginAssistanceController extends Controller
 {
     public function store(Request $request, CreateTicket $createTicket): RedirectResponse
     {
@@ -54,17 +56,39 @@ class LoginAssistanceController extends Controller
         $user = User::where('employee_id', $employee->id)->orWhere('employee_id', $employee->nik)->first();
         $reporterEmail = $user?->email;
 
-        // Locate Access & Permissions category or fallback
-        $category = TicketCategory::where('name', 'like', '%Access%')
-            ->orWhere('name', 'like', '%Permission%')
-            ->first() ?? TicketCategory::first();
+        // Dynamically resolve active ticket category based on issue type or default to Access & Permissions
+        $activeCategories = TicketCategory::where('is_active', true);
+        $issueType = $validated['issue_type'];
+        $category = null;
+
+        if (stripos($issueType, 'Hardware') !== false || stripos($issueType, 'Printer') !== false) {
+            $category = (clone $activeCategories)->where('name', 'like', '%Hardware%')->first();
+        } elseif (stripos($issueType, 'Network') !== false || stripos($issueType, 'Wi-Fi') !== false || stripos($issueType, 'Connectivity') !== false) {
+            $category = (clone $activeCategories)->where('name', 'like', '%Network%')->first();
+        } elseif (stripos($issueType, 'Software') !== false || stripos($issueType, 'Application') !== false) {
+            $category = (clone $activeCategories)->where('name', 'like', '%Software%')->first();
+        } elseif (stripos($issueType, 'Inquiry') !== false || stripos($issueType, 'Other') !== false) {
+            $category = (clone $activeCategories)->where(function ($q) {
+                $q->where('name', 'like', '%General%')->orWhere('name', 'like', '%Other%');
+            })->first();
+        }
+
+        if (! $category) {
+            $category = (clone $activeCategories)->where(function ($q) {
+                $q->where('name', 'like', '%Access%')->orWhere('name', 'like', '%Permission%');
+            })->first() ?? (clone $activeCategories)->first() ?? TicketCategory::first();
+        }
 
         $categoryId = $category ? $category->id : 1;
 
-        $title = "[Login Help] {$validated['issue_type']} - {$input}";
-        $fullDescription = "Issue Type: {$validated['issue_type']}\n"
-            . 'Contact Number: ' . ($validated['contact_number'] ?: 'Not provided') . "\n\n"
-            . "Problem Description:\n{$validated['description']}";
+        $title = "[IT Support] {$validated['issue_type']} - {$input}";
+        $userDescription = trim($validated['description']);
+        $contactNumber = ! empty($validated['contact_number']) ? trim($validated['contact_number']) : null;
+
+        // Clean and readable description format aligned with IT Concierge
+        $fullDescription = $contactNumber
+            ? "{$userDescription}\n\nContact Number: {$contactNumber}"
+            : $userDescription;
 
         $deviceInfo = $request->header('User-Agent');
 
