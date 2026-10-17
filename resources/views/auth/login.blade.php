@@ -158,143 +158,293 @@
             </div>
         </button>
 
-        {{-- IT Support & Public Ticket Tracking Links --}}
-        <div class="pt-3 flex flex-col items-center gap-2 text-center">
-            <button type="button" onclick="openLoginHelpModal()"
+        {{-- IT Support Help Quick Trigger --}}
+        <div class="pt-3 text-center">
+            <button type="button" onclick="openLoginHelpModal('new')"
                 class="text-xs font-semibold text-slate-500 hover:text-indigo-600 transition-colors inline-flex items-center gap-1.5 focus:outline-none">
                 <svg class="h-3.5 w-3.5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
-                {{ __('ticketing.login_help.trigger') }}
+                <span>{{ __('ticketing.login_help.trigger') }}</span>
             </button>
-            <a href="{{ route('support.track') }}"
-                class="text-xs font-semibold text-slate-400 hover:text-blue-600 transition-colors inline-flex items-center gap-1.5">
-                <svg class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                </svg>
-                {{ __('ticketing.login_help.check_status') }}
-            </a>
         </div>
 
     </form>
 @endsection
 
 @push('modals')
-    {{-- IT Support Ticket Modal --}}
-    <div id="loginHelpModal" role="dialog" aria-modal="true" aria-labelledby="loginHelpModalTitle"
-        class="fixed inset-0 z-[999] hidden items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm transition-opacity duration-200">
-        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 space-y-4 relative">
-            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                <div class="flex items-center gap-2.5">
-                    <div class="h-9 w-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h3 id="loginHelpModalTitle" class="text-sm font-bold text-slate-900">{{ __('ticketing.login_help.modal_title') }}</h3>
-                        <p class="text-[11px] text-slate-500">{{ __('ticketing.login_help.modal_subtitle') }}</p>
-                    </div>
-                </div>
-                <button type="button" onclick="closeLoginHelpModal()" aria-label="Close" class="text-slate-400 hover:text-slate-600 p-1">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+    {{-- Floating IT Concierge Bubble Button (Identical to inside-app IT Concierge) --}}
+    <button type="button"
+        id="guestConciergeToggleBtn"
+        onclick="toggleLoginHelpModal()"
+        aria-expanded="false"
+        aria-label="Toggle IT Concierge"
+        class="fixed bottom-6 right-6 z-[100] flex h-14 w-14 items-center justify-center rounded-full bg-slate-900 text-white shadow-2xl shadow-indigo-500/30 hover:bg-slate-800 transition-transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+        <svg id="guestConciergeIconClosed" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+        <svg id="guestConciergeIconOpen" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+    </button>
+
+    {{-- Guest IT Support Concierge Panel --}}
+    <div id="loginHelpModal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="loginHelpModalTitle"
+        class="fixed bottom-24 right-4 sm:right-6 z-[100] hidden w-[calc(100vw-2rem)] sm:w-[420px] rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden flex-col max-h-[calc(100vh-8rem)] transition-all duration-200">
+        
+        {{-- Header --}}
+        <div class="bg-slate-900 px-6 py-5 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="h-10 w-10 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                </button>
+                </div>
+                <div>
+                    <h3 id="loginHelpModalTitle" class="text-sm font-black text-white">{{ __('ticketing.login_help.modal_title') }}</h3>
+                    <p class="text-[11px] text-slate-400 font-medium mt-0.5">{{ __('ticketing.login_help.modal_subtitle') }}</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeLoginHelpModal()" aria-label="Close"
+                class="text-slate-400 hover:text-white transition-colors p-1">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        {{-- Tabs --}}
+        <div role="tablist" aria-label="Support options" class="flex border-b border-slate-100 bg-slate-50/50 shrink-0">
+            <button type="button" role="tab" id="guestTabBtnNew" aria-selected="true" aria-controls="guestTabContentNew"
+                onclick="switchGuestTab('new')"
+                class="flex-1 py-3 text-xs font-bold uppercase tracking-widest text-indigo-600 border-b-2 border-indigo-600 bg-white transition-all">
+                {{ __('ticketing.concierge.tabs.new') }}
+            </button>
+            <button type="button" role="tab" id="guestTabBtnTrack" aria-selected="false" aria-controls="guestTabContentTrack"
+                onclick="switchGuestTab('track')"
+                class="flex-1 py-3 text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all">
+                {{ __('ticketing.login_help.check_status') }}
+            </button>
+        </div>
+
+        {{-- Content Area --}}
+        <div class="flex-1 overflow-y-auto p-6 space-y-4">
+            {{-- Tab 1: New Ticket Request --}}
+            <div id="guestTabContentNew" role="tabpanel" aria-labelledby="guestTabBtnNew">
+                <form method="POST" action="{{ route('support.login-assistance') }}" class="space-y-4">
+                    @csrf
+                    <div>
+                        <label for="nik_input" class="block text-xs font-bold text-slate-700 mb-1">
+                            {{ __('ticketing.login_help.nik') }} <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" name="nik" id="nik_input" required value="{{ old('nik', old('nik_or_email')) }}"
+                            placeholder="{{ __('ticketing.login_help.nik_placeholder') }}"
+                            class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">
+                        <div id="nik-feedback" aria-live="polite" class="mt-1.5 min-h-[1.25rem] text-[11px] font-medium transition-all duration-200"></div>
+                        @if ($errors->has('nik') || $errors->has('nik_or_email'))
+                            <span class="text-xs text-rose-500 mt-1 block font-semibold">{{ $errors->first('nik') ?: $errors->first('nik_or_email') }}</span>
+                        @endif
+                    </div>
+
+                    <div>
+                        <label for="issue_type" class="block text-xs font-bold text-slate-700 mb-1">
+                            {{ __('ticketing.login_help.issue_type') }} <span class="text-rose-500">*</span>
+                        </label>
+                        <select name="issue_type" id="issue_type" required
+                            class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">
+                            <option value="Password Reset / Account Locked" @selected(old('issue_type') === 'Password Reset / Account Locked')>{{ __('ticketing.login_help.options.password_reset') }}</option>
+                            <option value="New Employee Account Setup" @selected(old('issue_type') === 'New Employee Account Setup')>{{ __('ticketing.login_help.options.account_setup') }}</option>
+                            <option value="Login Error / Access Denied" @selected(old('issue_type') === 'Login Error / Access Denied')>{{ __('ticketing.login_help.options.login_error') }}</option>
+                            <option value="Hardware / Computer / Printer" @selected(old('issue_type') === 'Hardware / Computer / Printer')>{{ __('ticketing.login_help.options.hardware') }}</option>
+                            <option value="Network / Wi-Fi / Connectivity" @selected(old('issue_type') === 'Network / Wi-Fi / Connectivity')>{{ __('ticketing.login_help.options.network') }}</option>
+                            <option value="Software / Application Issue" @selected(old('issue_type') === 'Software / Application Issue')>{{ __('ticketing.login_help.options.software') }}</option>
+                            <option value="General Inquiry / Other IT Issue" @selected(old('issue_type') === 'General Inquiry / Other IT Issue')>{{ __('ticketing.login_help.options.other') }}</option>
+                        </select>
+                        @error('issue_type')
+                            <span class="text-xs text-rose-500 mt-1 block font-semibold">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="contact_number" class="block text-xs font-bold text-slate-700 mb-1">
+                            {{ __('ticketing.login_help.phone') }}
+                        </label>
+                        <input type="text" name="contact_number" id="contact_number" value="{{ old('contact_number') }}"
+                            placeholder="{{ __('ticketing.login_help.phone_placeholder') }}"
+                            class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">
+                        @error('contact_number')
+                            <span class="text-xs text-rose-500 mt-1 block font-semibold">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="description" class="block text-xs font-bold text-slate-700 mb-1">
+                            {{ __('ticketing.login_help.details') }} <span class="text-rose-500">*</span>
+                        </label>
+                        <textarea name="description" id="description" rows="3" required
+                            placeholder="{{ __('ticketing.login_help.details_placeholder') }}"
+                            class="block w-full rounded-xl border border-slate-200 py-2 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">{{ old('description') }}</textarea>
+                        @error('description')
+                            <span class="text-xs text-rose-500 mt-1 block font-semibold">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    <div class="pt-1">
+                        <button type="submit"
+                            class="w-full rounded-xl bg-indigo-600 px-4 py-3 text-xs font-bold text-white hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-colors flex items-center justify-center gap-2">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                            </svg>
+                            <span>{{ __('ticketing.login_help.submit') }}</span>
+                        </button>
+                    </div>
+                </form>
             </div>
 
-            <form method="POST" action="{{ route('support.login-assistance') }}" class="space-y-4">
-                @csrf
-                <div>
-                    <label for="nik_input" class="block text-xs font-bold text-slate-700 mb-1">{{ __('ticketing.login_help.nik') }} <span class="text-rose-500">*</span></label>
-                    <input type="text" name="nik" id="nik_input" required value="{{ old('nik', old('nik_or_email')) }}"
-                        placeholder="{{ __('ticketing.login_help.nik_placeholder') }}"
-                        class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">
-                    <div id="nik-feedback" aria-live="polite" class="mt-1.5 min-h-[1.25rem] text-[11px] font-medium transition-all duration-200"></div>
-                    @if ($errors->has('nik') || $errors->has('nik_or_email'))
-                        <span class="text-xs text-rose-500 mt-1 block font-semibold">{{ $errors->first('nik') ?: $errors->first('nik_or_email') }}</span>
-                    @endif
+            {{-- Tab 2: Track Status --}}
+            <div id="guestTabContentTrack" role="tabpanel" aria-labelledby="guestTabBtnTrack" class="hidden space-y-4">
+                <div class="rounded-2xl bg-indigo-50/60 border border-indigo-100 p-4">
+                    <p class="text-xs font-semibold text-indigo-950 leading-relaxed">
+                        {{ __('ticketing.track.subtitle') }}
+                    </p>
                 </div>
 
-                <div>
-                    <label for="issue_type" class="block text-xs font-bold text-slate-700 mb-1">{{ __('ticketing.login_help.issue_type') }} <span class="text-rose-500">*</span></label>
-                    <select name="issue_type" id="issue_type" required
-                        class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">
-                        <option value="Password Reset / Account Locked" @selected(old('issue_type') === 'Password Reset / Account Locked')>{{ __('ticketing.login_help.options.password_reset') }}</option>
-                        <option value="New Employee Account Setup" @selected(old('issue_type') === 'New Employee Account Setup')>{{ __('ticketing.login_help.options.account_setup') }}</option>
-                        <option value="Login Error / Access Denied" @selected(old('issue_type') === 'Login Error / Access Denied')>{{ __('ticketing.login_help.options.login_error') }}</option>
-                        <option value="Hardware / Computer / Printer" @selected(old('issue_type') === 'Hardware / Computer / Printer')>{{ __('ticketing.login_help.options.hardware') }}</option>
-                        <option value="Network / Wi-Fi / Connectivity" @selected(old('issue_type') === 'Network / Wi-Fi / Connectivity')>{{ __('ticketing.login_help.options.network') }}</option>
-                        <option value="Software / Application Issue" @selected(old('issue_type') === 'Software / Application Issue')>{{ __('ticketing.login_help.options.software') }}</option>
-                        <option value="General Inquiry / Other IT Issue" @selected(old('issue_type') === 'General Inquiry / Other IT Issue')>{{ __('ticketing.login_help.options.other') }}</option>
-                    </select>
-                    @error('issue_type')
-                        <span class="text-xs text-rose-500 mt-1 block font-semibold">{{ $message }}</span>
-                    @enderror
-                </div>
+                <form method="GET" action="{{ route('support.track') }}" class="space-y-4">
+                    <div>
+                        <label for="track_ticket" class="block text-xs font-bold text-slate-700 mb-1">
+                            {{ __('ticketing.track.ticket_number') }} <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" name="ticket" id="track_ticket" required
+                            value="{{ old('ticket', request('ticket', session('submitted_ticket_number'))) }}"
+                            placeholder="{{ __('ticketing.track.ticket_number_placeholder') }}"
+                            class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm uppercase font-mono">
+                    </div>
 
-                <div>
-                    <label for="contact_number" class="block text-xs font-bold text-slate-700 mb-1">{{ __('ticketing.login_help.phone') }}</label>
-                    <input type="text" name="contact_number" id="contact_number" value="{{ old('contact_number') }}"
-                        placeholder="{{ __('ticketing.login_help.phone_placeholder') }}"
-                        class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">
-                    @error('contact_number')
-                        <span class="text-xs text-rose-500 mt-1 block font-semibold">{{ $message }}</span>
-                    @enderror
-                </div>
+                    <div>
+                        <label for="track_nik" class="block text-xs font-bold text-slate-700 mb-1">
+                            {{ __('ticketing.track.nik') }} <span class="text-rose-500">*</span>
+                        </label>
+                        <input type="text" name="nik" id="track_nik" required
+                            value="{{ old('nik', request('nik', session('submitted_ticket_nik'))) }}"
+                            placeholder="{{ __('ticketing.track.nik_placeholder') }}"
+                            class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">
+                    </div>
 
-                <div>
-                    <label for="description" class="block text-xs font-bold text-slate-700 mb-1">{{ __('ticketing.login_help.details') }} <span class="text-rose-500">*</span></label>
-                    <textarea name="description" id="description" rows="3" required placeholder="{{ __('ticketing.login_help.details_placeholder') }}"
-                        class="block w-full rounded-xl border border-slate-200 py-2 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">{{ old('description') }}</textarea>
-                    @error('description')
-                        <span class="text-xs text-rose-500 mt-1 block font-semibold">{{ $message }}</span>
-                    @enderror
-                </div>
-
-                <div class="pt-2 flex items-center justify-end gap-2">
-                    <button type="button" onclick="closeLoginHelpModal()"
-                        class="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
-                        {{ __('ticketing.login_help.cancel') }}
-                    </button>
-                    <button type="submit"
-                        class="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-colors">
-                        {{ __('ticketing.login_help.submit') }}
-                    </button>
-                </div>
-            </form>
+                    <div class="pt-1">
+                        <button type="submit"
+                            class="w-full rounded-xl bg-slate-900 px-4 py-3 text-xs font-bold text-white hover:bg-slate-800 shadow-md shadow-slate-300 transition-colors flex items-center justify-center gap-2">
+                            <svg class="h-4 w-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <span>{{ __('ticketing.track.check_button') }}</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 @endpush
 
 @push('scripts')
     <script>
-        function openLoginHelpModal() {
+        function openLoginHelpModal(tab = 'new') {
             const modal = document.getElementById('loginHelpModal');
+            const iconClosed = document.getElementById('guestConciergeIconClosed');
+            const iconOpen = document.getElementById('guestConciergeIconOpen');
+            const toggleBtn = document.getElementById('guestConciergeToggleBtn');
+
             if (modal) {
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
+                if (iconClosed) iconClosed.classList.add('hidden');
+                if (iconOpen) iconOpen.classList.remove('hidden');
+                if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'true');
+                switchGuestTab(tab);
+                setTimeout(() => {
+                    document.getElementById(tab === 'new' ? 'nik_input' : 'track_ticket')?.focus();
+                }, 60);
             }
         }
+
         function closeLoginHelpModal() {
             const modal = document.getElementById('loginHelpModal');
+            const iconClosed = document.getElementById('guestConciergeIconClosed');
+            const iconOpen = document.getElementById('guestConciergeIconOpen');
+            const toggleBtn = document.getElementById('guestConciergeToggleBtn');
+
             if (modal) {
                 modal.classList.remove('flex');
                 modal.classList.add('hidden');
+                if (iconClosed) iconClosed.classList.remove('hidden');
+                if (iconOpen) iconOpen.classList.add('hidden');
+                if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
             }
         }
+
+        function toggleLoginHelpModal() {
+            const modal = document.getElementById('loginHelpModal');
+            if (modal && !modal.classList.contains('hidden')) {
+                closeLoginHelpModal();
+            } else {
+                openLoginHelpModal('new');
+            }
+        }
+
+        function switchGuestTab(tab) {
+            const contentNew = document.getElementById('guestTabContentNew');
+            const contentTrack = document.getElementById('guestTabContentTrack');
+            const btnNew = document.getElementById('guestTabBtnNew');
+            const btnTrack = document.getElementById('guestTabBtnTrack');
+
+            if (tab === 'new') {
+                if (contentNew) contentNew.classList.remove('hidden');
+                if (contentTrack) contentTrack.classList.add('hidden');
+                if (btnNew) {
+                    btnNew.className = 'flex-1 py-3 text-xs font-bold uppercase tracking-widest text-indigo-600 border-b-2 border-indigo-600 bg-white transition-all';
+                    btnNew.setAttribute('aria-selected', 'true');
+                }
+                if (btnTrack) {
+                    btnTrack.className = 'flex-1 py-3 text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all';
+                    btnTrack.setAttribute('aria-selected', 'false');
+                }
+            } else {
+                if (contentNew) contentNew.classList.add('hidden');
+                if (contentTrack) contentTrack.classList.remove('hidden');
+                if (btnNew) {
+                    btnNew.className = 'flex-1 py-3 text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all';
+                    btnNew.setAttribute('aria-selected', 'false');
+                }
+                if (btnTrack) {
+                    btnTrack.className = 'flex-1 py-3 text-xs font-bold uppercase tracking-widest text-indigo-600 border-b-2 border-indigo-600 bg-white transition-all';
+                    btnTrack.setAttribute('aria-selected', 'true');
+                }
+            }
+        }
+
         const openSupportModal = openLoginHelpModal;
         const closeSupportModal = closeLoginHelpModal;
+
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 closeLoginHelpModal();
             }
         });
-        document.getElementById('loginHelpModal')?.addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeLoginHelpModal();
+
+        document.addEventListener('click', function(e) {
+            const modal = document.getElementById('loginHelpModal');
+            const toggleBtn = document.getElementById('guestConciergeToggleBtn');
+            if (modal && !modal.classList.contains('hidden')) {
+                if (!modal.contains(e.target) && (!toggleBtn || !toggleBtn.contains(e.target))) {
+                    if (!e.target.closest('[onclick*="openLoginHelpModal"]')) {
+                        closeLoginHelpModal();
+                    }
+                }
             }
         });
 

@@ -130,11 +130,15 @@ class NonTechnicalSupportWorkflowTest extends TestCase
         [$employee, $user] = $this->createEmployeeAndUser($uniqueNik, 'locked.out.' . rand(1000, 9999) . '@daijo.co.id');
         $this->getOrCreateCategory('Access & Permissions');
 
-        // Check login page renders help trigger
+        // Check login page renders help trigger and floating guest concierge bubble with tabs
         $response = $this->get(route('login'));
         $response->assertStatus(200);
         $response->assertSee(__('ticketing.login_help.trigger'), false);
         $response->assertSee(__('ticketing.login_help.modal_title'), false);
+        $response->assertSee('guestConciergeToggleBtn', false);
+        $response->assertSee(__('ticketing.concierge.tabs.new'), false);
+        $response->assertSee(__('ticketing.login_help.check_status'), false);
+        $response->assertSee('track_ticket', false);
 
         // Post unauthenticated login assistance request
         $postResponse = $this->post(route('support.login-assistance'), [
