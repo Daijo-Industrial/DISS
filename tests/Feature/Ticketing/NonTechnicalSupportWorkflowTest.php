@@ -176,6 +176,50 @@ class NonTechnicalSupportWorkflowTest extends TestCase
 
         $ticket = Ticket::where('reporter_id', $nonExistentNik)->first();
         $this->assertNull($ticket);
+
+        // Verify page renders error cleanly inside modal without duplicate handling on login card
+        $loginPage = $this->followRedirects($response);
+        $loginPage->assertStatus(200);
+        $loginPage->assertDontSee(__('auth.errors_title'));
+        $errorMsg = __('ticketing.login_help.nik_not_found');
+        $this->assertEquals(1, substr_count($loginPage->getContent(), $errorMsg));
+    }
+
+    public function test_login_form_credentials_failure_renders_login_error_box(): void
+    {
+        $response = $this->from(route('login'))->post(route('login'), [
+            'email' => 'nonexistent.user.' . rand(1000, 9999) . '@daijo.co.id',
+            'password' => 'wrong-password',
+        ]);
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHasErrors('email');
+
+        $loginPage = $this->followRedirects($response);
+        $loginPage->assertStatus(200);
+        $loginPage->assertSee(__('auth.errors_title'));
+        $loginPage->assertSee(__('auth.failed'));
+    }
+
+    public function test_login_assistance_field_validation_failure_isolates_error_to_modal(): void
+    {
+        $uniqueNik = 'EML' . rand(100000, 999999);
+        $this->createEmployeeAndUser($uniqueNik);
+
+        $response = $this->from(route('login'))->post(route('support.login-assistance'), [
+            'nik' => $uniqueNik,
+            'issue_type' => 'Software / Application Issue',
+            'description' => '', // missing required description
+            'contact_number' => str_repeat('9', 35), // invalid contact number > 30 characters
+        ]);
+
+        $response->assertRedirect(route('login'));
+        $response->assertSessionHasErrors(['description', 'contact_number']);
+
+        $loginPage = $this->followRedirects($response);
+        $loginPage->assertStatus(200);
+        $loginPage->assertDontSee(__('auth.errors_title'));
+        $loginPage->assertSee('openLoginHelpModal();', false);
     }
 
     public function test_support_ticket_submission_resolves_generalized_categories_dynamically(): void

@@ -45,8 +45,15 @@
         </div>
     @endif
 
-    @if ($errors->any())
-        <div class="mb-4 rounded-2xl bg-rose-50/80 backdrop-blur-sm border border-rose-100 px-4 py-3.5">
+    @php
+        $modalErrorKeys = ['nik', 'nik_or_email', 'issue_type', 'description', 'contact_number'];
+        $loginErrors = collect($errors->getMessages())
+            ->except($modalErrorKeys)
+            ->flatten();
+    @endphp
+
+    @if ($loginErrors->isNotEmpty())
+        <div role="alert" class="mb-4 rounded-2xl bg-rose-50/80 backdrop-blur-sm border border-rose-100 px-4 py-3.5">
             <div class="flex items-start gap-3 mb-2">
                 <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-100">
                     <svg class="h-4 w-4 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -57,7 +64,7 @@
                 <div class="flex-1">
                     <p class="text-sm font-bold text-rose-700 mb-2">{{ __('auth.errors_title') }}</p>
                     <ul class="space-y-1">
-                        @foreach ($errors->all() as $error)
+                        @foreach ($loginErrors as $error)
                             <li class="text-xs font-medium text-rose-600 flex items-start gap-1.5">
                                 <span class="text-rose-400 mt-0.5">•</span>
                                 <span>{{ $error }}</span>
@@ -175,7 +182,8 @@
 
 @push('modals')
     {{-- IT Support Ticket Modal --}}
-    <div id="loginHelpModal" class="fixed inset-0 z-[999] hidden items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm transition-opacity duration-200">
+    <div id="loginHelpModal" role="dialog" aria-modal="true" aria-labelledby="loginHelpModalTitle"
+        class="fixed inset-0 z-[999] hidden items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm transition-opacity duration-200">
         <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 space-y-4 relative">
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div class="flex items-center gap-2.5">
@@ -186,11 +194,11 @@
                         </svg>
                     </div>
                     <div>
-                        <h3 class="text-sm font-bold text-slate-900">{{ __('ticketing.login_help.modal_title') }}</h3>
+                        <h3 id="loginHelpModalTitle" class="text-sm font-bold text-slate-900">{{ __('ticketing.login_help.modal_title') }}</h3>
                         <p class="text-[11px] text-slate-500">{{ __('ticketing.login_help.modal_subtitle') }}</p>
                     </div>
                 </div>
-                <button type="button" onclick="closeLoginHelpModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                <button type="button" onclick="closeLoginHelpModal()" aria-label="Close" class="text-slate-400 hover:text-slate-600 p-1">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -200,22 +208,19 @@
             <form method="POST" action="{{ route('support.login-assistance') }}" class="space-y-4">
                 @csrf
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">{{ __('ticketing.login_help.nik') }} <span class="text-rose-500">*</span></label>
+                    <label for="nik_input" class="block text-xs font-bold text-slate-700 mb-1">{{ __('ticketing.login_help.nik') }} <span class="text-rose-500">*</span></label>
                     <input type="text" name="nik" id="nik_input" required value="{{ old('nik', old('nik_or_email')) }}"
                         placeholder="{{ __('ticketing.login_help.nik_placeholder') }}"
                         class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">
-                    <div id="nik-feedback" class="mt-1.5 min-h-[1.25rem] text-[11px] font-medium transition-all duration-200"></div>
-                    @error('nik')
-                        <span class="text-xs text-rose-500 mt-1 block font-semibold">{{ $message }}</span>
-                    @enderror
-                    @error('nik_or_email')
-                        <span class="text-xs text-rose-500 mt-1 block font-semibold">{{ $message }}</span>
-                    @enderror
+                    <div id="nik-feedback" aria-live="polite" class="mt-1.5 min-h-[1.25rem] text-[11px] font-medium transition-all duration-200"></div>
+                    @if ($errors->has('nik') || $errors->has('nik_or_email'))
+                        <span class="text-xs text-rose-500 mt-1 block font-semibold">{{ $errors->first('nik') ?: $errors->first('nik_or_email') }}</span>
+                    @endif
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">{{ __('ticketing.login_help.issue_type') }} <span class="text-rose-500">*</span></label>
-                    <select name="issue_type" required
+                    <label for="issue_type" class="block text-xs font-bold text-slate-700 mb-1">{{ __('ticketing.login_help.issue_type') }} <span class="text-rose-500">*</span></label>
+                    <select name="issue_type" id="issue_type" required
                         class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">
                         <option value="Password Reset / Account Locked" @selected(old('issue_type') === 'Password Reset / Account Locked')>{{ __('ticketing.login_help.options.password_reset') }}</option>
                         <option value="New Employee Account Setup" @selected(old('issue_type') === 'New Employee Account Setup')>{{ __('ticketing.login_help.options.account_setup') }}</option>
@@ -225,19 +230,28 @@
                         <option value="Software / Application Issue" @selected(old('issue_type') === 'Software / Application Issue')>{{ __('ticketing.login_help.options.software') }}</option>
                         <option value="General Inquiry / Other IT Issue" @selected(old('issue_type') === 'General Inquiry / Other IT Issue')>{{ __('ticketing.login_help.options.other') }}</option>
                     </select>
+                    @error('issue_type')
+                        <span class="text-xs text-rose-500 mt-1 block font-semibold">{{ $message }}</span>
+                    @enderror
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">{{ __('ticketing.login_help.phone') }}</label>
-                    <input type="text" name="contact_number" value="{{ old('contact_number') }}"
+                    <label for="contact_number" class="block text-xs font-bold text-slate-700 mb-1">{{ __('ticketing.login_help.phone') }}</label>
+                    <input type="text" name="contact_number" id="contact_number" value="{{ old('contact_number') }}"
                         placeholder="{{ __('ticketing.login_help.phone_placeholder') }}"
                         class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">
+                    @error('contact_number')
+                        <span class="text-xs text-rose-500 mt-1 block font-semibold">{{ $message }}</span>
+                    @enderror
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">{{ __('ticketing.login_help.details') }} <span class="text-rose-500">*</span></label>
-                    <textarea name="description" rows="3" required placeholder="{{ __('ticketing.login_help.details_placeholder') }}"
+                    <label for="description" class="block text-xs font-bold text-slate-700 mb-1">{{ __('ticketing.login_help.details') }} <span class="text-rose-500">*</span></label>
+                    <textarea name="description" id="description" rows="3" required placeholder="{{ __('ticketing.login_help.details_placeholder') }}"
                         class="block w-full rounded-xl border border-slate-200 py-2 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">{{ old('description') }}</textarea>
+                    @error('description')
+                        <span class="text-xs text-rose-500 mt-1 block font-semibold">{{ $message }}</span>
+                    @enderror
                 </div>
 
                 <div class="pt-2 flex items-center justify-end gap-2">
@@ -284,7 +298,7 @@
             }
         });
 
-        @if ($errors->has('nik') || $errors->has('nik_or_email') || $errors->has('issue_type') || $errors->has('description'))
+        @if ($errors->hasAny($modalErrorKeys ?? ['nik', 'nik_or_email', 'issue_type', 'description', 'contact_number']))
             openLoginHelpModal();
         @endif
 
