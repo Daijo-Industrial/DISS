@@ -3,16 +3,18 @@
     {{-- Header --}}
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-black text-slate-900 tracking-tight">IT Performance KPIs</h1>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">{{ __('ticketing.dashboard.title') }}</h1>
             <p class="text-sm font-medium text-slate-500 mt-1">
-                Auditing metrics for {{ auth()->user()->name }}
-                ({{ \Carbon\Carbon::parse($metrics['period']['start'])->format('M Y') }})
+                {{ __('ticketing.dashboard.subtitle', [
+                    'name' => auth()->user()->name,
+                    'period' => \Carbon\Carbon::parse($metrics['period']['start'])->translatedFormat('F Y')
+                ]) }}
             </p>
         </div>
         <div>
             <a href="{{ route('ticketing.list') ?? '#' }}"
                 class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-md hover:bg-slate-800 transition-colors">
-                <span>View All Tickets</span>
+                <span>{{ __('ticketing.dashboard.view_all_tickets') }}</span>
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                 </svg>
@@ -27,7 +29,7 @@
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm relative overflow-hidden group">
             <div class="flex justify-between items-start mb-4">
                 <div>
-                    <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Throughput</h3>
+                    <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{{ __('ticketing.dashboard.throughput') }}</h3>
                     <div class="mt-1 text-3xl font-black text-slate-900">{{ $metrics['throughput'] }}</div>
                 </div>
                 <div class="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
@@ -36,7 +38,7 @@
                     </svg>
                 </div>
             </div>
-            <div class="text-xs font-semibold text-slate-500">Tickets resolved this month</div>
+            <div class="text-xs font-semibold text-slate-500">{{ __('ticketing.dashboard.throughput_desc') }}</div>
             <!-- Decorative Subtle Sparkline -->
             <div class="absolute bottom-0 left-0 w-full h-8 opacity-20 pointer-events-none">
                 <canvas id="sparkline-throughput"></canvas>
@@ -47,7 +49,7 @@
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm relative overflow-hidden">
             <div class="flex justify-between items-start mb-4">
                 <div>
-                    <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">SLA Compliance</h3>
+                    <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{{ __('ticketing.dashboard.sla_compliance') }}</h3>
                     <div class="mt-1 flex items-baseline gap-1">
                         <span
                             class="text-3xl font-black @if ($metrics['sla_compliance'] >= 90) text-emerald-600 @else text-rose-600 @endif">
@@ -63,14 +65,14 @@
                     </svg>
                 </div>
             </div>
-            <div class="text-xs font-semibold text-slate-500">Target > 90%</div>
+            <div class="text-xs font-semibold text-slate-500">{{ __('ticketing.dashboard.sla_target') }}</div>
         </div>
 
         {{-- Re-open Rate --}}
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm relative overflow-hidden">
             <div class="flex justify-between items-start mb-4">
                 <div>
-                    <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Re-open Rate</h3>
+                    <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{{ __('ticketing.dashboard.reopen_rate') }}</h3>
                     <div
                         class="mt-1 text-3xl font-black @if ($metrics['reopen_rate'] > 5) text-rose-600 @else text-slate-900 @endif">
                         {{ $metrics['reopen_rate'] }}%
@@ -83,14 +85,14 @@
                     </svg>
                 </div>
             </div>
-            <div class="text-xs font-semibold text-slate-500">Lower is better</div>
+            <div class="text-xs font-semibold text-slate-500">{{ __('ticketing.dashboard.lower_is_better') }}</div>
         </div>
 
         {{-- Utilization --}}
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm relative overflow-hidden">
             <div class="flex justify-between items-start mb-4">
                 <div>
-                    <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">WIP / Utilization</h3>
+                    <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{{ __('ticketing.dashboard.utilization') }}</h3>
                     <div class="mt-1 flex items-center gap-2">
                         <span class="text-3xl font-black text-slate-900">{{ $metrics['utilization'] }}</span>
                         <div class="flex h-2.5 w-24 rounded-full bg-slate-100 overflow-hidden">
@@ -107,14 +109,14 @@
                     </svg>
                 </div>
             </div>
-            <div class="text-xs font-semibold text-slate-500">Concurrent active tickets</div>
+            <div class="text-xs font-semibold text-slate-500">{{ __('ticketing.dashboard.utilization_desc') }}</div>
         </div>
     </div>
 
     {{-- Example section for future extension: Top categories or open SLA breaches --}}
     <div class="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
         <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
-            <h3 class="text-sm font-black text-slate-800 tracking-wide">Productivity Trends</h3>
+            <h3 class="text-sm font-black text-slate-800 tracking-wide">{{ __('ticketing.dashboard.productivity_trends') }}</h3>
         </div>
         <div class="p-6 h-64">
             <canvas id="performance-chart"></canvas>
@@ -169,9 +171,14 @@
                 new Chart(mainCtx, {
                     type: 'bar',
                     data: {
-                        labels: ['SLA Compliance', 'Throughput', 'Re-open Rate (Avg)', 'Utilization'],
+                        labels: [
+                            @json(__('ticketing.dashboard.sla_compliance')),
+                            @json(__('ticketing.dashboard.throughput')),
+                            @json(__('ticketing.dashboard.chart.reopen_rate_avg')),
+                            @json(__('ticketing.dashboard.chart.utilization'))
+                        ],
                         datasets: [{
-                            label: 'Metrics',
+                            label: @json(__('ticketing.dashboard.chart.metrics')),
                             data: [{{ $metrics['sla_compliance'] }}, {{ $metrics['throughput'] }},
                                 {{ $metrics['reopen_rate'] }}, {{ $metrics['utilization'] }}
                             ],

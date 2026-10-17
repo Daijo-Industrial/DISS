@@ -58,7 +58,7 @@
             <p class="text-xs text-slate-400 mt-1">
                 {{ __('ticketing.detail.reported_by', [
                     'name' => optional($ticketData->reporter)->name ?? optional($ticketData->reporter)->nama ?? ($ticketData->reporter_id ?? 'User'),
-                    'time' => $ticketData->created_at->format('M d, Y H:i')
+                    'time' => $ticketData->created_at->translatedFormat('d M Y, H:i')
                 ]) }}
             </p>
         </div>
@@ -159,7 +159,7 @@
                             <div class="w-full border-t border-slate-100"></div>
                         </div>
                         <span class="relative text-[11px] font-medium text-slate-500 bg-slate-50 border border-slate-200/70 px-3.5 py-1 rounded-full shadow-2xs">
-                            {{ __('ticketing.detail.ticket_created_on', ['time' => $ticketData->created_at->format('M d, Y H:i')]) }}
+                            {{ __('ticketing.detail.ticket_created_on', ['time' => $ticketData->created_at->translatedFormat('d M Y, H:i')]) }}
                         </span>
                     </div>
 
@@ -383,12 +383,12 @@
                             class="block w-full rounded-xl bg-slate-50 border border-slate-200/80 py-1.5 px-3 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none cursor-pointer">
                             @foreach (\App\Domains\Ticketing\Enums\TicketPriority::cases() as $pCase)
                                 <option value="{{ $pCase->value }}" {{ $ticketData->priority->value === $pCase->value ? 'selected' : '' }}>
-                                    {{ $pCase->value }}
+                                    {{ __('ticketing.concierge.priorities.' . strtolower($pCase->value)) }}
                                 </option>
                             @endforeach
                         </select>
                     @else
-                        <div class="text-xs font-semibold text-slate-900">{{ $ticketData->priority->value }}</div>
+                        <div class="text-xs font-semibold text-slate-900">{{ __('ticketing.concierge.priorities.' . strtolower($ticketData->priority->value)) }}</div>
                     @endif
                 </div>
 
@@ -422,18 +422,18 @@
                     @if ($canManage)
                         <select wire:change="setSlaPreset($event.target.value)"
                             class="block w-full rounded-xl bg-slate-50 border border-slate-200/80 py-1.5 px-3 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none cursor-pointer">
-                            <option value="60" {{ $ticketData->getEffectiveSlaMinutes() === 60 ? 'selected' : '' }}>1 Hour</option>
-                            <option value="120" {{ $ticketData->getEffectiveSlaMinutes() === 120 ? 'selected' : '' }}>2 Hours</option>
-                            <option value="240" {{ $ticketData->getEffectiveSlaMinutes() === 240 ? 'selected' : '' }}>4 Hours</option>
-                            <option value="480" {{ $ticketData->getEffectiveSlaMinutes() === 480 ? 'selected' : '' }}>8 Hours (Standard)</option>
-                            <option value="1440" {{ $ticketData->getEffectiveSlaMinutes() === 1440 ? 'selected' : '' }}>1 Day (24 Hours)</option>
-                            <option value="2880" {{ $ticketData->getEffectiveSlaMinutes() === 2880 ? 'selected' : '' }}>2 Days (48 Hours)</option>
+                            <option value="60" {{ $ticketData->getEffectiveSlaMinutes() === 60 ? 'selected' : '' }}>{{ __('ticketing.detail.sla_presets_options.1_hour') }}</option>
+                            <option value="120" {{ $ticketData->getEffectiveSlaMinutes() === 120 ? 'selected' : '' }}>{{ __('ticketing.detail.sla_presets_options.2_hours') }}</option>
+                            <option value="240" {{ $ticketData->getEffectiveSlaMinutes() === 240 ? 'selected' : '' }}>{{ __('ticketing.detail.sla_presets_options.4_hours') }}</option>
+                            <option value="480" {{ $ticketData->getEffectiveSlaMinutes() === 480 ? 'selected' : '' }}>{{ __('ticketing.detail.sla_presets_options.8_hours') }}</option>
+                            <option value="1440" {{ $ticketData->getEffectiveSlaMinutes() === 1440 ? 'selected' : '' }}>{{ __('ticketing.detail.sla_presets_options.24_hours') }}</option>
+                            <option value="2880" {{ $ticketData->getEffectiveSlaMinutes() === 2880 ? 'selected' : '' }}>{{ __('ticketing.detail.sla_presets_options.48_hours') }}</option>
                         </select>
                     @endif
 
                     @if ($ticketData->getSlaDueAt())
                         <div class="text-[11px] text-slate-400 pt-1">
-                            {{ __('ticketing.detail.target_due') }}: {{ $ticketData->getSlaDueAt()->format('M d, H:i') }}
+                            {{ __('ticketing.detail.target_due') }}: {{ $ticketData->getSlaDueAt()->translatedFormat('d M, H:i') }}
                         </div>
                     @endif
                 </div>
