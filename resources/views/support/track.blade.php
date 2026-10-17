@@ -64,7 +64,7 @@
             {{-- Problem Description --}}
             <div class="rounded-2xl border border-slate-100 bg-slate-50/50 p-4 text-xs">
                 <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">{{ __('ticketing.login_help.details') }}</div>
-                <p class="text-slate-700 whitespace-pre-line leading-relaxed">{{ $ticket->description }}</p>
+                <p class="text-slate-700 whitespace-pre-line leading-relaxed">{{ $ticket->getCleanDescription() }}</p>
             </div>
 
             {{-- Recent Progress Timeline --}}

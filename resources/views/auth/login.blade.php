@@ -151,7 +151,7 @@
             </div>
         </button>
 
-        {{-- Login Help & Public Ticket Tracking Links --}}
+        {{-- IT Support & Public Ticket Tracking Links --}}
         <div class="pt-3 flex flex-col items-center gap-2 text-center">
             <button type="button" onclick="openLoginHelpModal()"
                 class="text-xs font-semibold text-slate-500 hover:text-indigo-600 transition-colors inline-flex items-center gap-1.5 focus:outline-none">
@@ -174,7 +174,7 @@
 @endsection
 
 @push('modals')
-    {{-- Login Assistance Modal --}}
+    {{-- IT Support Ticket Modal --}}
     <div id="loginHelpModal" class="fixed inset-0 z-[999] hidden items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm transition-opacity duration-200">
         <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 space-y-4 relative">
             <div class="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -217,10 +217,13 @@
                     <label class="block text-xs font-bold text-slate-700 mb-1">{{ __('ticketing.login_help.issue_type') }} <span class="text-rose-500">*</span></label>
                     <select name="issue_type" required
                         class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm">
-                        <option value="Password Reset / Account Locked">{{ __('ticketing.login_help.options.password_reset') }}</option>
-                        <option value="New Employee Account Setup">{{ __('ticketing.login_help.options.account_setup') }}</option>
-                        <option value="Login Error / Access Denied">{{ __('ticketing.login_help.options.login_error') }}</option>
-                        <option value="Other Login Issue">{{ __('ticketing.login_help.options.other') }}</option>
+                        <option value="Password Reset / Account Locked" @selected(old('issue_type') === 'Password Reset / Account Locked')>{{ __('ticketing.login_help.options.password_reset') }}</option>
+                        <option value="New Employee Account Setup" @selected(old('issue_type') === 'New Employee Account Setup')>{{ __('ticketing.login_help.options.account_setup') }}</option>
+                        <option value="Login Error / Access Denied" @selected(old('issue_type') === 'Login Error / Access Denied')>{{ __('ticketing.login_help.options.login_error') }}</option>
+                        <option value="Hardware / Computer / Printer" @selected(old('issue_type') === 'Hardware / Computer / Printer')>{{ __('ticketing.login_help.options.hardware') }}</option>
+                        <option value="Network / Wi-Fi / Connectivity" @selected(old('issue_type') === 'Network / Wi-Fi / Connectivity')>{{ __('ticketing.login_help.options.network') }}</option>
+                        <option value="Software / Application Issue" @selected(old('issue_type') === 'Software / Application Issue')>{{ __('ticketing.login_help.options.software') }}</option>
+                        <option value="General Inquiry / Other IT Issue" @selected(old('issue_type') === 'General Inquiry / Other IT Issue')>{{ __('ticketing.login_help.options.other') }}</option>
                     </select>
                 </div>
 
@@ -268,6 +271,8 @@
                 modal.classList.add('hidden');
             }
         }
+        const openSupportModal = openLoginHelpModal;
+        const closeSupportModal = closeLoginHelpModal;
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 closeLoginHelpModal();
