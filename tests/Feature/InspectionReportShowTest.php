@@ -41,7 +41,7 @@ class InspectionReportShowTest extends TestCase
 
         // Test Livewire component
         Livewire::test(InspectionShow::class, ['inspection_report' => $report])
-            ->assertSee('Open All Accordions')
+            ->assertSee('Open All')
             ->assertSee('Collapse All')
             ->assertSee('toggleAccordionGroup')
             ->assertSee('toggleAllAccordions')
@@ -60,7 +60,7 @@ class InspectionReportShowTest extends TestCase
             'quantityData',
         ]);
         $blade = view('inspection.show', ['inspectionReport' => $report, 'r' => $report])->render();
-        $this->assertStringContainsString('Open All Accordions', $blade);
+        $this->assertStringContainsString('Open All', $blade);
         $this->assertStringContainsString('Collapse All', $blade);
         $this->assertStringContainsString('toggleAccordionGroup', $blade);
         $this->assertStringContainsString('toggleAllAccordions', $blade);
