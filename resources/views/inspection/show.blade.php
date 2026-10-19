@@ -137,44 +137,56 @@
                                 $sameDay = $start->isSameDay($end);
                             @endphp
 
-                            <p class="mb-4">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                                <div>
+                                    {{-- ▼ Date(s) ---------------------------------------------------- --}}
+                                    @if ($sameDay)
+                                        <span class="text-muted">
+                                            <i class="bi bi-calendar-event me-1"></i>
+                                            {{ $start->format('d M Y') }}
+                                        </span>
+                                    @else
+                                        <span class="text-muted">
+                                            <i class="bi bi-calendar-event me-1"></i>
+                                            {{ $start->format('d M Y') }}
+                                        </span>
+                                        <span class="text-muted ms-2">
+                                            <i class="bi bi-arrow-right"></i>
+                                        </span>
+                                        <span class="text-muted ms-2">
+                                            <i class="bi bi-calendar-event me-1"></i>
+                                            {{ $end->format('d M Y') }}
+                                        </span>
+                                    @endif
 
-                                {{-- ▼ Date(s) ---------------------------------------------------- --}}
-                                @if ($sameDay)
-                                    <span class="text-muted">
-                                        <i class="bi bi-calendar-event me-1"></i>
-                                        {{ $start->format('d M Y') }}
+                                    {{-- ▼ Time range ------------------------------------------------ --}}
+                                    <span class="badge bg-light text-dark ms-3">
+                                        <i class="bi bi-clock me-1"></i>
+                                        {{ $start->format('H:i') }} &rarr; {{ $end->format('H:i') }}
                                     </span>
-                                @else
-                                    <span class="text-muted">
-                                        <i class="bi bi-calendar-event me-1"></i>
-                                        {{ $start->format('d M Y') }}
-                                    </span>
-                                    <span class="text-muted ms-2">
-                                        <i class="bi bi-arrow-right"></i>
-                                    </span>
-                                    <span class="text-muted ms-2">
-                                        <i class="bi bi-calendar-event me-1"></i>
-                                        {{ $end->format('d M Y') }}
-                                    </span>
-                                @endif
 
-                                {{-- ▼ Time range ------------------------------------------------ --}}
-                                <span class="badge bg-light text-dark ms-3">
-                                    <i class="bi bi-clock me-1"></i>
-                                    {{ $start->format('H:i') }} &rarr; {{ $end->format('H:i') }}
-                                </span>
+                                    {{-- ▼ Duration --------------------------------------------------- --}}
+                                    <span class="badge bg-secondary ms-1">
+                                        <i class="bi bi-hourglass-split me-1"></i>{{ $dur }}
+                                    </span>
+                                </div>
 
-                                {{-- ▼ Duration --------------------------------------------------- --}}
-                                <span class="badge bg-secondary ms-1">
-                                    <i class="bi bi-hourglass-split me-1"></i>{{ $dur }}
-                                </span>
-                            </p>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-primary"
+                                        onclick="toggleAccordionGroup('accordionQ{{ $p }}', true)">
+                                        <i class="bi bi-arrows-expand me-1"></i> Open All Accordions
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary"
+                                        onclick="toggleAccordionGroup('accordionQ{{ $p }}', false)">
+                                        <i class="bi bi-arrows-collapse me-1"></i> Collapse All
+                                    </button>
+                                </div>
+                            </div>
 
                             {{-- accordion per dataset (unchanged) ----------------------------- --}}
                             <div class="accordion" id="accordionQ{{ $p }}">
                                 {{-- First Inspection --}}
-                                <x-inspection-section parent="accordionQ{{ $p }}" id="first{{ $p }}"
+                                <x-inspection-section id="first{{ $p }}"
                                     title="First Inspection">
                                     @include('inspection.partials.first-inspection-table', [
                                         'rows' => $d->firstInspections,
@@ -182,24 +194,24 @@
                                 </x-inspection-section>
 
                                 {{-- Dimension Data (optional) --}}
-                                <x-inspection-section parent="accordionQ{{ $p }}"
-                                    id="measure{{ $p }}" title="Dimension Data">
+                                <x-inspection-section id="measure{{ $p }}"
+                                    title="Dimension Data">
                                     @include('inspection.partials.dimension-table', [
                                         'rows' => $h->dimensionData,
                                     ])
                                 </x-inspection-section>
 
                                 {{-- Second Inspection & children --}}
-                                <x-inspection-section parent="accordionQ{{ $p }}"
-                                    id="second{{ $p }}" title="Second Inspection">
+                                <x-inspection-section id="second{{ $p }}"
+                                    title="Second Inspection">
                                     @include('inspection.partials.second-inspection-table', [
                                         'second' => $d->secondInspections,
                                     ])
                                 </x-inspection-section>
 
                                 {{-- Judgement --}}
-                                <x-inspection-section parent="accordionQ{{ $p }}"
-                                    id="result{{ $p }}" title="Judgement">
+                                <x-inspection-section id="result{{ $p }}"
+                                    title="Judgement">
                                     @include('inspection.partials.judgement-table', [
                                         'judgement' => $d->judgementData,
                                     ])
@@ -385,4 +397,53 @@
                 </div>
             @endif
         </div>
-    @endsection
+    </div>
+
+    <script>
+        function toggleAccordionGroup(accordionId, open) {
+            const parent = typeof accordionId === 'string' ? document.getElementById(accordionId) : accordionId;
+            if (!parent) return;
+
+            const collapseEls = parent.querySelectorAll('.accordion-collapse');
+            collapseEls.forEach(el => {
+                if (open) {
+                    el.removeAttribute('data-bs-parent');
+                }
+
+                if (window.bootstrap?.Collapse) {
+                    const instance = window.bootstrap.Collapse.getOrCreateInstance(el, { toggle: false });
+                    if (open && instance._config) {
+                        instance._config.parent = null;
+                    }
+                    if (open) {
+                        instance.show();
+                    } else {
+                        instance.hide();
+                    }
+                } else {
+                    if (open) {
+                        el.classList.add('show');
+                    } else {
+                        el.classList.remove('show');
+                    }
+                }
+
+                const trigger = document.querySelector(`[data-bs-target="#${el.id}"]`);
+                if (trigger) {
+                    trigger.classList.toggle('collapsed', !open);
+                    trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+                }
+            });
+        }
+
+        function toggleAllAccordions(open) {
+            const activePane = document.querySelector('.tab-pane.active.show, .tab-pane.active') || document;
+            const accordions = activePane.querySelectorAll('.accordion');
+            if (accordions.length) {
+                accordions.forEach(acc => toggleAccordionGroup(acc, open));
+            } else {
+                document.querySelectorAll('.accordion').forEach(acc => toggleAccordionGroup(acc, open));
+            }
+        }
+    </script>
+@endsection
