@@ -18,6 +18,10 @@
 
 ## Development Invariants
 - **No Production Frontend Builds**: Never run `npm run build` in dev; Vite HMR is active.
+- **Bootstrap 5 & Tailwind Collision**:
+  - Tailwind's `.collapse { visibility: collapse; }` overrides Bootstrap 5's `.collapse` class, rendering expanded accordions invisible. When using Bootstrap collapse/accordion in views, ensure `.accordion-collapse` or container has an explicit `visibility: visible;` override.
+- **Accordion Multi-Expand ("Always Open")**:
+  - In reusable accordion Blade components, default the `parent` container prop to `null` and conditionally render `data-bs-parent` only when supplied (`@if(!empty($parent)) data-bs-parent="#{{ $parent }}" @endif`). Omitting it enables Bootstrap 5 multi-expand while preventing undefined variable notices and erroneous `data-bs-parent="#"` attributes.
 - **Targeted Code Styling**: NEVER run `vendor/bin/pint` without specific file arguments (legacy repo will time out). Always pass specific modified file paths.
 - **Testing Invariants**:
   - **Livewire Escaping**: Pass `escape: false` when asserting strings with `&` (`assertSee('A & B', escape: false)`).
@@ -51,4 +55,5 @@
 - **Minimalist Aesthetic**:
   - Calm neutral cards (`slate-50/60`), subtle status pills, no loud stacked warning banners.
   - Contextual action triggers; no duplicate buttons across multiple headers.
+  - **User-Centric UI Terminology**: Never leak implementation or component jargon (e.g. "Accordion", "Modal", "Drawer", "Card", "Tab") into user-facing action labels, headers, or buttons. Use intent-based action verbs (e.g. "Open All" / "Collapse All", "View Details", "Filter") rather than component-derived labels ("Open All Accordions", "Open Modal").
   - Soft geometry (`rounded-2xl`), subtle rings (`ring-1 ring-slate-900/5`), `Plus Jakarta Sans` typography hierarchy over high-contrast fills.
