@@ -259,7 +259,7 @@ class FinalSubmit extends Component
                 ->all();
         }
 
-        DB::transaction(function () {
+        DB::connection((new InspectionReport)->getConnectionName())->transaction(function () {
             InspectionReport::create($this->headerData);
             foreach ($this->detailData as $data) {
                 DetailInspectionReport::create($data);

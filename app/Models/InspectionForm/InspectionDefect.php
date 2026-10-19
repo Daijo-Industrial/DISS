@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class InspectionDefect extends Model
 {
-    use HasFactory;
+    use HasFactory, UsesInspectionConnection;
 
     protected $fillable = ['name', 'department'];
 }

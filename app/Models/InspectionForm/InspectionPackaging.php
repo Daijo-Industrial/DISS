@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class InspectionPackaging extends Model
 {
-    use HasFactory;
+    use HasFactory, UsesInspectionConnection;
 
     protected $fillable = [
         'second_inspection_document_number',
