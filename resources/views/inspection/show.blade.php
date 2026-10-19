@@ -174,7 +174,7 @@
                                 <div class="btn-group btn-group-sm">
                                     <button type="button" class="btn btn-outline-primary"
                                         onclick="toggleAccordionGroup('accordionQ{{ $p }}', true)">
-                                        <i class="bi bi-arrows-expand me-1"></i> Open All Accordions
+                                        <i class="bi bi-arrows-expand me-1"></i> Open All
                                     </button>
                                     <button type="button" class="btn btn-outline-secondary"
                                         onclick="toggleAccordionGroup('accordionQ{{ $p }}', false)">
