@@ -18,7 +18,7 @@
         <div class="container-xl py-4">
 
             {{-- back link ---------------------------------------------------- --}}
-            <a href="{{ route('inspection-report.index') }}" class="text-decoration-none small">
+            <a href="{{ route('inspection-reports.index') }}" class="text-decoration-none small">
                 <i class="bi bi-arrow-left-circle me-1"></i> Back to list
             </a>
 
@@ -192,7 +192,7 @@
                                 {{-- Second Inspection & children --}}
                                 <x-inspection-section parent="accordionQ{{ $p }}"
                                     id="second{{ $p }}" title="Second Inspection">
-                                    @include('inspection.partials.second-inspection', [
+                                    @include('inspection.partials.second-inspection-table', [
                                         'second' => $d->secondInspections,
                                     ])
                                 </x-inspection-section>
@@ -200,7 +200,7 @@
                                 {{-- Judgement --}}
                                 <x-inspection-section parent="accordionQ{{ $p }}"
                                     id="result{{ $p }}" title="Judgement">
-                                    @include('inspection.partials.judgement', [
+                                    @include('inspection.partials.judgement-table', [
                                         'judgement' => $d->judgementData,
                                     ])
                                 </x-inspection-section>

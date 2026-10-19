@@ -37,7 +37,7 @@
 
                         {{-- Weight, right-aligned --}}
                         <td class="text-center pe-4">
-                            {{ rtrim(rtrim(number_format($row->weight, 2), '0'), '.') }}
+                            {{ $row->weight !== null ? rtrim(rtrim(number_format((float) $row->weight, 2), '0'), '.') : '-' }}
                             <small class="text-muted">{{ $row->weight_uom }}</small>
                         </td>
 
@@ -48,7 +48,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="3" class="text-center text-muted py-3">
+                        <td colspan="4" class="text-center text-muted py-3">
                             <i class="bi bi-info-circle me-1"></i> No first-inspection data
                         </td>
                     </tr>

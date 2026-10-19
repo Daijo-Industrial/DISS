@@ -29,10 +29,10 @@
 
                         {{-- right-align numbers, unit on its own col --}}
                         <td class="text-center pe-3">
-                            {{ rtrim(rtrim(number_format($row->lower_limit, 2), '0'), '.') }}
+                            {{ $row->lower_limit !== null ? rtrim(rtrim(number_format((float) $row->lower_limit, 2), '0'), '.') : '-' }}
                             {{ $row->limit_uom }}</td>
                         <td class="text-center pe-3">
-                            {{ rtrim(rtrim(number_format($row->upper_limit, 2), '0'), '.') }}
+                            {{ $row->upper_limit !== null ? rtrim(rtrim(number_format((float) $row->upper_limit, 2), '0'), '.') : '-' }}
                             {{ $row->limit_uom }}</td>
 
                         <td>{!! $badge($row->judgement) !!}</td>
