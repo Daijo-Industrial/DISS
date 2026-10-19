@@ -3,6 +3,7 @@
 namespace App\Livewire\InspectionForm;
 
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 class StepHeader extends Component
@@ -45,22 +46,25 @@ class StepHeader extends Component
 
     protected $listeners = ['dropdownSelected'];
 
-    protected $rules = [
-        'document_number' => 'required|string|unique:inspection_reports,document_number',
-        'customer' => 'required|string',
-        'inspection_date' => 'required|date',
-        'part_number' => 'required|string',
-        'part_name' => 'required|string',
-        'weight' => 'required|numeric',
-        'weight_uom' => 'required|string',
-        'material' => 'required|string',
-        'color' => 'required|string',
-        'tool_number_or_cav_number' => 'required|string',
-        'machine_number' => 'required|string',
-        'shift' => 'required|integer|min:1|max:3',
-        'operator' => 'required|string',
-        'inspector' => 'required|string|max:255',
-    ];
+    public function rules(): array
+    {
+        return [
+            'document_number' => ['required', 'string', Rule::unique(InspectionReport::class, 'document_number')],
+            'customer' => 'required|string',
+            'inspection_date' => 'required|date',
+            'part_number' => 'required|string',
+            'part_name' => 'required|string',
+            'weight' => 'required|numeric',
+            'weight_uom' => 'required|string',
+            'material' => 'required|string',
+            'color' => 'required|string',
+            'tool_number_or_cav_number' => 'required|string',
+            'machine_number' => 'required|string',
+            'shift' => 'required|integer|min:1|max:3',
+            'operator' => 'required|string',
+            'inspector' => 'required|string|max:255',
+        ];
+    }
 
     /** Current payload for hashing */
     protected function snapshot(): array

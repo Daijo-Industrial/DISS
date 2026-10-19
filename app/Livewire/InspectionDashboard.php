@@ -325,7 +325,7 @@ class InspectionDashboard extends Component
         $model = new InspectionDimension;
         $table = $model->getTable();
 
-        $rows = DB::table($table)
+        $rows = DB::connection($model->getConnectionName())->table($table)
             ->join(
                 'inspection_reports',
                 "{$table}.inspection_report_document_number",
