@@ -16,7 +16,9 @@ return [
 
     'default' => env('DB_CONNECTION', 'mysql'),
 
-    'inspection_connection' => env('INSPECTION_DB_CONNECTION', 'mes_mysql'),
+    'inspection_connection' => env('USE_MES_INSPECTION_DB', true)
+        ? env('INSPECTION_DB_CONNECTION', 'mes_mysql')
+        : env('DB_CONNECTION', 'mysql'),
 
     /*
     |--------------------------------------------------------------------------
