@@ -38,6 +38,13 @@ class VerifyMesBridgeCommand extends Command
         $this->line('Host              : <comment>' . config("database.connections.{$connectionName}.host") . '</comment>');
         $this->line('Port              : <comment>' . config("database.connections.{$connectionName}.port") . '</comment>');
         $this->line('Database          : <comment>' . config("database.connections.{$connectionName}.database") . '</comment>');
+
+        if ($connectionName !== 'mes_mysql') {
+            $this->newLine();
+            $this->warn("  [NOTICE] The inspection bridge is currently switched OFF (using '{$connectionName}').");
+            $this->warn('  To enable reading/writing to Daijo_MES, set USE_MES_INSPECTION_DB=true in .env.');
+        }
+
         $this->newLine();
 
         // 1. Raw PDO Connectivity Check
