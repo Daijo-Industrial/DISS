@@ -2,6 +2,7 @@
 
 namespace App\Livewire\InspectionForm;
 
+use App\Models\InspectionForm\InspectionReport;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Component;

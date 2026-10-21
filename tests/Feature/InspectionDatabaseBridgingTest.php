@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\InspectionForm\StepHeader;
 use App\Models\InspectionForm\DetailInspectionReport;
 use App\Models\InspectionForm\FirstInspection;
 use App\Models\InspectionForm\InspectionDefect;
@@ -71,5 +72,20 @@ class InspectionDatabaseBridgingTest extends TestCase
         $this->assertIsArray($config);
         $this->assertSame('mysql', $config['driver']);
         $this->assertSame('DAIJO_MES', $config['database']);
+    }
+
+    /**
+     * Test that StepHeader unique validation rule targets the InspectionReport table and connection.
+     */
+    public function test_step_header_unique_rule_targets_inspection_report_table(): void
+    {
+        $stepHeader = new StepHeader;
+        $rules = $stepHeader->rules();
+
+        $this->assertArrayHasKey('document_number', $rules);
+        $documentNumberRules = array_map('strval', $rules['document_number']);
+
+        $expectedTarget = (new InspectionReport)->getConnectionName() . '.' . (new InspectionReport)->getTable();
+        $this->assertContains("unique:{$expectedTarget},document_number,NULL,id", $documentNumberRules);
     }
 }
