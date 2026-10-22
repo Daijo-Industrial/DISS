@@ -38,27 +38,26 @@
                     <thead>
                         <tr>
                             <td style="vertical-align: middle; height:60px; font-size: 18px;">Nama Vendor</td>
-                            <td colspan="12" style="vertical-align: middle; height:60px; font-size: 18px;">
+                            <td colspan="{{ 5 + count($mon) }}" style="vertical-align: middle; height:60px; font-size: 18px;">
                                 {{ $vendorName }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align: middle; height:60px; font-size: 18px;">Date</td>
-                            <td colspan="12" style="vertical-align: middle; height:60px; font-size: 18px;">
+                            <td colspan="{{ 5 + count($mon) }}" style="vertical-align: middle; height:60px; font-size: 18px;">
                                 {{ now()->timezone('Asia/Jakarta')->format('d-m-Y H:i:s') }}</td>
-                            <!-- Blank cell with colspan="10" -->
                         </tr>
                         <tr>
                             <td style="vertical-align: middle; height:60px; font-size: 18px;">ATT</td>
-                            <td colspan="12" style="vertical-align: middle; height:60px; font-size: 18px;">
+                            <td colspan="{{ 5 + count($mon) }}" style="vertical-align: middle; height:60px; font-size: 18px;">
                                 {{ $contact->persontocontact }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align: middle; height:60px; font-size: 18px;">FR </td>
-                            <td colspan="12" style="vertical-align: middle; height:60px; font-size: 18px;">
+                            <td colspan="{{ 5 + count($mon) }}" style="vertical-align: middle; height:60px; font-size: 18px;">
                                 {{ $contact->p_member ?? '-' }}</td>
                         </tr>
                         <tr>
-                            <td colspan="13" align="center" style="vertical-align: middle; font-size: 30px;">
+                            <td colspan="{{ 6 + count($mon) }}" align="center" style="vertical-align: middle; font-size: 30px;">
                                 Forecast
                                 Report</td>
                         </tr>
@@ -66,133 +65,85 @@
                             <td></td>
                         </tr>
                         <tr>
-                            <th align="center" style="vertical-align: middle; height:60px; font-size: 18px;">No
-                            </th>
+                            <th align="center" style="vertical-align: middle; height:60px; font-size: 18px;">No</th>
                             <th align="center" style="vertical-align: middle; font-size: 18px;">Material Code</th>
                             <th align="center" style="vertical-align: middle; font-size: 18px;">Material Name</th>
-                            <th align="center" style="vertical-align: middle; font-size: 18px;">U/M</th>
+                            <th align="center" style="vertical-align: middle; font-size: 18px;">Unit Measure</th>
                             @foreach ($mon as $month)
                                 <th align="center" style="vertical-align: middle; font-size: 18px;">
                                     {{ \Carbon\Carbon::parse($month)->format('M-Y') }}</th>
                             @endforeach
                             <th align="center" style="vertical-align: middle; font-size: 18px;">Total</th>
-                            <th align="center" style="vertical-align: middle; font-size: 18px;">Keterangan</th>
-                            <th align="center" style="vertical-align: middle; font-size: 18px;">Customer
-                            <th>
+                            <th align="center" style="vertical-align: middle; font-size: 18px;">Customer</th>
                         </tr>
                     </thead>
                     <tbody>
                         @php
+                            $colCount = count($qforecast[0] ?? []);
                             $currentMaterialCode = null;
-                            $materialTotal = 0;
-                            $monthlyTotals = array_fill(0, count($qforecast[0] ?? []), 0);
-                            $i = 1;
+                            $currentMaterialName = null;
+                            $currentMaterialMeasure = null;
+                            $currentCustomers = [];
+                            $monthlyTotals = array_fill(0, $colCount, 0);
+                            $rowNumber = 1;
                         @endphp
 
                         @foreach ($materials as $key => $material)
                             @if ($material->material_code != $currentMaterialCode)
-                                <!-- Print material code, name, and unit of measure only for the first occurrence -->
-                                @if ($currentMaterialCode != null)
+                                @if ($currentMaterialCode !== null)
                                     <tr>
-                                        <td class="table-bordered" align="center" style="vertical-align: middle;">
-                                            {{ $i++ }}</td>
-                                        <td class="table-bordered" align="center" style="vertical-align: middle;">
-                                            {{ $currentMaterialCode }}</td>
-                                        <td class="table-bordered" align="center" style="vertical-align: middle;">
-                                            {{ $currentMaterialName }}</td>
-                                        <td class="table-bordered" align="center" style="vertical-align: middle;">
-                                            {{ $currentMaterialMeasure }}</td>
+                                        <td class="table-bordered" align="center" style="vertical-align: middle;">{{ $rowNumber++ }}</td>
+                                        <td class="table-bordered" align="left" style="vertical-align: middle;">{{ $currentMaterialCode }}</td>
+                                        <td class="table-bordered" align="left" style="vertical-align: middle;">{{ $currentMaterialName }}</td>
+                                        <td class="table-bordered" align="center" style="vertical-align: middle;">{{ $currentMaterialMeasure }}</td>
                                         @foreach ($monthlyTotals as $monthlyTotal)
-                                            <td class="table-bordered" align="center" style="vertical-align: middle;">
-                                                <strong>{{ number_format($monthlyTotal, 2) }}</strong>
-                                            </td>
+                                            <td class="table-bordered" align="right" style="vertical-align: middle; mso-number-format:'\#\,\#\#0\.00';">{{ round($monthlyTotal, 2) }}</td>
                                         @endforeach
-                                        <td class="table-bordered" align="center" style="vertical-align: middle;">
-                                            <strong>{{ number_format(array_sum($monthlyTotals), 2) }}</strong>
-                                        </td>
-                                        <td class="table-bordered" rowspan="2" align="center"
-                                            style="vertical-align: middle;"></td>
-                                        <td class="table-bordered" rowspan="2" align="center"
-                                            style="vertical-align: middle;">{{ $currentCustomer }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td colspan="4" align=right style="vertical-align: middle;">
-                                            <strong>Total</strong>
-                                        </td>
-                                        @foreach ($monthlyTotals as $monthlyTotal)
-                                            <td align="center" style="vertical-align: middle;">
-                                                <strong>{{ number_format($monthlyTotal, 2) }}</strong>
-                                            </td>
-                                        @endforeach
-                                        <td align="center" style="vertical-align: middle;">
-                                            <strong>{{ number_format(array_sum($monthlyTotals), 2) }}</strong>
-                                        </td>
-                                        <td></td> <!-- Empty cell for customer -->
-                                    </tr>
-                                    <tr>
-                                        <td colspan="12"></td>
+                                        <td class="table-bordered" align="right" style="vertical-align: middle; font-weight: bold; mso-number-format:'\#\,\#\#0\.00';">{{ round(array_sum($monthlyTotals), 2) }}</td>
+                                        <td class="table-bordered" align="left" style="vertical-align: middle;">{{ implode(', ', array_unique(array_filter($currentCustomers))) }}</td>
                                     </tr>
                                 @endif
 
-                                <!-- Initialize for the new material code -->
                                 @php
                                     $currentMaterialCode = $material->material_code;
                                     $currentMaterialName = $material->material_name;
                                     $currentMaterialMeasure = $material->unit_of_measure;
-                                    $materialTotal = 0;
-                                    $monthlyTotals = array_fill(0, count($qforecast[0] ?? []), 0);
-                                    $currentCustomer = $material->customer;
+                                    $currentCustomers = [$material->customer];
+                                    $monthlyTotals = array_fill(0, $colCount, 0);
+                                @endphp
+                            @else
+                                @php
+                                    if (!empty($material->customer)) {
+                                        $currentCustomers[] = $material->customer;
+                                    }
                                 @endphp
                             @endif
 
-                            <!-- Accumulate data for each month -->
                             @foreach ($qforecast[$key] ?? [] as $index => $value)
                                 @php
                                     $calculation = $value * $material->quantity_material;
-                                    $materialTotal += $calculation;
                                     $monthlyTotals[$index] = ($monthlyTotals[$index] ?? 0) + $calculation;
                                 @endphp
                             @endforeach
                         @endforeach
 
                         <!-- Print the final row for the last material -->
+                        @if ($currentMaterialCode !== null)
+                            <tr>
+                                <td class="table-bordered" align="center" style="vertical-align: middle;">{{ $rowNumber++ }}</td>
+                                <td class="table-bordered" align="left" style="vertical-align: middle;">{{ $currentMaterialCode }}</td>
+                                <td class="table-bordered" align="left" style="vertical-align: middle;">{{ $currentMaterialName }}</td>
+                                <td class="table-bordered" align="center" style="vertical-align: middle;">{{ $currentMaterialMeasure }}</td>
+                                @foreach ($monthlyTotals as $monthlyTotal)
+                                    <td class="table-bordered" align="right" style="vertical-align: middle; mso-number-format:'\#\,\#\#0\.00';">{{ round($monthlyTotal, 2) }}</td>
+                                @endforeach
+                                <td class="table-bordered" align="right" style="vertical-align: middle; font-weight: bold; mso-number-format:'\#\,\#\#0\.00';">{{ round(array_sum($monthlyTotals), 2) }}</td>
+                                <td class="table-bordered" align="left" style="vertical-align: middle;">{{ implode(', ', array_unique(array_filter($currentCustomers))) }}</td>
+                            </tr>
+                        @endif
+
                         <tr>
-                            <td class="table-bordered" align="center" style="vertical-align: middle;">
-                                {{ $i++ }}</td>
-                            <td class="table-bordered" align="center" style="vertical-align: middle;">
-                                {{ $currentMaterialCode }}</td>
-                            <td class="table-bordered" align="center" style="vertical-align: middle;">
-                                {{ $currentMaterialName }}</td>
-                            <td class="table-bordered" align="center" style="vertical-align: middle;">
-                                {{ $currentMaterialMeasure }}</td>
-                            @foreach ($monthlyTotals as $monthlyTotal)
-                                <td class="table-bordered" align="center" style="vertical-align: middle;">
-                                    <strong>{{ number_format($monthlyTotal, 2) }}</strong>
-                                </td>
-                            @endforeach
-                            <td class="table-bordered" align="center" style="vertical-align: middle;">
-                                <strong>{{ number_format(array_sum($monthlyTotals), 2) }}</strong>
-                            </td>
-                            <td class="table-bordered" rowspan="2" align="center" style="vertical-align: middle;">
-                            </td>
-                            <td class="table-bordered" rowspan="2" align="center" style="vertical-align: middle;">
-                                {{ $currentCustomer }}</td>
-                        </tr>
-                        <tr>
-                            <td colspan="4" align=right style="vertical-align: middle;"><strong>Total</strong>
-                            </td>
-                            @foreach ($monthlyTotals as $monthlyTotal)
-                                <td align="center" style="vertical-align: middle;">
-                                    <strong>{{ number_format($monthlyTotal, 2) }}</strong>
-                                </td>
-                            @endforeach
-                            <td align="center" style="vertical-align: middle;">
-                                <strong>{{ number_format(array_sum($monthlyTotals), 2) }}</strong>
-                            </td>
-                            <td></td> <!-- Empty cell for customer -->
-                        </tr>
-                        <tr>
-                            <td colspan="14" style="text-align: left; font-style: italic;">
+                            <td colspan="{{ 6 + count($mon) }}" style="text-align: left; font-style: italic;">
                                 ** Daijo tidak bertanggung jawab atas perubahan Qty Forecast, sewaktu - waktu Qty bisa berubah sesuai permintaan customer kami
                             </td>
                         </tr>
