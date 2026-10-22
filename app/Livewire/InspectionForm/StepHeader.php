@@ -5,6 +5,7 @@ namespace App\Livewire\InspectionForm;
 use App\Models\InspectionForm\InspectionReport;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class StepHeader extends Component
@@ -122,6 +123,7 @@ class StepHeader extends Component
         return $hash && $hash === md5(json_encode($this->snapshot()));
     }
 
+    #[On('dropdownSelected')]
     public function dropdownSelected($payload = null)
     {
         if (! is_array($payload)) {
@@ -132,11 +134,13 @@ class StepHeader extends Component
         if (isset($payload['item_no']) && isset($payload['description'])) {
             $this->part_number = $payload['item_no'];
             $this->part_name = $payload['description'];
+            $this->resetErrorBag(['part_number', 'part_name']);
         }
 
         // Generic fallback (e.g. customer, operator, etc.)
         if (! empty($payload['field']) && isset($payload['value'])) {
             $this->{$payload['field']} = $payload['value'];
+            $this->resetErrorBag($payload['field']);
         }
     }
 
