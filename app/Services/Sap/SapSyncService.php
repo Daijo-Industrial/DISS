@@ -47,7 +47,7 @@ final class SapSyncService
             'sap_fct_bom_wip' => [
                 'path' => 'sap_fct_bom_wip/list',
                 'tables' => ['sap_fct_bom_wip_first'],
-                'params' => ['itemGroupCodes' => '103,168'],
+                'params' => ['itemGroupCodes' => '103,102,166,168'],
                 'convert_168_to_103' => true,
                 'column_map' => [
                     'Father'      => 'fg_code',
@@ -62,7 +62,7 @@ final class SapSyncService
             'sap_fct_bom_wip_semi' => [
                 'path' => 'sap_fct_bom_wip_semi/list',
                 'tables' => ['sap_fct_bom_wip_second'],
-                'params' => ['itemGroupCodes' => '103,168'],
+                'params' => ['itemGroupCodes' => '103,102,166,168'],
                 'convert_168_to_103' => true,
                 'column_map' => [
                     'FGCode'      => 'fg_code',
@@ -77,7 +77,7 @@ final class SapSyncService
             'sap_fct_bom_wip_semi_semi' => [
                 'path' => 'sap_fct_bom_wip_semi_semi/list',
                 'tables' => ['sap_fct_bom_wip_third'],
-                'params' => ['itemGroupCodes' => '103,168'],
+                'params' => ['itemGroupCodes' => '103,102,166,168'],
                 'convert_168_to_103' => true,
                 'column_map' => [
                     'FGCode'      => 'fg_code',
@@ -112,7 +112,7 @@ final class SapSyncService
             'sap_fct_inventory_fg' => [
                 'path' => 'sap_fct_inventory_fg/list',
                 'tables' => ['sap_fct_inventory_fgs'],
-                'params' => ['itemGroupCodes' => '103,168'],
+                'params' => ['itemGroupCodes' => '103,102,166,168'],
             ],
 
             // Line Production Group
