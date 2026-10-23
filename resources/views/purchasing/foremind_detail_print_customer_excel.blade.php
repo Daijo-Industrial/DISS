@@ -49,7 +49,7 @@
                         <tr>
                             <td style="vertical-align: middle; height:60px; font-size: 18px;">ATT</td>
                             <td colspan="{{ 5 + count($mon) }}" style="vertical-align: middle; height:60px; font-size: 18px;">
-                                {{ $contact->persontocontact }} </td>
+                                {{ $contact->persontocontact ?? "-" }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align: middle; height:60px; font-size: 18px;">FR </td>
