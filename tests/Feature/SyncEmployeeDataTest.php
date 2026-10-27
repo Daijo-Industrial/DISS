@@ -6,6 +6,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\Employee;
 use App\Models\EvaluationDataWeekly;
 use App\Services\JPayrollService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
@@ -78,7 +79,9 @@ test('it syncs employees, leave, and attendance correctly', function () {
 
     expect(DB::table('attendance_records')->count())->toBe(1);
     $attendance = DB::table('attendance_records')->first();
-    expect($attendance->alpha)->toBe(1)->and($attendance->izin)->toBe(1);
+    expect($attendance->alpha)->toBe(1)
+        ->and($attendance->cuti)->toBe(1)
+        ->and($attendance->izin)->toBe(0);
 
     expect(\App\Models\ImportJob::count())->toBe(1);
     $importJob = \App\Models\ImportJob::first();

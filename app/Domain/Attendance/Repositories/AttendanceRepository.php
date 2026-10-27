@@ -16,7 +16,7 @@ interface AttendanceRepository
     /**
      * Return aggregated per-employee totals for a date range, grouped by department.
      *
-     * @return Collection<int, object{department_name: string, alpha: int, telat: int, izin: int, sakit: int}>
+     * @return Collection<int, object{department_name: string, alpha: int, telat: int, cuti: int, izin: int, sakit: int}>
      */
     public function aggregateByDepartment(
         CarbonImmutable $from,
@@ -59,7 +59,7 @@ interface AttendanceRepository
     /**
      * Global attendance sums (all time).
      *
-     * @return array{alpha: int, telat: int, izin: int, sakit: int}
+     * @return array{alpha: int, telat: int, cuti: int, izin: int, sakit: int}
      */
     public function globalSums(): array;
 

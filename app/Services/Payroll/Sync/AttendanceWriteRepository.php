@@ -35,6 +35,7 @@ final class AttendanceWriteRepository
             'shift_date' => $dto->shiftDate->toDateString(),
             'alpha'      => $dto->alpha,
             'telat'      => $dto->telat,
+            'cuti'       => $dto->cuti,
             'izin'       => $dto->izin,
             'sakit'      => $dto->sakit,
             'synced_at'  => $now,
@@ -46,7 +47,7 @@ final class AttendanceWriteRepository
             return DB::table('attendance_records')->upsert(
                 $rows,
                 ['nik', 'shift_date'],
-                ['alpha', 'telat', 'izin', 'sakit', 'synced_at', 'updated_at'],
+                ['alpha', 'telat', 'cuti', 'izin', 'sakit', 'synced_at', 'updated_at'],
             );
         });
     }

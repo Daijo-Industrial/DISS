@@ -241,10 +241,11 @@
                                             });
                                         },
                                         get summary() {
-                                            let s = { alpha: 0, telat: 0, izin: 0, sakit: 0 };
+                                            let s = { alpha: 0, telat: 0, cuti: 0, izin: 0, sakit: 0 };
                                             this.filteredRecords.forEach(r => {
                                                 s.alpha += r.alpha || 0;
                                                 s.telat += r.telat || 0;
+                                                s.cuti += r.cuti || 0;
                                                 s.izin += r.izin || 0;
                                                 s.sakit += r.sakit || 0;
                                             });
@@ -266,8 +267,8 @@
                                     
                                     <div class="bg-slate-900 rounded-[2rem] p-6 shadow-xl">
                                         {{-- Metric KPI Row --}}
-                                        <div class="grid grid-cols-4 gap-2 mb-6">
-                                            <template x-for="[key, label, color] in [['alpha', 'Absent', 'rose'], ['telat', 'Late', 'amber'], ['izin', 'Permit', 'blue'], ['sakit', 'Sick', 'slate']]">
+                                        <div class="grid grid-cols-5 gap-2 mb-6">
+                                            <template x-for="[key, label, color] in [['alpha', 'Absent', 'rose'], ['telat', 'Late', 'amber'], ['cuti', 'Leave', 'emerald'], ['izin', 'Permit', 'blue'], ['sakit', 'Sick', 'slate']]">
                                                 <div class="flex flex-col items-center p-3 rounded-2xl bg-white/5 border border-white/10">
                                                     <span class="text-xl font-black tabular-nums leading-none"
                                                         :class="summary[key] > 0 ? 'text-' + color + '-400' : 'text-white/20'"
@@ -299,6 +300,7 @@
                                                                 <div class="flex items-center gap-2">
                                                                     <template x-if="r.alpha > 0"><span class="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-400 text-[9px] font-bold uppercase tracking-widest">Abs: <span x-text="r.alpha"></span></span></template>
                                                                     <template x-if="r.telat > 0"><span class="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-400 text-[9px] font-bold uppercase tracking-widest">Late: <span x-text="r.telat"></span></span></template>
+                                                                    <template x-if="r.cuti > 0"><span class="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 text-[9px] font-bold uppercase tracking-widest">Lv: <span x-text="r.cuti"></span></span></template>
                                                                     <template x-if="r.izin > 0"><span class="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-400 text-[9px] font-bold uppercase tracking-widest">Pmt: <span x-text="r.izin"></span></span></template>
                                                                     <template x-if="r.sakit > 0"><span class="px-2 py-0.5 rounded-md bg-slate-500/20 text-slate-400 text-[9px] font-bold uppercase tracking-widest">Sck: <span x-text="r.sakit"></span></span></template>
                                                                 </div>
