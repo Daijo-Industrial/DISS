@@ -6,12 +6,29 @@ use App\Infrastructure\Persistence\Eloquent\Models\Employee;
 use App\Infrastructure\Persistence\Eloquent\Models\User;
 use App\Models\AttendanceRecord;
 use App\Models\EvaluationData;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Spatie\Permission\Models\Role;
 
-uses(RefreshDatabase::class);
+uses(DatabaseTransactions::class);
+
+function createTestCutiIzinFile(string $nik = '00147', int $count = 1): string
+{
+    $spreadsheet = new Spreadsheet;
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setCellValue('C5', 'PERIOD : 2026/09 - 2026/09');
+    $sheet->setCellValue('B9', $nik);
+    $sheet->setCellValue('E9', $count);
+
+    $tempFile = tempnam(sys_get_temp_dir(), 'test_cuti_izin_') . '.xlsx';
+    $writer = new Xlsx($spreadsheet);
+    $writer->save($tempFile);
+
+    return $tempFile;
+}
 
 test('non-super-admin cannot import cuti izin excel', function () {
     $user = User::factory()->create();
@@ -26,7 +43,7 @@ test('super-admin can import cuti izin excel and update attendance records and e
     $admin = User::factory()->create();
     $admin->assignRole('super-admin');
 
-    // Create employee matching NIK in Cuti Izin September 2026.xls (e.g. 00147 has 1 izin)
+    // Create employee matching NIK in test Excel
     Employee::factory()->create([
         'nik' => '00147',
         'employment_type' => 'KONTRAK',
@@ -61,13 +78,12 @@ test('super-admin can import cuti izin excel and update attendance records and e
         'total' => 100,
     ]);
 
-    $filePath = base_path('Cuti Izin September 2026.xls');
-    expect(file_exists($filePath))->toBeTrue();
+    $tempPath = createTestCutiIzinFile('00147', 1);
 
     $file = new UploadedFile(
-        $filePath,
-        'Cuti Izin September 2026.xls',
-        'application/vnd.ms-excel',
+        $tempPath,
+        'Cuti Izin September 2026.xlsx',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         null,
         true
     );
@@ -94,14 +110,22 @@ test('super-admin can import cuti izin excel and update attendance records and e
     $evalData->refresh();
     expect($evalData->Izin)->toBe(1)
         ->and($evalData->total)->toBe(98);
+
+    if (file_exists($tempPath)) {
+        unlink($tempPath);
+    }
 });
 
 test('artisan command attendance:import-cuti-izin imports excel successfully', function () {
-    $filePath = base_path('Cuti Izin September 2026.xls');
+    $tempPath = createTestCutiIzinFile('00147', 1);
 
     $exitCode = Artisan::call('attendance:import-cuti-izin', [
-        'file' => $filePath,
+        'file' => $tempPath,
     ]);
 
     expect($exitCode)->toBe(0);
+
+    if (file_exists($tempPath)) {
+        unlink($tempPath);
+    }
 });

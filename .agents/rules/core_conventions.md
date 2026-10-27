@@ -37,6 +37,11 @@
   - GitHub Issue Forms reside in `.github/ISSUE_TEMPLATE/*.yml` and must be committed to VCS. For non-technical internal users who lack GitHub accounts, intake is centralized via the in-app Support Bubble, with IT administrators escalating validated bugs/features into GitHub via pre-filled URL query parameters.
 - **Sequential Unique Code Invariant (Soft-Deletable Models)**:
   - When auto-generating sequential codes (`IT-YYYY-XXXX`, `VND-YYYY-XXXX`) in observers, NEVER count active rows (`whereYear()->count() + 1`). DB `UNIQUE` indexes include soft-deleted rows. Always query `Model::withTrashed()`, find the highest numeric suffix, and wrap generation in a `do...while (exists)` uniqueness loop.
+- **JPayroll Attendance API Mapping (`CT` vs `izin`)**:
+  - `data['CT']` denotes *Cuti Tahunan* (Annual Leave) and maps strictly to `attendance_records.cuti`. It must NEVER map to `attendance_records.izin`.
+  - In employee evaluations, `cuti` has zero score penalty, whereas `izin` penalizes -2 points.
+  - JPayroll sync API does not supply `izin`; leave `izin` as `0` by default. Never guess or hallucinate API keys (e.g. `$r['IZ']`).
+  - `izin` is sourced solely via monthly JPayroll Attendance Summary Excel imports (`Cuti Izin [Month Year].xls`) or manual adjustments.
 - **Documentation Link Portability**:
   - Never use machine-absolute file URLs (`file:///home/...`). Always use repo-relative paths (`[Label](path/to/file)`) or inline backticks (`AuthController`).
 - **Bruno API Collection Hygiene**:
