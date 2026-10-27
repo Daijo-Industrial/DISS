@@ -10,8 +10,11 @@ use App\Infrastructure\Persistence\Eloquent\Models\Employee;
 use App\Models\AttendanceRecord;
 use App\Models\EvaluationData;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Spatie\Activitylog\Models\Activity;
 
 /**
  * EvaluationController
@@ -48,12 +51,12 @@ class EvaluationController extends Controller
      */
     public function index(Request $request, ?int $month = null, ?int $year = null)
     {
-        $user      = Auth::user();
+        $user = Auth::user();
         $prevMonth = now()->subMonth();
 
         // Default: previous month (so grading in current month evaluates prior period).
         $month ??= (int) $prevMonth->format('m');
-        $year  ??= (int) $prevMonth->format('Y');
+        $year ??= (int) $prevMonth->format('Y');
 
         $isElevated = $user->canAny(['evaluation.view-any', 'evaluation.approve-final']);
 
@@ -62,18 +65,18 @@ class EvaluationController extends Controller
             return redirect()->route('evaluation.index');
         }
 
-        $deptNo  = $isElevated ? null : $user->department?->dept_no;
+        $deptNo = $isElevated ? null : $user->department?->dept_no;
         $summary = $this->approvalService->statusSummary($month, $year, $deptNo);
-       
+
         $allowedTabs = $this->resolveAllowedTabs($user);
 
         if (empty($allowedTabs)) {
             abort(403, 'No evaluation tabs accessible for your account.');
         }
 
-        $canApproveDept  = $user->can('evaluation.approve-department');
+        $canApproveDept = $user->can('evaluation.approve-department');
         $canApproveFinal = $user->can('evaluation.approve-final');
-        $canGrade        = $user->can('evaluation.grade');
+        $canGrade = $user->can('evaluation.grade');
 
         $exportStatus = [];
         foreach ($allowedTabs as $t) {
@@ -105,7 +108,7 @@ class EvaluationController extends Controller
     public function dataRegular(EvaluationDataTable $dataTable, Request $request)
     {
         $month = $request->integer('month', now()->month);
-        $year  = $request->integer('year', now()->year);
+        $year = $request->integer('year', now()->year);
 
         return $dataTable->forType('regular')->forPeriod($month, $year)->ajax();
     }
@@ -117,7 +120,7 @@ class EvaluationController extends Controller
     public function dataYayasan(EvaluationDataTable $dataTable, Request $request)
     {
         $month = $request->integer('month', now()->month);
-        $year  = $request->integer('year', now()->year);
+        $year = $request->integer('year', now()->year);
 
         return $dataTable->forType('yayasan')->forPeriod($month, $year)->ajax();
     }
@@ -129,7 +132,7 @@ class EvaluationController extends Controller
     public function dataMagang(EvaluationDataTable $dataTable, Request $request)
     {
         $month = $request->integer('month', now()->month);
-        $year  = $request->integer('year', now()->year);
+        $year = $request->integer('year', now()->year);
 
         return $dataTable->forType('magang')->forPeriod($month, $year)->ajax();
     }
@@ -161,7 +164,7 @@ class EvaluationController extends Controller
         $employee = Employee::where('nik', $nik)->firstOrFail();
 
         $record = EvaluationData::firstOrNew([
-            'NIK'   => $nik,
+            'NIK' => $nik,
             'Month' => Carbon::create($year, $month, 1)->format('Y-m-d'),
         ]);
 
@@ -170,12 +173,12 @@ class EvaluationController extends Controller
             // the evaluation record so the penalty calculator uses correct values.
             $attendance = $this->aggregateAttendance($nik, $month, $year);
 
-            $record->dept           = $employee->dept_code ?? null;
+            $record->dept = $employee->dept_code ?? null;
             $record->evaluation_type = $record->evaluationType();
-            $record->Alpha          = $attendance['alpha'];
-            $record->Telat          = $attendance['telat'];
-            $record->Izin           = $attendance['izin'];
-            $record->Sakit          = $attendance['sakit'];
+            $record->Alpha = $attendance['alpha'];
+            $record->Telat = $attendance['telat'];
+            $record->Izin = $attendance['izin'];
+            $record->Sakit = $attendance['sakit'];
             $record->setRelation('karyawan', $employee);
         } else {
             $record->load('karyawan');
@@ -184,14 +187,14 @@ class EvaluationController extends Controller
             $attendance = $this->aggregateAttendance($nik, $month, $year);
             $record->Alpha = $attendance['alpha'];
             $record->Telat = $attendance['telat'];
-            $record->Izin  = $attendance['izin'];
+            $record->Izin = $attendance['izin'];
             $record->Sakit = $attendance['sakit'];
         }
 
         return $this->processGrading($request, $record);
     }
 
-    private function processGrading(Request $request, EvaluationData $record): \Illuminate\Http\JsonResponse
+    private function processGrading(Request $request, EvaluationData $record): JsonResponse
     {
         $this->authorize('evaluation.grade');
 
@@ -216,7 +219,7 @@ class EvaluationController extends Controller
         // Include the attendance snapshot so it is persisted alongside the grades.
         $scores['Alpha'] = $record->Alpha ?? 0;
         $scores['Telat'] = $record->Telat ?? 0;
-        $scores['Izin']  = $record->Izin  ?? 0;
+        $scores['Izin'] = $record->Izin ?? 0;
         $scores['Sakit'] = $record->Sakit ?? 0;
 
         if ($record->isRejected()) {
@@ -240,11 +243,11 @@ class EvaluationController extends Controller
     {
         $this->authorize('evaluation.approve-department');
 
-        $user   = Auth::user();
+        $user = Auth::user();
         $deptNo = $user->department->dept_no;
-        $month  = $request->integer('month');
-        $year   = $request->integer('year');
-        $type   = $request->input('type'); // regular|yayasan|magang|null (all)
+        $month = $request->integer('month');
+        $year = $request->integer('year');
+        $type = $request->input('type'); // regular|yayasan|magang|null (all)
 
         $count = $this->approvalService->approveDept($month, $year, $deptNo, $user, $type);
 
@@ -263,14 +266,110 @@ class EvaluationController extends Controller
     {
         $this->authorize('evaluation.approve-final');
 
-        $user  = Auth::user();
+        $user = Auth::user();
         $month = $request->integer('month');
-        $year  = $request->integer('year');
-        $type  = $request->input('type');
+        $year = $request->integer('year');
+        $type = $request->input('type');
 
         $count = $this->approvalService->approveHrd($month, $year, $user, $type);
 
         return back()->with('success', "{$count} records fully approved.");
+    }
+
+    // ──────────────────────────────────────────────────────
+    // Recalculate (Super-admin only)
+    // ──────────────────────────────────────────────────────
+
+    /**
+     * Batch recalculate attendance snapshots and evaluation scores for a period.
+     * Route: POST /evaluation/recalculate
+     */
+    public function recalculate(Request $request): JsonResponse
+    {
+        abort_unless(Auth::user()?->hasRole('super-admin'), 403, 'Unauthorized.');
+
+        $request->validate([
+            'month' => 'required|integer|between:1,12',
+            'year' => 'required|integer|min:2020|max:2099',
+            'type' => 'nullable|string|in:all,regular,yayasan,magang',
+        ]);
+
+        $month = $request->integer('month');
+        $year = $request->integer('year');
+        $type = $request->input('type', 'all');
+
+        $query = EvaluationData::whereYear('Month', $year)
+            ->whereMonth('Month', $month);
+
+        if ($type && $type !== 'all') {
+            $query->where('evaluation_type', $type);
+        }
+
+        $records = $query->get();
+
+        if ($records->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Tidak ada data evaluasi yang perlu dihitung ulang pada periode ini.',
+                'count' => 0,
+            ]);
+        }
+
+        $niks = $records->pluck('NIK')->unique()->filter()->values();
+
+        $attendanceData = AttendanceRecord::whereIn('nik', $niks)
+            ->whereYear('shift_date', $year)
+            ->whereMonth('shift_date', $month)
+            ->selectRaw('
+                nik,
+                COALESCE(SUM(alpha), 0) AS agg_alpha,
+                COALESCE(SUM(telat), 0) AS agg_telat,
+                COALESCE(SUM(cuti),  0) AS agg_cuti,
+                COALESCE(SUM(izin),  0) AS agg_izin,
+                COALESCE(SUM(sakit), 0) AS agg_sakit
+            ')
+            ->groupBy('nik')
+            ->get()
+            ->keyBy('nik');
+
+        $calculator = app(EvaluationScoreCalculatorService::class);
+        $updatedCount = 0;
+
+        DB::transaction(function () use ($records, $attendanceData, $calculator, &$updatedCount) {
+            foreach ($records as $record) {
+                $att = $attendanceData->get($record->NIK);
+
+                $record->Alpha = (int) ($att?->agg_alpha ?? 0);
+                $record->Telat = (int) ($att?->agg_telat ?? 0);
+                $record->Izin = (int) ($att?->agg_izin ?? 0);
+                $record->Sakit = (int) ($att?->agg_sakit ?? 0);
+
+                $fields = $record->useNewScoringSystem()
+                    ? ['kemampuan_kerja', 'kecerdasan_kerja', 'qualitas_kerja', 'disiplin_kerja',
+                        'kepatuhan_kerja', 'lembur', 'efektifitas_kerja', 'relawan', 'integritas']
+                    : ['kerajinan_kerja', 'kerapian_kerja', 'prestasi', 'loyalitas', 'perilaku_kerja'];
+
+                $scores = $record->only($fields);
+                $hasScores = collect($scores)->filter(fn ($v) => ! is_null($v) && $v !== '')->isNotEmpty();
+
+                if ($hasScores) {
+                    $total = $record->useNewScoringSystem()
+                        ? $calculator->calculateTotal($scores, $record)
+                        : $calculator->calculateTotalOld($scores, $record);
+
+                    $record->total = (int) $total;
+                }
+
+                $record->save();
+                $updatedCount++;
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => "Berhasil memperbarui kehadiran dan menghitung ulang {$updatedCount} data evaluasi.",
+            'count' => $updatedCount,
+        ]);
     }
 
     // ──────────────────────────────────────────────────────
@@ -336,11 +435,11 @@ class EvaluationController extends Controller
             $attendance = $this->aggregateAttendance($nik, $month, $year);
 
             $record = new EvaluationData([
-                'NIK'   => $nik,
+                'NIK' => $nik,
                 'Month' => Carbon::create($year, $month, 1)->format('Y-m-d'),
                 'Alpha' => $attendance['alpha'],
                 'Telat' => $attendance['telat'],
-                'Izin'  => $attendance['izin'],
+                'Izin' => $attendance['izin'],
                 'Sakit' => $attendance['sakit'],
             ]);
             $record->setRelation('karyawan', $employee);
@@ -363,10 +462,10 @@ class EvaluationController extends Controller
         return response()->json(array_merge(
             $record->toArray(),
             [
-                'ytd_alpha'  => (int) ($ytd->ytd_alpha  ?? 0),
-                'ytd_telat'  => (int) ($ytd->ytd_telat  ?? 0),
-                'ytd_izin'   => (int) ($ytd->ytd_izin   ?? 0),
-                'ytd_sakit'  => (int) ($ytd->ytd_sakit  ?? 0),
+                'ytd_alpha' => (int) ($ytd->ytd_alpha ?? 0),
+                'ytd_telat' => (int) ($ytd->ytd_telat ?? 0),
+                'ytd_izin' => (int) ($ytd->ytd_izin ?? 0),
+                'ytd_sakit' => (int) ($ytd->ytd_sakit ?? 0),
                 'ytd_months' => (int) ($ytd->ytd_months ?? 0),
             ]
         ));
@@ -383,8 +482,8 @@ class EvaluationController extends Controller
     public function summary(Request $request)
     {
         $month = $request->integer('month', now()->month);
-        $year  = $request->integer('year', now()->year);
-        $type  = $request->input('type');
+        $year = $request->integer('year', now()->year);
+        $type = $request->input('type');
 
         $deptNo = Auth::user()->canAny(['evaluation.view-any', 'evaluation.approve-final'])
             ? null
@@ -407,7 +506,7 @@ class EvaluationController extends Controller
     {
         abort_unless(auth()->user()?->hasRole('super-admin'), 403);
 
-        $query = \Spatie\Activitylog\Models\Activity::with('causer')
+        $query = Activity::with('causer')
             ->where('log_name', 'evaluation')
             ->latest();
 
@@ -419,36 +518,36 @@ class EvaluationController extends Controller
             });
         }
 
-        $perPage   = (int) $request->get('per_page', 50);
-        $page      = (int) $request->get('page', 1);
+        $perPage = (int) $request->get('per_page', 50);
+        $page = (int) $request->get('page', 1);
         $paginated = $query->paginate($perPage, ['*'], 'page', $page);
 
         $data = $paginated->getCollection()->map(function ($activity) {
-            $props   = $activity->properties ?? collect();
-            $old     = $props->get('old', []);
-            $new     = $props->get('attributes', []);
+            $props = $activity->properties ?? collect();
+            $old = $props->get('old', []);
+            $new = $props->get('attributes', []);
             $changes = [];
 
             foreach ($new as $field => $val) {
-                $prev      = $old[$field] ?? '—';
+                $prev = $old[$field] ?? '—';
                 $changes[] = "{$field}: {$prev} → {$val}";
             }
 
             return [
-                'id'          => $activity->id,
-                'date'        => $activity->created_at->format('d M Y H:i'),
-                'causer'      => $activity->causer?->name ?? 'System',
+                'id' => $activity->id,
+                'date' => $activity->created_at->format('d M Y H:i'),
+                'causer' => $activity->causer?->name ?? 'System',
                 'description' => $activity->description,
-                'subject_id'  => $activity->subject_id,
-                'changes'     => implode("\n", $changes) ?: '—',
+                'subject_id' => $activity->subject_id,
+                'changes' => implode("\n", $changes) ?: '—',
             ];
         });
 
         return response()->json([
-            'data'         => $data,
+            'data' => $data,
             'current_page' => $paginated->currentPage(),
-            'last_page'    => $paginated->lastPage(),
-            'total'        => $paginated->total(),
+            'last_page' => $paginated->lastPage(),
+            'total' => $paginated->total(),
         ]);
     }
 
@@ -463,8 +562,8 @@ class EvaluationController extends Controller
     public function export(Request $request, EvaluationDataTable $dataTable)
     {
         $month = $request->integer('month', now()->month);
-        $year  = $request->integer('year', now()->year);
-        $type  = $request->query('type', 'regular');
+        $year = $request->integer('year', now()->year);
+        $type = $request->query('type', 'regular');
 
         return $dataTable->forType($type)->forPeriod($month, $year)->excel();
     }
@@ -495,7 +594,7 @@ class EvaluationController extends Controller
         return [
             'alpha' => (int) ($row->agg_alpha ?? 0),
             'telat' => (int) ($row->agg_telat ?? 0),
-            'izin'  => (int) ($row->agg_izin  ?? 0),
+            'izin' => (int) ($row->agg_izin ?? 0),
             'sakit' => (int) ($row->agg_sakit ?? 0),
         ];
     }
@@ -510,7 +609,7 @@ class EvaluationController extends Controller
     private function isPeriodAllowed(int $month, int $year, Carbon $prevMonth): bool
     {
         $allowedStart = $prevMonth->copy()->startOfYear();
-        $selected     = Carbon::createFromDate($year, $month, 1);
+        $selected = Carbon::createFromDate($year, $month, 1);
 
         return $selected->gte($allowedStart) && $selected->lte($prevMonth->copy()->endOfMonth());
     }
@@ -523,9 +622,9 @@ class EvaluationController extends Controller
     private function resolveAllowedTabs($user): array
     {
         return array_values(array_filter([
-            $user->can('evaluation.view-regular') ? 'regular'  : null,
-            $user->can('evaluation.view-yayasan') ? 'yayasan'  : null,
-            $user->can('evaluation.view-magang')  ? 'magang'   : null,
+            $user->can('evaluation.view-regular') ? 'regular' : null,
+            $user->can('evaluation.view-yayasan') ? 'yayasan' : null,
+            $user->can('evaluation.view-magang') ? 'magang' : null,
         ]));
     }
 }

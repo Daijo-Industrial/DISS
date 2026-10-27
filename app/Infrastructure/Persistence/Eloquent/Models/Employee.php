@@ -2,8 +2,10 @@
 
 namespace App\Infrastructure\Persistence\Eloquent\Models;
 
+use App\Models\AttendanceRecord;
 use App\Models\EmployeeWarningLog;
 use App\Models\EvaluationData;
+use Database\Factories\EmployeeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -13,6 +15,11 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 class Employee extends Authenticatable
 {
     use HasFactory;
+
+    protected static function newFactory()
+    {
+        return EmployeeFactory::new();
+    }
 
     public $incrementing = false;
 
@@ -56,17 +63,17 @@ class Employee extends Authenticatable
 
     public function dailyReports(): HasMany
     {
-        return $this->hasMany(\App\Infrastructure\Persistence\Eloquent\Models\EmployeeDailyReport::class, 'employee_id', 'nik');
+        return $this->hasMany(EmployeeDailyReport::class, 'employee_id', 'nik');
     }
 
     public function latestDailyReport(): HasOne
     {
-        return $this->hasOne(\App\Infrastructure\Persistence\Eloquent\Models\EmployeeDailyReport::class, 'employee_id', 'nik')->latestOfMany('sort_datetime');
+        return $this->hasOne(EmployeeDailyReport::class, 'employee_id', 'nik')->latestOfMany('sort_datetime');
     }
 
     public function attendanceRecords(): HasMany
     {
-        return $this->hasMany(\App\Models\AttendanceRecord::class, 'nik', 'nik')->orderBy('shift_date', 'desc');
+        return $this->hasMany(AttendanceRecord::class, 'nik', 'nik')->orderBy('shift_date', 'desc');
     }
 
     public function latestEvaluation(): HasOne
