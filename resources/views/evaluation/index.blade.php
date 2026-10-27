@@ -425,6 +425,14 @@
                         @endif
 
                         @role('super-admin')
+                            {{-- Recalculate Scores Button --}}
+                            <button type="button" id="recalculate-scores-btn"
+                                class="inline-flex items-center gap-2 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800 border border-amber-200 px-4 py-2 text-sm font-semibold shadow-sm transition-all hover:-translate-y-0.5"
+                                title="Hitung ulang snapshot kehadiran dan nilai total untuk periode ini">
+                                <x-bx-refresh class="w-5 h-5 text-amber-600" />
+                                <span>Hitung Ulang</span>
+                            </button>
+
                             {{-- Advanced Toggle Button --}}
                             <button type="button" @click="$dispatch('open-advanced-sidebar')"
                                 class="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm border border-slate-200 transition-all hover:bg-slate-200 hover:-translate-y-0.5">
@@ -1151,6 +1159,59 @@
                             '<tr><td colspan="5" class="py-8 text-center text-rose-400">Gagal memuat history.</td></tr>';
                     });
                 }
+            })();
+
+            // ── Recalculate Button (super-admin only) ──────────────────────────────
+            (function() {
+                const recalcBtn = document.getElementById('recalculate-scores-btn');
+                if (!recalcBtn) return;
+
+                recalcBtn.addEventListener('click', function() {
+                    const month = document.getElementById('period-month').value;
+                    const year = document.getElementById('period-year').value;
+                    const monthSelect = document.getElementById('period-month');
+                    const monthName = monthSelect.options[monthSelect.selectedIndex]?.text?.trim() || month;
+
+                    Swal.fire({
+                        title: 'Hitung Ulang Evaluasi?',
+                        html: `Tindakan ini akan memperbarui snapshot kehadiran (Alpha, Telat, Izin, Sakit) dan menghitung ulang skor total untuk <strong>semua data evaluasi periode ${monthName} ${year}</strong>.<br><br><span class="text-xs text-slate-500">Gunakan fitur ini jika terdapat pembaruan atau sinkronisasi data absensi karyawan.</span>`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#f59e0b',
+                        cancelButtonColor: '#64748b',
+                        confirmButtonText: '<i class="bx bx-refresh mr-1"></i> Ya, Hitung Ulang!',
+                        cancelButtonText: 'Batal',
+                        showLoaderOnConfirm: true,
+                        preConfirm: () => {
+                            return axios.post('{{ route('evaluation.recalculate') }}', {
+                                month: parseInt(month),
+                                year: parseInt(year),
+                                type: 'all'
+                            })
+                            .then(response => response.data)
+                            .catch(error => {
+                                Swal.showValidationMessage(
+                                    error.response?.data?.message || 'Gagal menghitung ulang evaluasi.'
+                                );
+                            });
+                        },
+                        allowOutsideClick: () => !Swal.isLoading()
+                    }).then((result) => {
+                        if (result.isConfirmed && result.value?.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil!',
+                                text: result.value.message,
+                                timer: 2500,
+                                showConfirmButton: false
+                            });
+
+                            if (typeof window.reloadEvaluationTables === 'function') {
+                                window.reloadEvaluationTables();
+                            }
+                        }
+                    });
+                });
             })();
 
         })();

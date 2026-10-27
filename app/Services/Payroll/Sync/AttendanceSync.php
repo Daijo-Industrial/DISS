@@ -77,6 +77,7 @@ final class AttendanceSync
 
             if ((int)$curr['alpha'] !== $item->alpha) $diffs['alpha'] = ['old' => (int)$curr['alpha'], 'new' => $item->alpha];
             if ((int)$curr['telat'] !== $item->telat) $diffs['telat'] = ['old' => (int)$curr['telat'], 'new' => $item->telat];
+            if ((int)($curr['cuti'] ?? 0) !== $item->cuti) $diffs['cuti'] = ['old' => (int)($curr['cuti'] ?? 0), 'new' => $item->cuti];
             if ((int)$curr['izin'] !== $item->izin) $diffs['izin'] = ['old' => (int)$curr['izin'], 'new' => $item->izin];
             if ((int)$curr['sakit'] !== $item->sakit) $diffs['sakit'] = ['old' => (int)$curr['sakit'], 'new' => $item->sakit];
 

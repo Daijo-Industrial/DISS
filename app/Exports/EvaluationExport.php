@@ -61,6 +61,10 @@ class EvaluationExport implements FromQuery, WithHeadings, WithMapping, WithStri
             $q->when($this->year,  fn ($q) => $q->whereYear('shift_date', $this->year))
               ->when($this->month, fn ($q) => $q->whereMonth('shift_date', $this->month));
         }], 'telat')
+        ->withSum(['attendanceRecords as att_cuti' => function ($q) {
+            $q->when($this->year,  fn ($q) => $q->whereYear('shift_date', $this->year))
+              ->when($this->month, fn ($q) => $q->whereMonth('shift_date', $this->month));
+        }], 'cuti')
         ->withSum(['attendanceRecords as att_izin' => function ($q) {
             $q->when($this->year,  fn ($q) => $q->whereYear('shift_date', $this->year))
               ->when($this->month, fn ($q) => $q->whereMonth('shift_date', $this->month));
@@ -82,6 +86,7 @@ class EvaluationExport implements FromQuery, WithHeadings, WithMapping, WithStri
             'Status',
             'Alpha',
             'Telat',
+            'Cuti',
             'Izin',
             'Sakit',
             'Total Score',
@@ -136,6 +141,7 @@ class EvaluationExport implements FromQuery, WithHeadings, WithMapping, WithStri
             $employee->employment_scheme,
             (int) ($employee->att_alpha ?? 0),
             (int) ($employee->att_telat ?? 0),
+            (int) ($employee->att_cuti ?? 0),
             (int) ($employee->att_izin ?? 0),
             (int) ($employee->att_sakit ?? 0),
             $evalData->total ?? 0,
