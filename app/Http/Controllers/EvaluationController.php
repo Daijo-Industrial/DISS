@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\DataTables\EvaluationDataTable;
+use App\Domain\Attendance\Services\ImportCutiIzinService;
 use App\Domain\Evaluation\Services\DepartmentEmployeeResolver;
 use App\Domain\Evaluation\Services\EvaluationApprovalService;
 use App\Domain\Evaluation\Services\EvaluationScoreCalculatorService;
@@ -370,6 +371,40 @@ class EvaluationController extends Controller
             'message' => "Berhasil memperbarui kehadiran dan menghitung ulang {$updatedCount} data evaluasi.",
             'count' => $updatedCount,
         ]);
+    }
+
+    /**
+     * Import Cuti Izin from JPayroll summary Excel file (super-admin only).
+     * Route: POST /evaluation/import-cuti-izin
+     */
+    public function importCutiIzin(Request $request, ImportCutiIzinService $service): JsonResponse
+    {
+        abort_unless(Auth::user()?->hasRole('super-admin'), 403, 'Unauthorized.');
+
+        $request->validate([
+            'file' => 'required|file|max:10240',
+            'month' => 'nullable|integer|between:1,12',
+            'year' => 'nullable|integer|min:2020|max:2099',
+        ]);
+
+        try {
+            $result = $service->import(
+                $request->file('file'),
+                $request->filled('month') ? $request->integer('month') : null,
+                $request->filled('year') ? $request->integer('year') : null
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => "Berhasil mengimpor Cuti Izin periode {$result['period']}. {$result['updated_employees']} karyawan diperbarui dan {$result['recalculated_evaluations']} nilai evaluasi dihitung ulang.",
+                'data' => $result,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengimpor file: ' . $e->getMessage(),
+            ], 422);
+        }
     }
 
     // ──────────────────────────────────────────────────────
