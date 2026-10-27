@@ -6,10 +6,10 @@ use App\Infrastructure\Persistence\Eloquent\Models\Employee;
 use App\Infrastructure\Persistence\Eloquent\Models\User;
 use App\Models\AttendanceRecord;
 use App\Models\EvaluationData;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Spatie\Permission\Models\Role;
 
-uses(RefreshDatabase::class);
+uses(DatabaseTransactions::class);
 
 test('non-super-admin cannot trigger evaluation recalculate', function () {
     $user = User::factory()->create();
