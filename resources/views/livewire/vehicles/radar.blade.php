@@ -31,26 +31,26 @@
                         {{ __('fleet.operations.live_radar_title') }}
                     </h1>
                     @if ($metrics['on_trip'] > 0)
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-300">
-                            <span class="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse mr-1.5"></span>
-                            {{ __('fleet.operations.active_trips_count', ['count' => $metrics['on_trip']]) }}
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-300">
+                            <span class="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
+                            <span>{{ __('fleet.operations.active_trips_count', ['count' => $metrics['on_trip']]) }}</span>
                         </span>
                     @else
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
                             {{ __('fleet.operations.all_standby') }}
                         </span>
                     @endif
                 </div>
-                <p class="text-xs text-slate-500 mt-0.5">
+                <div class="text-xs text-slate-500 mt-0.5">
                     {{ __('fleet.operations.live_radar_subtitle') }}
-                </p>
+                </div>
             </div>
         </div>
 
         {{-- Right Controls: Auto-Refresh Status & Refresh Button --}}
         <div class="flex items-center gap-2 self-start sm:self-auto text-xs text-slate-500">
-            <span class="inline-flex items-center gap-1.5 text-[11px] text-slate-400 mr-1">
-                <span class="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+            <span class="inline-flex items-center gap-1.5 text-xs text-slate-400 mr-1">
+                <span class="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse shrink-0"></span>
                 <span>{{ __('fleet.operations.auto_refresh') }} (30s)</span>
             </span>
 
@@ -74,9 +74,9 @@
                         <span class="font-bold text-amber-950">
                             {{ __('fleet.operations.orphan_alert_title', ['count' => $orphanCheckouts->count()]) }}
                         </span>
-                        <p class="text-[11px] text-amber-800/90 mt-0.5">
+                        <div class="text-[11px] text-amber-800/90 mt-0.5">
                             {{ __('fleet.operations.orphan_alert_desc') }}
-                        </p>
+                        </div>
                     </div>
                 </div>
 
@@ -149,8 +149,8 @@
                                 </div>
                             </div>
 
-                            <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 shrink-0">
-                                <span class="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800 shrink-0">
+                                <span class="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
                                 <span>{{ __('fleet.index.badge_on_trip') }}</span>
                             </span>
                         </div>
@@ -229,7 +229,7 @@
 
             <div class="flex items-center gap-2 self-start sm:self-auto">
                 <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-emerald-200/80 text-xs font-semibold text-emerald-900 shadow-2xs">
-                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                    <span class="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
                     <span>{{ __('fleet.operations.ready_units_count', ['count' => $metrics['in_pool']]) }}</span>
                 </span>
             </div>

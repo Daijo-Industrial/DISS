@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 {{--
     Unified Discipline Edit Modal (AlpineJS + Tailwind)
     ───────────────────────────────────────────────────

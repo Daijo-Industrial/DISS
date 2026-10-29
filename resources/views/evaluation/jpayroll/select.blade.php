@@ -5,6 +5,7 @@
 @section('page-subtitle', 'Pilih periode untuk mengunduh data nilai ke format JPayroll Yayasan')
 
 @section('content')
+    <x-bootstrap-cdn />
 
     {{-- Page header card --}}
     <div class="flex items-center gap-4 mb-6">

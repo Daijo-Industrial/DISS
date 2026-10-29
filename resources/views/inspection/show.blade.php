@@ -1,6 +1,7 @@
 @extends('layouts.guest')
 
 @section('content')
+    <x-bootstrap-cdn />
     @php
         $h = $inspectionReport; // shorthand
     @endphp

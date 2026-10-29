@@ -3,6 +3,7 @@
 @section('title', 'Evaluasi Karyawan — ' . \Carbon\Carbon::createFromDate($year, $month, 1)->translatedFormat('F Y'))
 
 @section('content')
+    <x-bootstrap-cdn />
 
     <div class="mx-auto max-w-7xl px-3 py-6 sm:px-4 lg:px-0 space-y-6">
         {{-- ═══════════════════════════════════════════════════════════════

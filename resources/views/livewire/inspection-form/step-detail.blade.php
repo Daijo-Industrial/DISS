@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="pb-4">
     @php
         $showDocumentInfo = false;

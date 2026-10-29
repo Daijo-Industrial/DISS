@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="container">
     <h1 class="my-4 text-center">Inspection Form</h1>
 

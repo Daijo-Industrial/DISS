@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 {{-- resources/views/components/inspection-section.blade.php --}}
 @props(['parent' => null, 'id', 'title'])
 <div class="accordion-item">

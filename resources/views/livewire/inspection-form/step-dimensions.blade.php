@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div data-step-dimensions>
     <!-- Status chip -->
     <div wire:ignore x-data="{ dirty: false, saved: @js($this->isSaved), ts: @js($savedAt) }" x-init="const root = $el.closest('[data-step-dimensions]');

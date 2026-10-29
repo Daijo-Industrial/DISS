@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <a href="{{ route('po.view', $po->id) }}" class="btn btn-outline-primary">
     <i class="bi bi-eye"></i></i> View
 </a>

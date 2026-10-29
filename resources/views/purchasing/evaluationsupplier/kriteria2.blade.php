@@ -77,6 +77,7 @@
 @endpush
 
 @section('content')
+    <x-bootstrap-cdn />
     <div class="container py-3">
 
         {{-- HEADER --}}

@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="container py-4" wire:init="load">
 
     {{-- Header / Controls --}}

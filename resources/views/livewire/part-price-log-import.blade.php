@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="container mt-3">
     <div class="card shadow-sm">
         <div class="card-header fw-semibold">Upload Price Log (Excel/CSV)</div>

@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 {{-- resources/views/inspection/partials/results.blade.php --}}
 @props(['judgement']) {{-- each is a collection --}}
 

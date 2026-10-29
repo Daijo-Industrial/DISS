@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="modal fade" id="rejectModal">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">

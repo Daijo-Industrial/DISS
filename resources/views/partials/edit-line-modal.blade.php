@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="modal" tabindex="-1" class="modal fade" id="edit-line-modal{{ str_replace(' ', '', $data->line_code) }}"
     aria-labelledby="editModalLabel" aria-hidden="true">
     <div class="modal-dialog">

@@ -1,6 +1,7 @@
 @extends('new.layouts.app')
 
 @section('content')
+    <x-bootstrap-cdn />
     <div class="container py-3 py-lg-4">
         <div class="row justify-content-center">
             <div class="col-12">

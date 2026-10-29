@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div data-header>
     <!-- Status chip -->
     <div wire:ignore x-data="{ dirty: false, saved: @js($isSaved), ts: @js($savedAt) }" x-init="const root = $el.closest('[data-header]');

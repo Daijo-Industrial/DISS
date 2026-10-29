@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="modal fade" id="delete-department-modal-{{ $department->id }}" tabindex="-1" role="dialog"
     aria-labelledby="deleteConfirmationModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">

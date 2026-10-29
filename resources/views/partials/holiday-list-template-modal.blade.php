@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="modal fade" id="holiday-list-template">
     <div class="modal-dialog">
         <div class="modal-content">

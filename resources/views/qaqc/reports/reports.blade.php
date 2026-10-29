@@ -1,6 +1,7 @@
 @extends('new.layouts.app')
 
 @section('content')
+    <x-bootstrap-cdn />
     <div class="content-wrapper">
         <!-- Content Header (Page header) -->
         <div class="content-header">

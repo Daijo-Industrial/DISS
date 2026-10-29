@@ -1,6 +1,7 @@
 @extends('new.layouts.app')
 
 @section('content')
+    <x-bootstrap-cdn />
     <div class="max-w-6xl px-4 py-6 mx-auto space-y-4">
         {{-- Breadcrumb --}}
         <nav aria-label="Breadcrumb" class="text-sm">

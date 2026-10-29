@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 @php
     $phase = $data['phase'] ?? 'idle';
     $isDone = $phase === 'done';

@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="print-section">
     @push('styles')
         <style>

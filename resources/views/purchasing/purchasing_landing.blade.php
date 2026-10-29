@@ -143,6 +143,7 @@
 @endpush
 
 @section('content')
+    <x-bootstrap-cdn />
     <div class="ag-format-container">
         <div class="ag-courses_box">
             @foreach ($data as $key => $count)

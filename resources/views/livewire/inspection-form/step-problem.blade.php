@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div>
     <div class="card">
         <div class="card-body">

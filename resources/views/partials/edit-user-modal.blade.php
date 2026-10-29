@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="modal" tabindex="-1" class="modal fade" id="edit-user-modal{{ $user->id }}"
     aria-labelledby="editModalLabel" aria-hidden="true">
     <div class="modal-dialog">

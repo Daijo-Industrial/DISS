@@ -79,7 +79,7 @@
 
 <span {{ $attributes->merge(['class' => "inline-flex items-center font-bold rounded-full border shadow-2xs {$cfg['bg']} {$cfg['text']} {$cfg['border']} {$sizeClasses} shrink-0 transition-colors"]) }}>
     @if($dot)
-        <span class="h-1.5 w-1.5 rounded-full {{ $cfg['dot'] }}"></span>
+        <span class="h-1.5 w-1.5 rounded-full shrink-0 {{ $cfg['dot'] }}"></span>
     @endif
     <span>{{ $displayLabel }}</span>
 </span>

@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 {{-- resources/views/inspection/partials/first-inspection-table.blade.php --}}
 @props(['rows'])
 

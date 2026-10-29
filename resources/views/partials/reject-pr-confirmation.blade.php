@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="modal fade" id="reject-pr-confirmation">
     <div class="modal-dialog modal-dialog">
         <form action="{{ route('purchase-requests.reject', $purchaseRequest->id) }}" method="get">

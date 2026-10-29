@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <!-- Button to trigger warning logs modal -->
 <button type="button" class="btn btn-info view-warnings-btn" data-bs-toggle="modal" data-bs-target="#warningLogsModal"
     data-employee-id="{{ $employee->nik }}">
