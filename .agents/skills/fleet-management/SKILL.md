@@ -56,11 +56,15 @@ Managed by `App\Livewire\Vehicles\InspectionForm`:
 4. **Auto-Switching**: Detects `$vehicle->is_out_on_trip` to default to `check_in`; otherwise `check_out`.
 5. **Check-out**: Logs initial odometer, fuel %, and 7 checklist points (body, tires, odometer, cabin, battery/fuel, brake lights, headlights/signals).
 6. **Check-in**: Logs return odometer and fuel. Calculates `trip_distance = return_odometer - departure_odometer`.
-7. **Odometer Sanitization**: UI formats with thousand dots; backend strictly sanitizes to integer `(int) preg_replace('/\D/', '', $value)`.
-8. **Fuel Gauge Assistant**:
+7. **Tri-State Inspection Telemetry**:
+   - **Paired** (`$isCheckIn && $parent`): Departure telemetry from `$parent`, return from `$ins`. Distance is `$ins->trip_distance`.
+   - **Direct Check-in** (`$isCheckIn && !$parent`): Departure telemetry is strictly `null` (`$depTime = null`, `$depOdo = null`, `$depFuel = null`); badge displays `[Check-in Langsung]` and Departure Card displays empty state (`fleet.show.no_departure_data`). Never fall back to `$ins` telemetry for departure.
+   - **Unclosed Check-out** (`!$isCheckIn`): Departure telemetry from `$ins`; Return Card displays unclosed state (`fleet.show.unclosed_trip`).
+8. **Odometer Sanitization**: UI formats with thousand dots; backend strictly sanitizes to integer `(int) preg_replace('/\D/', '', $value)`.
+9. **Fuel Gauge Assistant**:
    - Quick needle presets: $E$ (0%), $1/4$ (25%), $1/2$ (50%), $3/4$ (75%), $F$ (100%).
    - Bar segments formula: `fuel_percentage = round((selectedBar / totalBars) * 100)`.
-9. **Defect Severity**:
+10. **Defect Severity**:
    - Defaults to `minor` (vehicle remains operational).
    - `critical_grounded` automatically locks vehicle status to `VehicleStatus::MAINTENANCE`.
    - Defect handover pre-fills workshop service form via `?vehicle_id=X&defect=Y`.

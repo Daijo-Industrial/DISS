@@ -62,6 +62,11 @@
 ## UI & Navigation Standards
 - **Responsive Drawer**: Fullscreen on `< sm`, PC-width (`w-72` / 288px) on `sm:` to `lg:` with `bg-slate-950/60 backdrop-blur-sm`. In `w-72` drawers, brand flex containers must use `min-w-0 flex-1 truncate block` and `<aside>` must use `overflow-hidden` so close button (`shrink-0`) is never pushed out. Floating overlays (e.g. IT Concierge `z-[100]`) hide when drawer opens (`x-show="!sidebarOpen"`).
 - **Sticky Navigation & Overflow Clipping**: Never use `overflow-x: hidden` on root ancestors (`<html>` or `<body>`). It establishes an overflow clipping context and forces `overflow-y` to compute to `auto`, breaking `position: sticky` on the sidebar (`sticky top-0 h-screen`) and topbar. To prevent horizontal scroll on mobile without disabling sticky containers, strictly use `overflow-x: clip` (`class="overflow-x-clip"`).
+- **Cockpit Column Zero Horizontal Scroll**: In multi-column cockpit views (`lg:col-span-8` alongside a desktop sidebar), eliminate inner horizontal scrollbars (`overflow-x-auto`):
+  - **Container**: Table wrappers use `rounded-2xl border bg-white overflow-hidden min-w-0`.
+  - **Tab Bars**: Container uses `flex items-center gap-1 w-full min-w-0` with tab buttons set to `flex-1 min-w-0`, label `truncate`, and badge/icons `shrink-0`. Never use `-mx-3 px-3` or `w-max`.
+  - **Columns**: Limit `whitespace-nowrap` strictly to compact cells (dates, badges, numbers). Truncate free-text cells with explicit widths (`max-w-[120px] sm:max-w-[160px] truncate`).
+  - **Padding**: Compact cell padding (`px-2.5` to `px-3`, `py-2` to `py-2.5`).
 - **Dashboard & Quick Access**: `/home` shows greeting, Quick Access shortcuts, and Recent Requests/Approval Queue. `NavigationService::getQuickAccessItems($user)` uses smart defaults and cold-start fallback (up to 6 items). `NavPinController::MAX_PINS = 8`.
 - **Admin Layout**: `new.layouts.admin-settings` is strictly for directory listings. Entity edit/create views extend `new.layouts.app` wrapped in `max-w-6xl mx-auto` with a back button.
 - **Minimalist Aesthetic**:

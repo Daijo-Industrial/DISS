@@ -1479,6 +1479,28 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $inspectionComponent->set('p2hSearch', '')
             ->set('p2hDefect', 'defects_only')
             ->assertSee('Bambang Sudirno');
+
+        // 7. Standalone Check-in (no parent check-out) renders cleanly without duplicating telemetry
+        VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'parent_inspection_id' => null,
+            'inspection_type' => 'check_in',
+            'driver_name' => 'Doni Saputra',
+            'trip_purpose' => 'Pengembalian Langsung',
+            'odometer' => 10200,
+            'fuel_percentage' => 80,
+            'checklist_results' => [],
+            'severity' => 'none',
+            'inspector_id' => $this->user->id,
+            'checked_at' => now(),
+        ]);
+
+        $standaloneComponent = Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'inspections']);
+
+        $standaloneComponent->assertSee('Doni Saputra')
+            ->assertSee(__('fleet.show.direct_checkin'))
+            ->assertSee(__('fleet.show.no_departure_data'));
     }
 
     public function test_vehicles_index_table_view_multi_select_category_and_status_filtering(): void

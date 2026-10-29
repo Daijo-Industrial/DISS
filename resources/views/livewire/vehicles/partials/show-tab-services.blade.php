@@ -60,29 +60,29 @@
             {{ __('fleet.show.empty_services') }}
         </div>
     @else
-        <div class="overflow-x-auto rounded-2xl border border-slate-200/80 min-w-0">
-            <table class="min-w-full divide-y divide-slate-200 text-left text-xs">
-                <thead class="bg-slate-50 font-semibold text-slate-600 uppercase tracking-wider">
+        <div class="rounded-2xl border border-slate-200/80 overflow-hidden min-w-0">
+            <table class="w-full divide-y divide-slate-200 text-left text-xs">
+                <thead class="bg-slate-50 font-semibold text-slate-600 uppercase tracking-wider text-[11px]">
                     <tr>
-                        <th class="px-4 py-3">{{ __('fleet.show.col_service_date') }}</th>
-                        <th class="px-4 py-3">{{ __('fleet.show.col_workshop') }}</th>
-                        <th class="px-4 py-3">{{ __('fleet.show.col_odometer') }}</th>
-                        <th class="px-4 py-3">{{ __('fleet.show.col_parts_action') }}</th>
+                        <th class="px-3 py-2.5">{{ __('fleet.show.col_service_date') }}</th>
+                        <th class="px-3 py-2.5">{{ __('fleet.show.col_workshop') }}</th>
+                        <th class="px-3 py-2.5">{{ __('fleet.show.col_odometer') }}</th>
+                        <th class="px-3 py-2.5">{{ __('fleet.show.col_parts_action') }}</th>
                         @if ($canViewCosts)
-                            <th class="px-4 py-3 text-right">{{ __('fleet.show.col_cost') }}</th>
+                            <th class="px-3 py-2.5 text-right">{{ __('fleet.show.col_cost') }}</th>
                         @endif
                         @if ($canManage)
-                            <th class="px-4 py-3 text-right">{{ __('fleet.show.col_action') }}</th>
+                            <th class="px-3 py-2.5 text-right">{{ __('fleet.show.col_action') }}</th>
                         @endif
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 bg-white text-slate-700">
                     @foreach ($records as $rec)
                         <tr class="hover:bg-slate-50/70 transition">
-                            <td class="px-4 py-3 font-bold text-slate-900 whitespace-nowrap">{{ $rec->service_date->isoFormat('DD MMM YYYY') }}</td>
-                            <td class="px-4 py-3">{{ $rec->workshop ?: __('fleet.show.internal_workshop') }}</td>
-                            <td class="px-4 py-3 font-semibold whitespace-nowrap">{{ number_format($rec->odometer) }} km</td>
-                            <td class="px-4 py-3">
+                            <td class="px-3 py-2.5 font-bold text-slate-900 whitespace-nowrap">{{ $rec->service_date->isoFormat('DD MMM YYYY') }}</td>
+                            <td class="px-3 py-2.5 min-w-0 max-w-[140px] truncate" title="{{ $rec->workshop ?: __('fleet.show.internal_workshop') }}">{{ $rec->workshop ?: __('fleet.show.internal_workshop') }}</td>
+                            <td class="px-3 py-2.5 font-semibold whitespace-nowrap">{{ number_format($rec->odometer) }} km</td>
+                            <td class="px-3 py-2.5">
                                 @if ($rec->items->isNotEmpty())
                                     <ul class="list-disc list-inside space-y-0.5 text-slate-600">
                                         @foreach ($rec->items->take(2) as $it)
@@ -97,12 +97,12 @@
                                 @endif
                             </td>
                             @if ($canViewCosts)
-                                <td class="px-4 py-3 text-right font-bold text-slate-900 whitespace-nowrap font-mono">
+                                <td class="px-3 py-2.5 text-right font-bold text-slate-900 whitespace-nowrap font-mono">
                                     Rp {{ number_format($rec->total_cost, 0, ',', '.') }}
                                 </td>
                             @endif
                             @if ($canManage)
-                                <td class="px-4 py-3 text-right whitespace-nowrap">
+                                <td class="px-3 py-2.5 text-right whitespace-nowrap">
                                     <a href="{{ route('services.edit', $rec) }}" class="text-slate-600 hover:text-slate-900 mr-2" title="{{ __('fleet.common.edit') }}">
                                         <i class="bi bi-pencil"></i>
                                     </a>

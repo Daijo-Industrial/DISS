@@ -263,30 +263,30 @@
             </div>
 
             <div x-show="showArchive" x-transition.duration.200ms x-cloak class="pt-1">
-                <div class="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white">
+                <div class="rounded-2xl border border-slate-200/80 bg-white overflow-hidden min-w-0">
                     <table class="w-full text-left text-xs text-slate-600">
                         <thead class="bg-slate-50/70 border-b border-slate-100 text-[10px] uppercase font-bold text-slate-400 tracking-wider">
                             <tr>
-                                <th class="px-3.5 py-2.5">{{ __('fleet.documents.type') }}</th>
-                                <th class="px-3.5 py-2.5">{{ __('fleet.documents.doc_number') }}</th>
-                                <th class="px-3.5 py-2.5">{{ __('fleet.documents.expired_date') }}</th>
-                                <th class="px-3.5 py-2.5">{{ __('fleet.documents.attachment') }}</th>
-                                <th class="px-3.5 py-2.5">{{ __('fleet.common.notes') }}</th>
+                                <th class="px-3 py-2">{{ __('fleet.documents.type') }}</th>
+                                <th class="px-3 py-2">{{ __('fleet.documents.doc_number') }}</th>
+                                <th class="px-3 py-2">{{ __('fleet.documents.expired_date') }}</th>
+                                <th class="px-3 py-2">{{ __('fleet.documents.attachment') }}</th>
+                                <th class="px-3 py-2">{{ __('fleet.common.notes') }}</th>
                                 @if ($canManage)
-                                    <th class="px-3.5 py-2.5 text-right">{{ __('fleet.common.action') }}</th>
+                                    <th class="px-3 py-2 text-right">{{ __('fleet.common.action') }}</th>
                                 @endif
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             @foreach ($documents->sortByDesc('expired_date') as $doc)
                                 <tr class="hover:bg-slate-50/50 transition">
-                                    <td class="px-3.5 py-2.5 font-semibold text-slate-900 whitespace-nowrap">
+                                    <td class="px-3 py-2 font-semibold text-slate-900 whitespace-nowrap">
                                         {{ $doc->type_label }}
                                     </td>
-                                    <td class="px-3.5 py-2.5 font-mono text-[11px] text-slate-700 whitespace-nowrap">
+                                    <td class="px-3 py-2 font-mono text-[11px] text-slate-700 whitespace-nowrap">
                                         {{ $doc->document_number ?: '—' }}
                                     </td>
-                                    <td class="px-3.5 py-2.5 whitespace-nowrap">
+                                    <td class="px-3 py-2 whitespace-nowrap">
                                         <div class="flex items-center gap-1.5">
                                             <span>{{ $doc->expired_date->isoFormat('D MMM YYYY') }}</span>
                                             <span class="rounded-md px-1.5 py-0.2 text-[9px] font-bold {{ $doc->status_badge_classes }}">
@@ -294,7 +294,7 @@
                                             </span>
                                         </div>
                                     </td>
-                                    <td class="px-3.5 py-2.5 whitespace-nowrap">
+                                    <td class="px-3 py-2 whitespace-nowrap">
                                         @if ($doc->attachment_path)
                                             @if ($doc->is_image_attachment)
                                                 <button type="button" @click.prevent="$dispatch('open-lightbox', { src: '{{ $doc->attachment_url }}', title: '{{ __('fleet.documents.attachment') }}: {{ $doc->type_label }}', subtitle: '{{ $vehicle->plate_number }} • No: {{ $doc->document_number ?: '-' }}' })"
@@ -311,11 +311,11 @@
                                             <span class="text-slate-400">—</span>
                                         @endif
                                     </td>
-                                    <td class="px-3.5 py-2.5 text-slate-500 max-w-xs truncate">
+                                    <td class="px-3 py-2 text-slate-500 max-w-xs truncate">
                                         {{ $doc->notes ?: '—' }}
                                     </td>
                                     @if ($canManage)
-                                        <td class="px-3.5 py-2.5 text-right whitespace-nowrap">
+                                        <td class="px-3 py-2 text-right whitespace-nowrap">
                                             <button type="button" wire:click="deleteDocument({{ $doc->id }})" wire:confirm="{{ __('fleet.documents.delete_confirm') }}"
                                                 title="{{ __('fleet.documents.delete_document') }}"
                                                 class="text-slate-400 hover:text-rose-600 transition cursor-pointer p-1">
