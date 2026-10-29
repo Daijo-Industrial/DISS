@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="modal fade" tabindex="-1" id="edit-department-modal-{{ $department->id }}"
     aria-labelledby="editDepartmentModal" aria-hidden="true">
     <div class="modal-dialog">

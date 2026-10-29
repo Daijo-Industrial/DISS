@@ -1,6 +1,7 @@
 @extends('new.layouts.app')
 
 @section('content')
+    <x-bootstrap-cdn />
 
     <div class="container">
         <div class="card">

@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div x-data="focusMode()" x-show="isOpen" @open-focus-mode.window="openMode($event.detail)"
     @focus-mode-finished.window="closeMode()" style="display: none;"
     class="fixed inset-0 z-[1100] bg-slate-100 flex flex-col items-center justify-start overflow-hidden">

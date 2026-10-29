@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="card shadow h-100 pt-2 btn btn-light text-start"
     style="border-left: 3px solid {{ $attributes->get('color', '') }}">
     <div class="card-body">

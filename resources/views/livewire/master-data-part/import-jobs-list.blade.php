@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <!-- resources/views/livewire/master-data-part/import-jobs-list.blade.php -->
 <div class="card shadow-sm border-0">
     <div class="card-header bg-white">

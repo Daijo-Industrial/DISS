@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div>
     <div x-data="{ open: false }" @click.outside="open = false" class="position-relative">
         <label class="form-label">{!! $labelHtml ?? $label !!}</label>

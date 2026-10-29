@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="sm:px-4 lg:px-0 space-y-6" x-data="{
     activeDrawer: null,
     filtersOpen: false,

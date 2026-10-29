@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 @php
     /** The “theme” you want each section to live under */
     $groups = [

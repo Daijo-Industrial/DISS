@@ -3,6 +3,7 @@
 @section('title', 'Specifications')
 
 @section('content')
+    <x-bootstrap-cdn />
     <div class="space-y-6">
         {{-- Header Section --}}
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

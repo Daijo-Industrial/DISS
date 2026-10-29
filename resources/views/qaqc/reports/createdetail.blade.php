@@ -1,6 +1,7 @@
 @extends('new.layouts.app')
 
 @section('content')
+    <x-bootstrap-cdn />
     <style>
         .dropdown-content {
             max-height: 200px;

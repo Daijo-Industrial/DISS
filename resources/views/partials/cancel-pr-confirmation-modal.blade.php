@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div x-data="{
     show: false,
     id: null,

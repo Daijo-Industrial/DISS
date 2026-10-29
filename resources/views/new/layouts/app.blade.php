@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="overflow-x-hidden">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="overflow-x-clip">
 
 <head>
     <meta charset="utf-8">
@@ -43,12 +43,14 @@
         };
     </script>
 
-    @vite(['resources/css/app.css', 'resources/sass/app.scss', 'resources/js/app.js'])
+    {{-- Compiled Assets --}}
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     {{-- Livewire styles --}}
     @livewireStyles
 
     @stack('head')
+    @stack('extraCss')
 </head>
 
 @php
@@ -68,7 +70,7 @@
 @endphp
 
 <body
-    class="min-h-screen main-gradient text-slate-900 font-sans antialiased selection:bg-blue-100 selection:text-blue-900 overflow-x-hidden"
+    class="min-h-screen main-gradient text-slate-900 font-sans antialiased selection:bg-blue-100 selection:text-blue-900 overflow-x-clip"
     :class="{ 'overflow-hidden': sidebarOpen }"
     x-data='{
         sidebarOpen: false,
@@ -249,7 +251,7 @@
     <div class="min-h-screen flex w-full">
         {{-- Desktop sidebar (>= lg / >= 1024px) --}}
         <aside
-            class="hidden lg:flex flex-col border-r border-slate-200/60 bg-white/95 backdrop-blur-sm transition-all duration-500 ease-in-out sticky top-0 h-screen z-50 overflow-hidden"
+            class="hidden lg:flex flex-col border-r border-slate-200/60 bg-white/95 backdrop-blur-sm transition-[width] duration-300 ease-in-out sticky top-0 h-screen z-50 overflow-hidden"
             :class="sidebarCollapsed ? 'w-[5rem]' : 'w-72'">
             {{-- Header --}}
             <div class="flex items-center h-16 border-b border-slate-100"
@@ -782,6 +784,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 
     @stack('scripts')
+    @stack('extraJs')
 </body>
 
 </html>

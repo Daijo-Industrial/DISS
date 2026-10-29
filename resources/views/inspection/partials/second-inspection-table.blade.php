@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 {{-- resources/views/inspection/partials/second-inspection.blade.php --}}
 @props(['second']) {{-- Collection<SecondInspection> --}}
 

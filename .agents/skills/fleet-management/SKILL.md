@@ -70,12 +70,14 @@ Managed by `App\Livewire\Vehicles\InspectionForm`:
 - **Cron**: `php artisan fleet:check-reminders` (scheduled daily at `07:30`).
 - **Thresholds**: H-30, H-14, H-7, and expired (`expired_date <= today`).
 - **Notification**: `VehicleDocumentExpiryNotification` (mail and in-app database bell).
+- **Testing Recipient Scoping**: `fleet:check-reminders` strictly queries users with the `super-admin` role or `PERSONALIA`/`GA` departments. In tests using `DatabaseTransactions`, unseeded test users created via `User::factory()->create()` must be explicitly assigned the `super-admin` role (`$this->user->assignRole('super-admin')`) to receive the notification.
 
 ## 7. UI Conventions & Responsiveness
 
 - **Dedicated Live Radar (`/vehicles/radar` - `vehicles/radar.blade.php`)**:
   - Gated by `fleet.view` or `fleet.manage`.
   - **Live Operational Telemetry**: Strictly 1 card per vehicle on trip via `Vehicle::whereHas('activeCheckOut')`, eliminating duplicate cards and aligning card count with header metric.
+  - **Inspector Fallback Invariant**: When displaying the inspector name in cards and logs, resolve in priority order: `{{ $trip->created_by ?: ($trip->inspector?->name ?? '—') }}`.
   - **Historical Orphan Checkouts Alert**: Collapsible alert for older unclosed checkouts not belonging to current `activeCheckOut`, with direct links to vehicle inspection history.
   - Auto-refresh polling (`wire:poll.30s`) and manual refresh trigger.
 - **Dedicated Daily Operations Cockpit (`/vehicles/operations` - `vehicles/operations.blade.php`)**:

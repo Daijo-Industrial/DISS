@@ -1,6 +1,7 @@
 @extends('layouts.guest')
 
 @section('content')
+    <x-bootstrap-cdn />
     <style>
         /* General Styling */
         .container {

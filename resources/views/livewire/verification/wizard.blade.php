@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="w-full bg-slate-50/50 min-h-screen" x-data="{ openDiscard: false }">
     <main class="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8" x-data="{ step: @entangle('step') }" x-init="$root.addEventListener('input', () => $wire.set('isDirty', true), { capture: true });
     $root.addEventListener('change', () => $wire.set('isDirty', true), { capture: true });"

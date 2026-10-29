@@ -25,6 +25,7 @@
 @endpush
 
 @section('content')
+    <x-bootstrap-cdn />
     @include('partials.alert-success-error')
     <div class="container mt-3">
         <div class="row justify-content-center">

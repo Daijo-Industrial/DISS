@@ -16,6 +16,7 @@
 @endpush
 
 @section('content')
+    <x-bootstrap-cdn />
     <section aria-label="header" class="container">
         <div class="row text-center mt-5">
             <div class="col">

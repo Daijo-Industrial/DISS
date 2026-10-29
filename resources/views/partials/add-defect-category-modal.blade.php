@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="modal" tabindex="-1" id="add-defect-category-modal-{{ $id }}"
     aria-labelledby="addDefectCategoryModal" aria-hidden="true">
     <div class="modal-dialog">

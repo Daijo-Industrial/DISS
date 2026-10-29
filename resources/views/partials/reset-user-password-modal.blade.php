@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="modal fade" id="resetPasswordConfirmationModal{{ $user->id }}" tabindex="-1" role="dialog"
     aria-labelledby="resetPasswordConfirmationLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">

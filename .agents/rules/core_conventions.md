@@ -18,6 +18,7 @@
 
 ## Development Invariants
 - **No Production Frontend Builds**: Never run `npm run build` in dev; Vite HMR is active.
+- **Bootstrap 5 Decoupling**: When migrating views to Tailwind, do not bundle Bootstrap SCSS in Vite. Isolate legacy views via `<x-bootstrap-cdn />` (`@once` loading Bootstrap 5.3.3 + DataTables CSS). Keep `bootstrap-icons` self-contained via direct package import (`@import 'bootstrap-icons/font/bootstrap-icons.css';` in `resources/css/app.css`).
 - **Bootstrap 5 & Tailwind Collision**:
   - Tailwind's `.collapse { visibility: collapse; }` overrides Bootstrap 5's `.collapse` class, rendering expanded accordions invisible. When using Bootstrap collapse/accordion in views, ensure `.accordion-collapse` or container has an explicit `visibility: visible;` override.
 - **Accordion Multi-Expand ("Always Open")**:
@@ -32,6 +33,8 @@
   - **Model Default Reload**: Call `$model->refresh()` before asserting fields backed by DB defaults (e.g. `stage = 'DRAFT'`).
   - **Employee Fixture Linkage**: `Employee` has `public $incrementing = false;`. In tests linking `User::employee_id`, always create employee rows via `DB::table('employees')->insertGetId([...])` so the MySQL auto-increment ID is captured. Enforce `grade_level` as an integer and `organization_structure` $\le 6$ characters (`char(6)` column).
   - **Livewire 3 Route Authorization**: For full-page Livewire components, test 403 responses via `$this->actingAs($user)->get(route(...))->assertForbidden()`. Avoid `Livewire::actingAs($user)->test(Component::class)->assertForbidden()`; it unbinds exception handlers on the test broker, causing subsequent test redirects inside `mount()` to bubble up as `Object of class Redirector could not be converted to int`.
+  - **Livewire Single Root Invariant**: Every Livewire component view must strictly contain exactly one single root HTML element. Sibling root elements or accidental template duplication trigger `MultipleRootElementsDetectedException`.
+  - **Dev Server Stale Cache on Dependency Changes**: Installing or removing packages in `node_modules` while `npm run dev` is running invalidates Vite's in-memory chunk hashes (`[plugin:vite:css] Cannot find module '.../dep-*.js'`). Restart the dev server (`Ctrl+C` then `npm run dev`) and purge `node_modules/.vite`.
 - **Translation Replacement Tokens**:
   - When translation keys contain `:token` placeholders (e.g. `:count`), always pass the replacement array (`__('fleet.index.units_count', ['count' => $total])`). Invoking `__()` without parameters renders literal `:token` in the UI.
 - **Critical Lookup Self-Healing**:
@@ -58,6 +61,7 @@
 
 ## UI & Navigation Standards
 - **Responsive Drawer**: Fullscreen on `< sm`, PC-width (`w-72` / 288px) on `sm:` to `lg:` with `bg-slate-950/60 backdrop-blur-sm`. In `w-72` drawers, brand flex containers must use `min-w-0 flex-1 truncate block` and `<aside>` must use `overflow-hidden` so close button (`shrink-0`) is never pushed out. Floating overlays (e.g. IT Concierge `z-[100]`) hide when drawer opens (`x-show="!sidebarOpen"`).
+- **Sticky Navigation & Overflow Clipping**: Never use `overflow-x: hidden` on root ancestors (`<html>` or `<body>`). It establishes an overflow clipping context and forces `overflow-y` to compute to `auto`, breaking `position: sticky` on the sidebar (`sticky top-0 h-screen`) and topbar. To prevent horizontal scroll on mobile without disabling sticky containers, strictly use `overflow-x: clip` (`class="overflow-x-clip"`).
 - **Dashboard & Quick Access**: `/home` shows greeting, Quick Access shortcuts, and Recent Requests/Approval Queue. `NavigationService::getQuickAccessItems($user)` uses smart defaults and cold-start fallback (up to 6 items). `NavPinController::MAX_PINS = 8`.
 - **Admin Layout**: `new.layouts.admin-settings` is strictly for directory listings. Entity edit/create views extend `new.layouts.app` wrapped in `max-w-6xl mx-auto` with a back button.
 - **Minimalist Aesthetic**:

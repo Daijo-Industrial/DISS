@@ -4,6 +4,7 @@
 @section('page-subtitle', 'Enterprise Document Lifecycle & Archive Command Center')
 
 @section('content')
+    <x-bootstrap-cdn />
     <div class="px-4 py-4 space-y-4" x-data>
         @push('scripts')
             <script>

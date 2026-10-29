@@ -3,6 +3,7 @@
 @section('title', 'Purchase Request Details - ' . $purchaseRequest->doc_num)
 
 @section('content')
+    <x-bootstrap-cdn />
     @php
         $canApprove = $flags['canApprove'] ?? false;
         $canUpload = $flags['canUpload'] ?? false;

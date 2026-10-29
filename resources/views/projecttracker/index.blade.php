@@ -1,6 +1,7 @@
 @extends('new.layouts.app')
 
 @section('content')
+    <x-bootstrap-cdn />
     <div class="row">
         <div class="col">
             <h1>Project Tracker</h1>

@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <nav class="navbar px-4 py-3 shadow-sm" style="background: linear-gradient(90deg,#14385e 0%, #1e4e84 100%);">
     <h4 class="mb-0 text-white">Daijo Industrial Support System</h4>
     <div class="d-flex align-items-center gap-3">

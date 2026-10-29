@@ -1,6 +1,7 @@
 @extends('new.layouts.app')
 
 @section('content')
+    <x-bootstrap-cdn />
     <h2>Unlock Data</h2>
 
     @if ($datas->isEmpty())

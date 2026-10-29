@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <!-- Add Warning Modal -->
 <div class="modal fade" id="warningModal" tabindex="-1" role="dialog" aria-labelledby="warningModalLabel">
     <div class="modal-dialog" role="document">

@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 @php
     /** @var \App\Models\InspectionReport $inspectionReport */
     $h = $inspectionReport; // shorthand

@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div data-step-judgement>
     @php
         $showDocumentInfo = false;

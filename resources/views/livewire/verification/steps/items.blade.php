@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-4">
     {{-- LEFT PANE: Master List of Items --}}
     <div class="lg:col-span-4">

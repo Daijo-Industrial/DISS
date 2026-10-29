@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <style>
     .autograph-box {
         width: 200px;

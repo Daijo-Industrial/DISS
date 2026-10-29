@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="modal fade" id="edit-purchase-request-received-{{ $detail->id }}">
     <div class="modal-dialog">
         <div class="modal-content">

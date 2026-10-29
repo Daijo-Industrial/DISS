@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="dropdown position-relative" wire:key="notif-menu" x-data="{ open: @entangle('open').live, ready: @js($ready) }" @click.outside="open = false"
     @keydown.escape.window="open = false">
     {{-- Bell button --}}

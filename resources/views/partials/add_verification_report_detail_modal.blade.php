@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="modal fade modal-lg" tabindex="-1" id="addVerificationReportDetailModal"
     aria-labelledby="addVerificationReportDetailModal" aria-hidden="true">
     <div class="modal-dialog">

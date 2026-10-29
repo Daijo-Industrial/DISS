@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div data-step-packaging>
     {{-- Status chip (JS island) --}}
     <div wire:ignore x-data="{ dirty: false, saved: @js($isSaved), ts: @js($savedAt) }" x-init="const root = $el.closest('[data-step-packaging]');

@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <div class="modal" tabindex="-1" class="modal fade" id="add-user-modal" aria-labelledby="addUserModal" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">

@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
  <!-- resources/views/livewire/master-data-part/import-parts.blade.php -->
  <div class="container py-4">
      <!-- Page Header -->

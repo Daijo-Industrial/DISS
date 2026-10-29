@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 <!-- Warning Logs Modal -->
 <div class="modal fade" id="warningLogsModal" tabindex="-1" role="dialog" aria-labelledby="warningLogsModalLabel"
     aria-hidden="true">

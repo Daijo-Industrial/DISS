@@ -233,6 +233,8 @@ class VehicleInspectionAndComplianceTest extends TestCase
     public function test_check_reminders_command_notifies_recipients()
     {
         Notification::fake();
+        Role::firstOrCreate(['name' => 'super-admin']);
+        $this->user->assignRole('super-admin');
 
         // Buat dokumen yang akan expired 5 hari lagi
         $doc = VehicleDocument::create([

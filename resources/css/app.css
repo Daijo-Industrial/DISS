@@ -1,3 +1,4 @@
+@import 'bootstrap-icons/font/bootstrap-icons.css';
 @import 'tom-select/dist/css/tom-select.default.css';
 
 @tailwind base;
@@ -153,4 +154,63 @@
 .ts-fleet-inspector .ts-control input {
     font-size: 0.875rem !important;
     color: #0f172a !important;
+}
+
+/* ========================================================================= */
+/* Legacy Utility Bridges (Migrated from SCSS)                               */
+/* ========================================================================= */
+.badge-floating {
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    transform: translate(50%, -50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.125rem;
+    height: 1.125rem;
+    padding: 0;
+    border-radius: 50%;
+    background: #0d6efd;
+    color: #fff;
+    font-size: 0.65rem;
+    line-height: 1;
+    font-weight: 600;
+}
+
+.skeleton {
+    position: relative;
+    overflow: hidden;
+    background: #e9ecef;
+    border-radius: 8px;
+}
+
+.skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+    animation: shimmer 1.2s infinite;
+}
+
+.skeleton-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+}
+
+.skeleton-line {
+    height: 12px;
+    border-radius: 6px;
+}
+
+@keyframes shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.accordion-collapse {
+    visibility: visible;
 }

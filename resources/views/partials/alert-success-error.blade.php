@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 @if ($message = Session::get('success'))
     <div class="alert alert-success alert-dismissible fade show d-flex align-items-center auto-dismiss-alert"
         role="alert">

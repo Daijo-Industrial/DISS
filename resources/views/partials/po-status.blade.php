@@ -1,3 +1,4 @@
+<x-bootstrap-cdn />
 @php
     $statusEnum = $po->getStatusEnum();
 @endphp

@@ -1,6 +1,7 @@
 @extends('new.layouts.app')
 
 @section('content')
+    <x-bootstrap-cdn />
     <div class="container mt-4">
         <h4>Import Jabatan Update</h4>
 
