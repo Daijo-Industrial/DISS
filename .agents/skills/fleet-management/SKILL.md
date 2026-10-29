@@ -85,10 +85,11 @@ Managed by `App\Livewire\Vehicles\InspectionForm`:
   - **Historical Orphan Checkouts Alert**: Collapsible alert for older unclosed checkouts not belonging to current `activeCheckOut`, with direct links to vehicle inspection history.
   - Auto-refresh polling (`wire:poll.30s`) and manual refresh trigger.
 - **Dedicated Daily Operations Cockpit (`/vehicles/operations` - `vehicles/operations.blade.php`)**:
-  - Restricted strictly to managers with `fleet.manage` permission (`abort(403)` otherwise).
-  - **Daily Operational Log**: Single-day historical audit log for a chosen date (defaults to Today). Quick presets for `[Hari Ini]` and `[Kemarin]`, HTML5 custom date picker, and intuitive `[‹]` / `[›]` day-steppers without infinite scrolling.
-  - **Progressive Disclosure**: Compact glanceable cards showing Plate, Model, Driver, Duration, Distance, and Health Status (`Normal` vs `Defect Reported`). 1-click drill-down expands fuel delta, odometer readings, and defect photo evidence with lightbox triggers.
-  - **Zero Duplication**: Active ongoing trips are strictly exclusive to Live Radar and never duplicated in the Daily Log.
+  - Gated by `fleet.manage`.
+  - **Weekly Day-Strip Navigation**: 7-day Monday–Sunday strip with week steppers (`previousWeek()` / `nextWeek()`), future days disabled, calendar picker, and dynamic `[Hari Ini]` button.
+  - **Unified Timeline Rail**: Continuous vertical spine (`border-l-2`) with color-coded nodes (🟢 normal, 🔴 defect, 🟣 service, 🔵 direct check-in). Merges `TYPE_CHECK_IN` and `ServiceRecord` into `$timelineEvents` sorted by timestamp descending, terminated by start-of-day anchor.
+  - **Progressive Disclosure**: Header shows time badge (`H:i WIB`), span, and health pill. Body shows plate, driver, purpose, defect note, and metrics (`+km`, `% BBM`). Expand toggle (`x-show="expanded"`) reveals 4-metric grid, defect photos with lightbox, and vehicle profile link.
+  - **Zero Duplication**: Ongoing trips are strictly exclusive to `/vehicles/radar`.
 - **Vehicle Index (`vehicles/index.blade.php`)**:
   - Category filter defaults to `passenger`.
   - Filter drawer (`x-collapse`) houses operational status and gallery sorting.

@@ -19,6 +19,7 @@ use App\Models\VehicleInspection;
 use App\Notifications\VehicleDocumentExpiryNotification;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -698,8 +699,8 @@ class VehicleInspectionAndComplianceTest extends TestCase
         // Verify P2H form renders Indonesian
         Livewire::actingAs($this->user)
             ->test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
-            ->assertSee('1. Telemetri')
-            ->assertSee('Driver & Telemetri Armada')
+            ->assertSee('1. Data Perjalanan')
+            ->assertSee('Driver & Info Awal')
             ->assertSee('Lanjut ke Checklist Fisik')
             ->assertSee('Operasional Kantor')
             ->assertSee('Kunjungan Lapangan / Proyek');
@@ -709,8 +710,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->test(VehiclesOperations::class)
             ->assertSee('Operasional Harian')
             ->assertSee('Log Operasional Harian')
-            ->assertSee('Hari Ini')
-            ->assertSee('Kemarin');
+            ->assertSee('Hari Ini');
 
         Livewire::actingAs($this->user)
             ->test(VehiclesRadar::class)
@@ -730,8 +730,8 @@ class VehicleInspectionAndComplianceTest extends TestCase
         // Verify P2H form renders English
         Livewire::actingAs($this->user)
             ->test(InspectionForm::class, ['vehicle' => $this->vehicle, 'type' => 'check_out'])
-            ->assertSee('1. Telemetry')
-            ->assertSee('Driver & Fleet Telemetry')
+            ->assertSee('1. Trip Info')
+            ->assertSee('Driver & Initial Info')
             ->assertSee('Proceed to Physical Checklist')
             ->assertSee('Office Operations')
             ->assertSee('Field / Project Visit');
@@ -741,8 +741,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->test(VehiclesOperations::class)
             ->assertSee('Daily Operations')
             ->assertSee('Daily Operational Log')
-            ->assertSee('Today')
-            ->assertSee('Yesterday');
+            ->assertSee('Today');
 
         Livewire::actingAs($this->user)
             ->test(VehiclesRadar::class)
@@ -2197,5 +2196,134 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->test(VehiclesRadar::class)
             ->assertSeeHtml(route('vehicles.index'))
             ->assertDontSeeHtml(route('vehicles.operations'));
+    }
+
+    public function test_daily_operations_command_center_kpis_filters_and_direct_checkin(): void
+    {
+        Role::firstOrCreate(['name' => 'super-admin']);
+        $this->user->assignRole('super-admin');
+
+        // 1. Create a vehicle with an active checkout (ongoing trip)
+        $activeTrip = VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'inspector_id' => $this->user->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_OUT,
+            'checked_at' => now()->subMinutes(45),
+            'driver_name' => 'Driver Aktif Sekarang',
+            'trip_purpose' => 'Antar Logistik Urgent',
+            'created_by' => 'Gate Security',
+            'odometer' => 52000,
+            'fuel_percentage' => 85,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+        ]);
+
+        // 2. Create another vehicle with a standalone direct check-in today (no checkout parent)
+        $vehicle2 = Vehicle::create([
+            'category' => 'passenger',
+            'plate_number' => 'B 9999 DIR',
+            'brand' => 'Toyota',
+            'model' => 'Camry',
+            'fuel_type' => 'petrol',
+            'requires_kir' => false,
+            'odometer' => 15000,
+            'status' => VehicleStatus::ACTIVE,
+        ]);
+
+        $directCheckIn = VehicleInspection::create([
+            'vehicle_id' => $vehicle2->id,
+            'inspector_id' => $this->user->id,
+            'parent_inspection_id' => null,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_IN,
+            'checked_at' => now()->startOfDay()->addHours(11),
+            'driver_name' => 'Driver Tamu VIP',
+            'trip_purpose' => 'Kepulangan Tamu VIP',
+            'created_by' => 'Security Pos 1',
+            'odometer' => 15000,
+            'fuel_percentage' => 80,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+        ]);
+
+        $component = Livewire::actingAs($this->user)
+            ->test(VehiclesOperations::class);
+
+        // 3. KPI bar, vehicles on trip section, and redundant buttons are removed from operations view
+        $component->assertDontSee('Driver Aktif Sekarang')
+            ->assertDontSee(__('fleet.operational_statuses.maintenance'));
+
+        // 4. Standalone Direct Check-in displays [Check-in Langsung] and correct trip purpose
+        $component->assertSee(__('fleet.show.direct_check_in'))
+            ->assertSee('Kepulangan Tamu VIP')
+            ->assertSee('Driver Tamu VIP')
+            ->assertSee('15,000 km')
+            ->assertDontSee('0 → 15,000 km');
+
+        // 5. Category and search filters work
+        $component->call('setDatePreset', 'today')
+            ->set('q', 'Camry')
+            ->assertSee('B 9999 DIR');
+
+        // 6. Activity filter works
+        $component->set('q', '')
+            ->call('setActivityFilter', 'defects')
+            ->call('setActivityFilter', 'all')
+            ->assertSee('Kepulangan Tamu VIP');
+    }
+
+    public function test_fleet_views_do_not_add_extra_gmt_offset_to_stored_timestamps(): void
+    {
+        Role::firstOrCreate(['name' => 'super-admin']);
+        $this->user->assignRole('super-admin');
+
+        // Create completed trip with explicit stored times (GMT+7 Asia/Jakarta)
+        $checkoutTime = Carbon::parse('2026-10-29 09:15:00');
+        $checkinTime = Carbon::parse('2026-10-29 14:45:00');
+
+        $checkout = VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'inspector_id' => $this->user->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_OUT,
+            'checked_at' => $checkoutTime,
+            'driver_name' => 'Driver Tepat Waktu',
+            'trip_purpose' => 'Uji Zona Waktu GMT+7',
+            'created_by' => 'Security Gate',
+            'odometer' => 30000,
+            'fuel_percentage' => 100,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+        ]);
+
+        $checkin = VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'parent_inspection_id' => $checkout->id,
+            'inspector_id' => $this->user->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_IN,
+            'checked_at' => $checkinTime,
+            'driver_name' => 'Driver Tepat Waktu',
+            'trip_purpose' => 'Uji Zona Waktu GMT+7',
+            'created_by' => 'Security Gate',
+            'odometer' => 30050,
+            'fuel_percentage' => 90,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+        ]);
+
+        // 1. Verify in VehiclesOperations: exactly 14:45 WIB and 09:15, NOT shifted +7 hours (21:45 or 16:15)
+        Livewire::actingAs($this->user)
+            ->test(VehiclesOperations::class)
+            ->call('selectDate', '2026-10-29')
+            ->assertSee('14:45 WIB')
+            ->assertSee('09:15')
+            ->assertDontSee('21:45')
+            ->assertDontSee('16:15');
+
+        // 2. Verify in VehicleShow (inspections tab): exactly 09:15 and 14:45, NOT shifted +7 hours
+        Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'inspections'])
+            ->assertSeeHtml('09:15')
+            ->assertSeeHtml('14:45')
+            ->assertDontSeeHtml('16:15')
+            ->assertDontSeeHtml('21:45');
     }
 }

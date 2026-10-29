@@ -28,6 +28,7 @@
   - **Livewire Escaping**: Pass `escape: false` when asserting strings with `&` (`assertSee('A & B', escape: false)`).
   - **HTTP Response HTML**: Laravel `TestResponse` lacks `assertSeeHtml()`; use `$response->assertSee('<tag>', false)`.
   - **Indonesian Locale**: `config('app.locale')` is `'id'`. Evaluate `Carbon::diffForHumans()` dynamically in tests.
+  - **Application Timezone**: `config('app.timezone')` is `'Asia/Jakarta'` (GMT+7). Database datetime columns store local GMT+7. Never chain `setTimezone('Asia/Jakarta')` or `addHours(7)` on Eloquent attributes (causes +14h shift). `' WIB'` in Blade views is strictly a static text label.
   - **Database Transactions**: NEVER use `RefreshDatabase` (160+ legacy tables collide). Always use `DatabaseTransactions`.
   - **Pest Scoping**: In Pest, `Feature/` tests inherit `Tests\TestCase` via `tests/Pest.php`. Never declare `uses(Tests\TestCase::class)` in `Feature/` (causes fatal duplicate test case error); declare only `uses(DatabaseTransactions::class)`. In `Unit/` tests needing DB, declare `uses(Tests\TestCase::class, DatabaseTransactions::class)`.
   - **Model Default Reload**: Call `$model->refresh()` before asserting fields backed by DB defaults (e.g. `stage = 'DRAFT'`).
@@ -73,4 +74,5 @@
   - Calm neutral cards (`slate-50/60`), subtle status pills, no loud stacked warning banners.
   - Contextual action triggers; no duplicate buttons across multiple headers.
   - **User-Centric UI Terminology**: Never leak implementation or component jargon (e.g. "Accordion", "Modal", "Drawer", "Card", "Tab") into user-facing action labels, headers, or buttons. Use intent-based action verbs (e.g. "Open All" / "Collapse All", "View Details", "Filter") rather than component-derived labels ("Open All Accordions", "Open Modal").
+  - **Plain Language Invariant**: User-facing operational and field views (fleet, gate security, inventory) strictly use plain, direct vocabulary over engineering jargon (e.g. "Data Perjalanan" / "Trip Info" over "Telemetry"; "Lihat Rincian" / "View Details").
   - Soft geometry (`rounded-2xl`), subtle rings (`ring-1 ring-slate-900/5`), `Plus Jakarta Sans` typography hierarchy over high-contrast fills.
