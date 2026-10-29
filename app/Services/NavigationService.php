@@ -348,10 +348,17 @@ class NavigationService
                         'permission' => 'ops.view',
                     ],
                     [
+                        'label' => 'Fleet Operations',
+                        'route' => 'vehicles.operations',
+                        'icon' => 'broadcast',
+                        'active' => request()->routeIs('vehicles.operations'),
+                        'permission' => 'fleet.manage',
+                    ],
+                    [
                         'label' => 'Vehicles',
                         'route' => 'vehicles.index',
                         'icon' => 'truck',
-                        'active' => request()->routeIs('vehicles.*') || request()->routeIs('services.*'),
+                        'active' => (request()->routeIs('vehicles.*') && ! request()->routeIs('vehicles.operations')) || request()->routeIs('services.*'),
                         'permission' => ['fleet.view', 'fleet.manage', 'fleet.inspect', 'ops.view'],
                     ],
                     [

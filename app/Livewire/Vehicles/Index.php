@@ -57,7 +57,13 @@ class Index extends Component
         }
 
         $this->canManage = $user?->can('fleet.manage') ?? false;
-        $this->canInspect = $this->canManage || ($user?->can('fleet.inspect') ?? false);
+        $this->canInspect = $user?->can('fleet.inspect') ?? false;
+
+        if (request('tab') === 'operations') {
+            $this->redirectRoute('vehicles.operations');
+
+            return;
+        }
 
         if (! empty($this->selectedCategories)) {
             $this->selectedCategories = array_values($this->selectedCategories);

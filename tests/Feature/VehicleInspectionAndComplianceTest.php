@@ -8,6 +8,7 @@ use App\Livewire\Vehicles\Form;
 use App\Livewire\Vehicles\Form as VehicleForm;
 use App\Livewire\Vehicles\Index as VehiclesIndex;
 use App\Livewire\Vehicles\InspectionForm;
+use App\Livewire\Vehicles\Operations as VehiclesOperations;
 use App\Livewire\Vehicles\Scan as VehicleScan;
 use App\Livewire\Vehicles\Show as VehicleShow;
 use App\Models\ServiceRecord;
@@ -559,16 +560,24 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $managerUser = User::factory()->create();
         $managerUser->givePermissionTo('fleet.manage');
 
-        // 1. VehiclesIndex has canManage = true
+        // 1. VehiclesIndex has canManage = true, canInspect = false (no quick action P2H buttons or scan button)
         Livewire::actingAs($managerUser)
             ->test(VehiclesIndex::class)
             ->assertSet('canManage', true)
-            ->assertSee(__('fleet.index.add_vehicle'));
+            ->assertSet('canInspect', false)
+            ->assertSee(__('fleet.index.add_vehicle'))
+            ->assertSee('Operasional Harian')
+            ->assertDontSee(__('fleet.index.scan_qr'))
+            ->assertDontSee('P2H Check-out →');
 
-        // 2. VehicleShow has canManage = true
+        // 2. VehicleShow has canManage = true, canInspect = false (no primary check-in/out button, but can view inspection logs)
         Livewire::actingAs($managerUser)
             ->test(VehicleShow::class, ['vehicle' => $this->vehicle])
-            ->assertSet('canManage', true);
+            ->assertSet('canManage', true)
+            ->assertSet('canInspect', false)
+            ->assertDontSee(__('fleet.show.btn_checkout'))
+            ->assertDontSee(__('fleet.show.btn_checkin'))
+            ->assertSee(__('fleet.show.inspections_title'));
 
         // 3. VehicleForm can create new vehicle
         Livewire::actingAs($managerUser)
@@ -692,6 +701,15 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->assertSee('Operasional Kantor')
             ->assertSee('Kunjungan Lapangan / Proyek');
 
+        // Verify Daily Operations renders Indonesian
+        Livewire::actingAs($this->user)
+            ->test(VehiclesOperations::class)
+            ->assertSee('Operasional Harian')
+            ->assertSee('Live Operational Radar')
+            ->assertSee('Log Operasional Harian')
+            ->assertSee('Hari Ini')
+            ->assertSee('Kemarin');
+
         // English (Switched)
         app()->setLocale('en');
         $this->assertEquals('Passenger Car / Small', $this->vehicle->category_label);
@@ -710,6 +728,15 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->assertSee('Proceed to Physical Checklist')
             ->assertSee('Office Operations')
             ->assertSee('Field / Project Visit');
+
+        // Verify Daily Operations renders English
+        Livewire::actingAs($this->user)
+            ->test(VehiclesOperations::class)
+            ->assertSee('Daily Operations')
+            ->assertSee('Live Operational Radar')
+            ->assertSee('Daily Operational Log')
+            ->assertSee('Today')
+            ->assertSee('Yesterday');
 
         // Reset back to id
         app()->setLocale('id');
@@ -1747,5 +1774,196 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->assertSeeHtml('showGroundingOption')
             ->assertSee('Status Kelayakan: Tetap Boleh Beroperasi (Minor)')
             ->assertSeeHtml('min-h-[52px]');
+    }
+
+    public function test_daily_operations_live_radar_displays_active_trips_with_elapsed_time(): void
+    {
+        Role::firstOrCreate(['name' => 'super-admin']);
+        $this->user->assignRole('super-admin');
+
+        // Create an active departure 2 hours ago
+        VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'inspector_id' => $this->user->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_OUT,
+            'checked_at' => now()->subHours(2),
+            'driver_name' => 'Budi Santoso',
+            'trip_purpose' => 'Antar Tamu Direksi',
+            'created_by' => 'Gate Security',
+            'odometer' => 45000,
+            'fuel_percentage' => 80,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+        ]);
+
+        $component = Livewire::actingAs($this->user)
+            ->test(VehiclesOperations::class);
+
+        // 1. Initial operations view shows Live Operational Radar
+        $component->assertSeeHtml('Live Operational Radar')
+            ->assertSee('Budi Santoso')
+            ->assertSee('Antar Tamu Direksi')
+            ->assertSee('Berjalan 2 jam')
+            ->assertDontSee('Check-In Sekarang')
+            ->assertSeeHtml('wire:poll.30s');
+
+        // 2. Count active trips in property
+        $this->assertCount(1, $component->get('liveActiveTrips'));
+
+        // 3. Ongoing trip is NOT duplicated in dayLog completed_trips
+        $dayLog = $component->get('dayLog');
+        $this->assertCount(0, $dayLog->completed_trips);
+    }
+
+    public function test_daily_operations_timeline_groups_paired_trips_and_defects_for_today_and_yesterday(): void
+    {
+        Role::firstOrCreate(['name' => 'super-admin']);
+        $this->user->assignRole('super-admin');
+
+        // Completed trip today: 50 km distance
+        $todayOut = VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'inspector_id' => $this->user->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_OUT,
+            'checked_at' => now()->startOfDay()->addHours(8),
+            'driver_name' => 'Driver Pagi',
+            'trip_purpose' => 'Kirim Sample Hari Ini',
+            'created_by' => 'Gate Security',
+            'odometer' => 50000,
+            'fuel_percentage' => 80,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+        ]);
+
+        VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'inspector_id' => $this->user->id,
+            'parent_inspection_id' => $todayOut->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_IN,
+            'checked_at' => now()->startOfDay()->addHours(10)->addMinutes(30),
+            'driver_name' => 'Driver Pagi',
+            'trip_purpose' => 'Kirim Sample Hari Ini',
+            'created_by' => 'Gate Security',
+            'odometer' => 50050,
+            'fuel_percentage' => 70,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+        ]);
+
+        // Completed trip yesterday: 120 km distance with minor defect
+        $yesterdayOut = VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'inspector_id' => $this->user->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_OUT,
+            'checked_at' => now()->subDay()->startOfDay()->addHours(9),
+            'driver_name' => 'Driver Kemarin',
+            'trip_purpose' => 'Kunjungan Luar Kota Kemarin',
+            'created_by' => 'Gate Security',
+            'odometer' => 49800,
+            'fuel_percentage' => 90,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+        ]);
+
+        VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'inspector_id' => $this->user->id,
+            'parent_inspection_id' => $yesterdayOut->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_IN,
+            'checked_at' => now()->subDay()->startOfDay()->addHours(14),
+            'driver_name' => 'Driver Kemarin',
+            'trip_purpose' => 'Kunjungan Luar Kota Kemarin',
+            'created_by' => 'Gate Security',
+            'odometer' => 49920,
+            'fuel_percentage' => 75,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_MINOR,
+            'defect_notes' => 'Lampu sein kanan mati',
+        ]);
+
+        $component = Livewire::actingAs($this->user)
+            ->test(VehiclesOperations::class);
+
+        // 1. Initial dayLog is Today
+        $todayLog = $component->get('dayLog');
+        $this->assertTrue($todayLog->is_today);
+        $this->assertEquals(1, $todayLog->total_trips);
+        $this->assertEquals(50, $todayLog->total_distance);
+        $this->assertEquals(0, $todayLog->total_defects);
+        $component->assertSee('+50 km')
+            ->assertSee('Kirim Sample Hari Ini');
+
+        // 2. Switch to Yesterday
+        $component->call('setDatePreset', 'yesterday');
+        $yesterdayLog = $component->get('dayLog');
+        $this->assertTrue($yesterdayLog->is_yesterday);
+        $this->assertEquals(1, $yesterdayLog->total_trips);
+        $this->assertEquals(120, $yesterdayLog->total_distance);
+        $this->assertEquals(1, $yesterdayLog->total_defects);
+        $component->assertSee('Lampu sein kanan mati')
+            ->assertSee('+120 km')
+            ->assertSee('Kunjungan Luar Kota Kemarin');
+    }
+
+    public function test_daily_operations_date_filtering_and_navigation(): void
+    {
+        Role::firstOrCreate(['name' => 'super-admin']);
+        $this->user->assignRole('super-admin');
+
+        $component = Livewire::actingAs($this->user)
+            ->test(VehiclesOperations::class);
+
+        // 1. Initial state is today
+        $this->assertEquals(now()->toDateString(), $component->get('selectedDate'));
+        $this->assertTrue($component->get('isToday'));
+        $this->assertFalse($component->get('canGoNextDay'));
+
+        // 2. Go to previous day
+        $component->call('previousDay');
+        $this->assertEquals(now()->subDay()->toDateString(), $component->get('selectedDate'));
+        $this->assertTrue($component->get('isYesterday'));
+        $this->assertTrue($component->get('canGoNextDay'));
+
+        // 3. Go to next day (returns to today)
+        $component->call('nextDay');
+        $this->assertEquals(now()->toDateString(), $component->get('selectedDate'));
+        $this->assertTrue($component->get('isToday'));
+
+        // 4. Switch date preset to yesterday
+        $component->call('setDatePreset', 'yesterday');
+        $this->assertEquals(now()->subDay()->toDateString(), $component->get('selectedDate'));
+
+        // 5. Switch back to today
+        $component->call('setDatePreset', 'today');
+        $this->assertEquals(now()->toDateString(), $component->get('selectedDate'));
+
+        // 6. Set custom date
+        $component->set('selectedDate', '2026-10-25');
+        $this->assertEquals('2026-10-25', $component->get('selectedDate'));
+        $this->assertFalse($component->get('isToday'));
+
+        // 7. Non-manager user gets 403 Forbidden on dedicated operations route
+        $viewerUser = User::factory()->create();
+        $viewerUser->givePermissionTo('fleet.view');
+        $this->actingAs($viewerUser)
+            ->get(route('vehicles.operations'))
+            ->assertForbidden();
+
+        // 8. Vehicles index includes direct link to dedicated operations page for managers
+        Livewire::actingAs($this->user)
+            ->test(VehiclesIndex::class)
+            ->assertSeeHtml(route('vehicles.operations'))
+            ->assertSee('Operasional Harian');
+
+        // 9. Vehicles index hides operations jump pill for non-managers
+        Livewire::actingAs($viewerUser)
+            ->test(VehiclesIndex::class)
+            ->assertDontSeeHtml(route('vehicles.operations'));
+
+        // 10. Query param ?tab=operations on index redirects to dedicated operations page
+        Livewire::actingAs($this->user)
+            ->withQueryParams(['tab' => 'operations'])
+            ->test(VehiclesIndex::class)
+            ->assertRedirect(route('vehicles.operations'));
     }
 }

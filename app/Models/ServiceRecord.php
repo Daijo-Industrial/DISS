@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Infrastructure\Persistence\Eloquent\Models\Vehicle;
 use Illuminate\Database\Eloquent\Model;
 
 class ServiceRecord extends Model

@@ -55,11 +55,24 @@
                 {{ __('fleet.index.title') }}
             </h1>
             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200/60">
-                {{ $metrics['total'] }} unit
+                {{ __('fleet.index.units_count', ['count' => $metrics['total']]) }}
             </span>
         </div>
 
         <div class="flex items-center gap-2">
+            @if ($canManage)
+                <a href="{{ route('vehicles.operations') }}" wire:navigate
+                    class="inline-flex items-center justify-center rounded-xl bg-indigo-50 border border-indigo-200/80 hover:bg-indigo-100 text-indigo-700 px-3.5 py-2 text-xs font-semibold transition active:scale-[0.98] shadow-2xs">
+                    <i class="bi bi-broadcast mr-1.5 text-xs text-indigo-600"></i>
+                    <span>{{ __('fleet.operations.tab_operations') }}</span>
+                    @if ($metrics['on_trip'] > 0)
+                        <span class="ml-1.5 inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-300">
+                            <span class="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse mr-1"></span>
+                            {{ $metrics['on_trip'] }}
+                        </span>
+                    @endif
+                </a>
+            @endif
             @if ($canInspect)
                 <a href="{{ route('vehicles.scan') }}" wire:navigate
                     class="inline-flex items-center justify-center rounded-xl {{ ! $canManage ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-white border border-slate-200/80 text-slate-700 hover:bg-slate-50' }} px-3.5 py-2 text-xs font-semibold transition active:scale-[0.98] shadow-2xs">
@@ -100,7 +113,7 @@
             <div class="flex items-center gap-2 min-w-0">
                 <i class="bi bi-exclamation-triangle-fill text-amber-500 text-xs shrink-0"></i>
                 <span class="truncate font-medium">
-                    <strong class="font-bold">{{ $complianceAlerts->count() }}</strong> dokumen KIR &amp; Pajak STNK membutuhkan perhatian segera
+                    {{ __('fleet.index.compliance_alert', ['count' => $complianceAlerts->count()]) }}
                 </span>
             </div>
             @php
@@ -109,7 +122,7 @@
             @if ($firstAlert)
                 <a href="{{ route('vehicles.show', ['vehicle' => $firstAlert->vehicle_id, 'tab' => 'documents']) }}"
                     class="shrink-0 font-semibold text-amber-800 hover:text-amber-950 inline-flex items-center gap-1 transition">
-                    <span>Lihat Dokumen</span>
+                    <span>{{ __('fleet.index.view_documents') }}</span>
                     <i class="bi bi-arrow-right text-[11px]"></i>
                 </a>
             @endif
@@ -234,18 +247,18 @@
                 {{-- Sort Field (Shown only when viewMode is grid) --}}
                 <div x-show="viewMode === 'grid'">
                     <label for="fleet-sort-filter" class="block text-[11px] font-semibold text-slate-600 mb-1">
-                        Urutkan Berdasarkan
+                        {{ __('fleet.index.sort_by') }}
                     </label>
                     <div class="relative">
                         <select id="fleet-sort-filter" wire:model.live="sort"
                             class="w-full appearance-none rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 pl-3 pr-8 text-xs font-semibold text-slate-800 hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition cursor-pointer">
-                            <option value="updated_at">Terakhir Diperbarui / Ditambahkan</option>
-                            <option value="plate_number">Plat Nomor</option>
-                            <option value="driver_name">Driver Penanggung Jawab</option>
+                            <option value="updated_at">{{ __('fleet.index.sort_updated_at') }}</option>
+                            <option value="plate_number">{{ __('fleet.index.sort_plate') }}</option>
+                            <option value="driver_name">{{ __('fleet.index.sort_driver') }}</option>
                             @if ($canManage)
-                                <option value="odometer">Odometer (KM)</option>
-                                <option value="status">Status Unit</option>
-                                <option value="last_service_date">Servis Terakhir</option>
+                                <option value="odometer">{{ __('fleet.index.sort_odometer') }}</option>
+                                <option value="status">{{ __('fleet.index.sort_status') }}</option>
+                                <option value="last_service_date">{{ __('fleet.index.sort_last_service') }}</option>
                             @endif
                         </select>
                         <i class="bi bi-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none"></i>
@@ -255,13 +268,13 @@
                 {{-- Sort Direction (Shown only when viewMode is grid) --}}
                 <div x-show="viewMode === 'grid'">
                     <label class="block text-[11px] font-semibold text-slate-600 mb-1">
-                        Arah Urutan
+                        {{ __('fleet.index.sort_direction') }}
                     </label>
                     <div class="relative">
                         <select wire:model.live="dir"
                             class="w-full appearance-none rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 pl-3 pr-8 text-xs font-semibold text-slate-800 hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition cursor-pointer">
-                            <option value="desc">Z - A (Terbaru / Tertinggi / Turun)</option>
-                            <option value="asc">A - Z (Terlama / Terendah / Naik)</option>
+                            <option value="desc">{{ __('fleet.index.sort_desc') }}</option>
+                            <option value="asc">{{ __('fleet.index.sort_asc') }}</option>
                         </select>
                         <i class="bi bi-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none"></i>
                     </div>
@@ -396,7 +409,7 @@
                     </div>
 
                     {{-- Card Footer: Single Primary Action Button --}}
-                    @if (!$v->is_sold && $v->category === 'passenger')
+                    @if ($canInspect && !$v->is_sold && $v->category === 'passenger')
                         <div class="mt-3 pt-3 border-t border-slate-100" @click.stop>
                             @if ($isOut)
                                 <a href="{{ route('vehicles.inspect', ['vehicle' => $v, 'type' => 'check_in']) }}"
@@ -417,8 +430,8 @@
             @empty
                 <div class="col-span-full rounded-2xl border border-dashed border-slate-300 p-8 sm:p-12 text-center">
                     <i class="bi bi-truck text-3xl sm:text-4xl text-slate-300"></i>
-                    <h3 class="mt-2 text-xs sm:text-sm font-bold text-slate-700">Tidak ada armada pada kategori/status ini</h3>
-                    <p class="text-[11px] text-slate-400 mt-0.5">Gunakan tab filter lain atau ubah kata kunci pencarian.</p>
+                    <h3 class="mt-2 text-xs sm:text-sm font-bold text-slate-700">{{ __('fleet.index.empty_filtered_title') }}</h3>
+                    <p class="text-[11px] text-slate-400 mt-0.5">{{ __('fleet.index.empty_filtered_desc') }}</p>
                 </div>
             @endforelse
         </div>
@@ -436,7 +449,7 @@
             <div class="flex flex-wrap items-center gap-2">
                 <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1 flex items-center gap-1.5">
                     <i class="bi bi-funnel text-xs text-slate-500"></i>
-                    <span>Filter:</span>
+                    <span>{{ __('fleet.index.filter_label') }}</span>
                 </span>
 
                 {{-- Kategori Filter Dropdown Popover --}}
@@ -444,7 +457,7 @@
                     <button type="button" @click="catFilterOpen = !catFilterOpen; statusFilterOpen = false"
                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition cursor-pointer active:scale-95 shadow-2xs {{ $hasCustomCategory ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-bold' : 'bg-white border-slate-200/80 text-slate-700 hover:bg-slate-50' }}">
                         <i class="bi bi-car-front text-xs {{ $hasCustomCategory ? 'text-indigo-600' : 'text-slate-400' }}"></i>
-                        <span>Kategori</span>
+                        <span>{{ __('fleet.index.filter_category_btn') }}</span>
                         <span class="rounded-full px-1.5 py-0.2 text-[10px] font-bold {{ $hasCustomCategory ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600' }}">
                             {{ count($selectedCategories) }}
                         </span>
@@ -455,17 +468,17 @@
                     <div x-show="catFilterOpen" x-cloak
                         class="absolute left-0 top-full mt-1.5 w-64 rounded-2xl bg-white border border-slate-200 shadow-xl p-3 z-50 normal-case tracking-normal space-y-2.5">
                         <div class="flex items-center justify-between pb-2 border-b border-slate-100">
-                            <span class="text-[11px] font-bold text-slate-800">Filter Kategori</span>
+                            <span class="text-[11px] font-bold text-slate-800">{{ __('fleet.index.filter_category_title') }}</span>
                             <div class="flex items-center gap-2 text-[10px]">
                                 <button type="button" wire:click="selectAllCategories"
                                     class="font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer">
-                                    Semua
+                                    {{ __('fleet.index.select_all') }}
                                 </button>
                                 @if ($hasCustomCategory)
                                     <span class="text-slate-300">•</span>
                                     <button type="button" wire:click="resetCategoryFilter"
                                         class="font-semibold text-rose-600 hover:text-rose-800 cursor-pointer">
-                                        Reset
+                                        {{ __('fleet.index.reset') }}
                                     </button>
                                 @endif
                             </div>
@@ -536,7 +549,7 @@
                     <button type="button" @click="statusFilterOpen = !statusFilterOpen; catFilterOpen = false"
                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition cursor-pointer active:scale-95 shadow-2xs {{ $hasCustomStatus ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-bold' : 'bg-white border-slate-200/80 text-slate-700 hover:bg-slate-50' }}">
                         <i class="bi bi-activity text-xs {{ $hasCustomStatus ? 'text-indigo-600' : 'text-slate-400' }}"></i>
-                        <span>Status Operasional</span>
+                        <span>{{ __('fleet.index.filter_status_btn') }}</span>
                         <span class="rounded-full px-1.5 py-0.2 text-[10px] font-bold {{ $hasCustomStatus ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600' }}">
                             {{ count($selectedStatuses) }}
                         </span>
@@ -547,17 +560,17 @@
                     <div x-show="statusFilterOpen" x-cloak
                         class="absolute left-0 top-full mt-1.5 w-64 rounded-2xl bg-white border border-slate-200 shadow-xl p-3 z-50 normal-case tracking-normal space-y-2.5">
                         <div class="flex items-center justify-between pb-2 border-b border-slate-100">
-                            <span class="text-[11px] font-bold text-slate-800">Filter Status Armada</span>
+                            <span class="text-[11px] font-bold text-slate-800">{{ __('fleet.index.filter_status_title') }}</span>
                             <div class="flex items-center gap-2 text-[10px]">
                                 <button type="button" wire:click="selectAllStatuses"
                                     class="font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer">
-                                    Semua
+                                    {{ __('fleet.index.select_all') }}
                                 </button>
                                 @if ($hasCustomStatus)
                                     <span class="text-slate-300">•</span>
                                     <button type="button" wire:click="resetStatusFilter"
                                         class="font-semibold text-rose-600 hover:text-rose-800 cursor-pointer">
-                                        Reset
+                                        {{ __('fleet.index.reset') }}
                                     </button>
                                 @endif
                             </div>
@@ -570,7 +583,7 @@
                                     class="rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer">
                                 <div class="flex items-center gap-2 flex-1 min-w-0">
                                     <span class="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
-                                    <span class="text-xs text-slate-700 font-medium truncate">Di Pool</span>
+                                    <span class="text-xs text-slate-700 font-medium truncate">{{ __('fleet.index.badge_in_pool') }}</span>
                                     <span class="ml-auto text-[10px] text-slate-400 font-semibold">{{ $metrics['in_pool'] }}</span>
                                 </div>
                             </label>
@@ -581,7 +594,7 @@
                                     class="rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer">
                                 <div class="flex items-center gap-2 flex-1 min-w-0">
                                     <span class="h-2 w-2 rounded-full bg-amber-500 shrink-0"></span>
-                                    <span class="text-xs text-slate-700 font-medium truncate">On-Trip</span>
+                                    <span class="text-xs text-slate-700 font-medium truncate">{{ __('fleet.index.badge_on_trip') }}</span>
                                     <span class="ml-auto text-[10px] text-slate-400 font-semibold">{{ $metrics['on_trip'] }}</span>
                                 </div>
                             </label>
@@ -592,7 +605,7 @@
                                     class="rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer">
                                 <div class="flex items-center gap-2 flex-1 min-w-0">
                                     <span class="h-2 w-2 rounded-full bg-rose-500 shrink-0"></span>
-                                    <span class="text-xs text-slate-700 font-medium truncate">Perawatan</span>
+                                    <span class="text-xs text-slate-700 font-medium truncate">{{ __('fleet.statuses.maintenance') }}</span>
                                     <span class="ml-auto text-[10px] text-slate-400 font-semibold">{{ $metrics['maintenance'] ?? 0 }}</span>
                                 </div>
                             </label>
@@ -604,7 +617,7 @@
                                         class="rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer">
                                     <div class="flex items-center gap-2 flex-1 min-w-0">
                                         <span class="h-2 w-2 rounded-full bg-slate-500 shrink-0"></span>
-                                        <span class="text-xs text-slate-700 font-medium truncate">Terjual / Purnatugas</span>
+                                        <span class="text-xs text-slate-700 font-medium truncate">{{ __('fleet.statuses.sold') }}</span>
                                         <span class="ml-auto text-[10px] text-slate-400 font-semibold">{{ $metrics['sold'] ?? 0 }}</span>
                                     </div>
                                 </label>
@@ -612,10 +625,10 @@
                         </div>
 
                         <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                            <span>{{ ! $hasCustomStatus ? 'Semua status aktif' : (count($selectedStatuses) === ($canManage ? 4 : 3) ? 'Semua status' : count($selectedStatuses) . ' terpilih') }}</span>
+                            <span>{{ ! $hasCustomStatus ? __('fleet.index.all_statuses_active') : (count($selectedStatuses) === ($canManage ? 4 : 3) ? __('fleet.index.all_statuses') : __('fleet.index.statuses_selected', ['count' => count($selectedStatuses)])) }}</span>
                             <button type="button" @click="statusFilterOpen = false"
                                 class="px-2.5 py-1 rounded-lg bg-slate-900 text-white font-semibold hover:bg-slate-800 transition cursor-pointer">
-                                Tutup
+                                {{ __('fleet.index.close') }}
                             </button>
                         </div>
                     </div>
@@ -626,14 +639,14 @@
                     <button type="button" wire:click="resetFilters"
                         class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition cursor-pointer">
                         <i class="bi bi-arrow-counterclockwise text-xs"></i>
-                        <span>Reset</span>
+                        <span>{{ __('fleet.index.reset') }}</span>
                     </button>
                 @endif
             </div>
 
             {{-- Summary count on the right --}}
             <div class="text-[11px] text-slate-400 font-medium">
-                Total: <span class="font-bold text-slate-700">{{ $vehicles->total() }}</span> unit
+                Total: <span class="font-bold text-slate-700">{{ __('fleet.index.units_count', ['count' => $vehicles->total()]) }}</span>
             </div>
         </div>
 
@@ -645,18 +658,18 @@
                         <th class="px-4 py-3 cursor-pointer select-none hover:bg-slate-100/80 transition group"
                             wire:click="sortBy('plate_number')">
                             <div class="flex items-center gap-1.5">
-                                <span>Armada / Plat</span>
+                                <span>{{ __('fleet.index.th_vehicle_plate') }}</span>
                                 <i class="bi {{ $sort === 'plate_number' ? ($dir === 'asc' ? 'bi-sort-up text-indigo-600 font-bold' : 'bi-sort-down text-indigo-600 font-bold') : 'bi-arrow-down-up text-slate-300 opacity-0 group-hover:opacity-100' }} text-xs transition"></i>
                             </div>
                         </th>
 
                         {{-- Kategori Column Header --}}
-                        <th class="px-4 py-3">Kategori</th>
+                        <th class="px-4 py-3">{{ __('fleet.index.th_category') }}</th>
 
                         <th class="px-4 py-3 cursor-pointer select-none hover:bg-slate-100/80 transition group"
                             wire:click="sortBy('driver_name')">
                             <div class="flex items-center gap-1.5">
-                                <span>Driver</span>
+                                <span>{{ __('fleet.index.th_driver') }}</span>
                                 <i class="bi {{ $sort === 'driver_name' ? ($dir === 'asc' ? 'bi-sort-up text-indigo-600 font-bold' : 'bi-sort-down text-indigo-600 font-bold') : 'bi-arrow-down-up text-slate-300 opacity-0 group-hover:opacity-100' }} text-xs transition"></i>
                             </div>
                         </th>
@@ -665,12 +678,12 @@
                             <th class="px-4 py-3 cursor-pointer select-none hover:bg-slate-100/80 transition group"
                                 wire:click="sortBy('odometer')">
                                 <div class="flex items-center gap-1.5">
-                                    <span>Odometer</span>
+                                    <span>{{ __('fleet.index.th_odometer') }}</span>
                                     <i class="bi {{ $sort === 'odometer' ? ($dir === 'asc' ? 'bi-sort-up text-indigo-600 font-bold' : 'bi-sort-down text-indigo-600 font-bold') : 'bi-arrow-down-up text-slate-300 opacity-0 group-hover:opacity-100' }} text-xs transition"></i>
                                 </div>
                             </th>
                         @else
-                            <th class="px-4 py-3">Odometer</th>
+                            <th class="px-4 py-3">{{ __('fleet.index.th_odometer') }}</th>
                         @endif
 
                         {{-- Status Operasional Column Header --}}
@@ -678,26 +691,26 @@
                             <th class="px-4 py-3 cursor-pointer select-none hover:bg-slate-100/80 transition group"
                                 wire:click="sortBy('status')">
                                 <div class="flex items-center gap-1.5">
-                                    <span>Status Operasional</span>
+                                    <span>{{ __('fleet.index.th_status') }}</span>
                                     <i class="bi {{ $sort === 'status' ? ($dir === 'asc' ? 'bi-sort-up text-indigo-600 font-bold' : 'bi-sort-down text-indigo-600 font-bold') : 'bi-arrow-down-up text-slate-300 opacity-0 group-hover:opacity-100' }} text-xs transition"></i>
                                 </div>
                             </th>
                         @else
-                            <th class="px-4 py-3">Status Operasional</th>
+                            <th class="px-4 py-3">{{ __('fleet.index.th_status') }}</th>
                         @endif
 
                         @if ($canManage)
                             <th class="px-4 py-3 cursor-pointer select-none hover:bg-slate-100/80 transition group"
                                 wire:click="sortBy('last_service_date')">
                                 <div class="flex items-center gap-1.5">
-                                    <span>Servis Terakhir</span>
+                                    <span>{{ __('fleet.index.th_last_service') }}</span>
                                     <i class="bi {{ $sort === 'last_service_date' ? ($dir === 'asc' ? 'bi-sort-up text-indigo-600 font-bold' : 'bi-sort-down text-indigo-600 font-bold') : 'bi-arrow-down-up text-slate-300 opacity-0 group-hover:opacity-100' }} text-xs transition"></i>
                                 </div>
                             </th>
                         @else
-                            <th class="px-4 py-3">Servis Terakhir</th>
+                            <th class="px-4 py-3">{{ __('fleet.index.th_last_service') }}</th>
                         @endif
-                        <th class="px-4 py-3 text-right">Aksi</th>
+                        <th class="px-4 py-3 text-right">{{ __('fleet.index.th_action') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 bg-white text-slate-700">
@@ -712,8 +725,8 @@
                             <td class="px-4 py-3.5">
                                 <div class="flex items-center gap-3">
                                     @if ($v->image_path)
-                                        <button type="button" @click.stop="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $v->image_path) }}', title: 'Foto Profil {{ $v->plate_number }}', subtitle: '{{ trim($v->brand . ' ' . $v->model) }}' })"
-                                            title="Perbesar foto" class="group/img cursor-pointer shrink-0">
+                                        <button type="button" @click.stop="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $v->image_path) }}', title: '{{ __('fleet.index.vehicle_photo_title', ['plate' => $v->plate_number]) }}', subtitle: '{{ trim($v->brand . ' ' . $v->model) }}' })"
+                                            title="{{ __('fleet.index.zoom_photo') }}" class="group/img cursor-pointer shrink-0">
                                             <img src="{{ asset('storage/' . $v->image_path) }}" alt="{{ $v->plate_number }}"
                                                 class="h-9 w-9 rounded-xl object-cover border border-slate-200/90 shadow-2xs group-hover/img:scale-105 transition">
                                         </button>
@@ -779,7 +792,7 @@
                             </td>
                             <td class="px-4 py-3.5 text-right whitespace-nowrap" onclick="event.stopPropagation()">
                                 <div class="inline-flex items-center gap-1.5">
-                                    @if (!$v->is_sold && $v->category === 'passenger')
+                                    @if ($canInspect && !$v->is_sold && $v->category === 'passenger')
                                         @if ($isOut)
                                             <a href="{{ route('vehicles.inspect', ['vehicle' => $v, 'type' => 'check_in']) }}"
                                                 class="rounded-xl bg-amber-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-amber-600 shadow-2xs transition active:scale-[0.98]">
@@ -798,7 +811,7 @@
                     @empty
                         <tr>
                             <td colspan="7" class="px-4 py-8 text-center text-xs text-slate-400">
-                                Tidak ada data armada.
+                                {{ __('fleet.index.empty_title') }}
                             </td>
                         </tr>
                     @endforelse
