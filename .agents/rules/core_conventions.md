@@ -31,6 +31,9 @@
   - **Pest Scoping**: In Pest, `Feature/` tests inherit `Tests\TestCase` via `tests/Pest.php`. Never declare `uses(Tests\TestCase::class)` in `Feature/` (causes fatal duplicate test case error); declare only `uses(DatabaseTransactions::class)`. In `Unit/` tests needing DB, declare `uses(Tests\TestCase::class, DatabaseTransactions::class)`.
   - **Model Default Reload**: Call `$model->refresh()` before asserting fields backed by DB defaults (e.g. `stage = 'DRAFT'`).
   - **Employee Fixture Linkage**: `Employee` has `public $incrementing = false;`. In tests linking `User::employee_id`, always create employee rows via `DB::table('employees')->insertGetId([...])` so the MySQL auto-increment ID is captured. Enforce `grade_level` as an integer and `organization_structure` $\le 6$ characters (`char(6)` column).
+  - **Livewire 3 Route Authorization**: For full-page Livewire components, test 403 responses via `$this->actingAs($user)->get(route(...))->assertForbidden()`. Avoid `Livewire::actingAs($user)->test(Component::class)->assertForbidden()`; it unbinds exception handlers on the test broker, causing subsequent test redirects inside `mount()` to bubble up as `Object of class Redirector could not be converted to int`.
+- **Translation Replacement Tokens**:
+  - When translation keys contain `:token` placeholders (e.g. `:count`), always pass the replacement array (`__('fleet.index.units_count', ['count' => $total])`). Invoking `__()` without parameters renders literal `:token` in the UI.
 - **Critical Lookup Self-Healing**:
   - Category and lookup tables powering essential UI components (e.g. `ticket_categories`) must be seeded via migrations or contain self-healing fallbacks (calling seeder if empty) to prevent unseeded environments from breaking frontend dropdowns.
 - **Two-Tier Issue Escalation**:

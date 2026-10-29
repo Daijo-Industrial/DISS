@@ -104,7 +104,7 @@
         @endif
 
         {{-- Primary Action Button (Check-out / Check-in) --}}
-        @if (!$vehicle->is_sold && $vehicle->category === 'passenger')
+        @if ($canInspect && !$vehicle->is_sold && $vehicle->category === 'passenger')
             <div>
                 @if ($isOut)
                     <a href="{{ route('vehicles.inspect', ['vehicle' => $vehicle, 'type' => 'check_in']) }}"

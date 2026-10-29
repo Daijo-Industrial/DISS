@@ -116,7 +116,7 @@ class Show extends Component
         ]);
 
         $this->canManage = $user?->can('fleet.manage') ?? false;
-        $this->canInspect = $this->canManage || ($user?->can('fleet.inspect') ?? false);
+        $this->canInspect = $user?->can('fleet.inspect') ?? false;
         $this->canViewDocuments = $this->canManage || ($user?->can('fleet.documents') ?? false);
         $this->canViewCosts = $this->canManage || ($user?->can('fleet.view-costs') ?? false);
 
