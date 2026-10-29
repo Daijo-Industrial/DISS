@@ -9,6 +9,7 @@ use App\Livewire\Vehicles\Form as VehicleForm;
 use App\Livewire\Vehicles\Index as VehiclesIndex;
 use App\Livewire\Vehicles\InspectionForm;
 use App\Livewire\Vehicles\Operations as VehiclesOperations;
+use App\Livewire\Vehicles\Radar as VehiclesRadar;
 use App\Livewire\Vehicles\Scan as VehicleScan;
 use App\Livewire\Vehicles\Show as VehicleShow;
 use App\Models\ServiceRecord;
@@ -701,14 +702,18 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->assertSee('Operasional Kantor')
             ->assertSee('Kunjungan Lapangan / Proyek');
 
-        // Verify Daily Operations renders Indonesian
+        // Verify Daily Operations and Live Radar render Indonesian
         Livewire::actingAs($this->user)
             ->test(VehiclesOperations::class)
             ->assertSee('Operasional Harian')
-            ->assertSee('Live Operational Radar')
             ->assertSee('Log Operasional Harian')
             ->assertSee('Hari Ini')
             ->assertSee('Kemarin');
+
+        Livewire::actingAs($this->user)
+            ->test(VehiclesRadar::class)
+            ->assertSee('Live Operational Radar')
+            ->assertSee('Auto-refresh');
 
         // English (Switched)
         app()->setLocale('en');
@@ -729,14 +734,18 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->assertSee('Office Operations')
             ->assertSee('Field / Project Visit');
 
-        // Verify Daily Operations renders English
+        // Verify Daily Operations and Live Radar render English
         Livewire::actingAs($this->user)
             ->test(VehiclesOperations::class)
             ->assertSee('Daily Operations')
-            ->assertSee('Live Operational Radar')
             ->assertSee('Daily Operational Log')
             ->assertSee('Today')
             ->assertSee('Yesterday');
+
+        Livewire::actingAs($this->user)
+            ->test(VehiclesRadar::class)
+            ->assertSee('Live Operational Radar')
+            ->assertSee('Auto-refresh');
 
         // Reset back to id
         app()->setLocale('id');
@@ -1388,39 +1397,86 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->assertSeeHtml('wire:click="sortBy(\'plate_number\')"');
     }
 
-    public function test_vehicle_show_right_layout_initially_hidden_but_accessible_with_tab_counts(): void
+    public function test_vehicle_show_permanent_two_column_cockpit_and_paired_p2h_journeys(): void
     {
-        // 1. Initial mount without tab query param has showRightLayout = false
+        // 1. Initial mount has permanent two-column layout without collapsing wrapper
         $component = Livewire::actingAs($this->user)
             ->test(VehicleShow::class, ['vehicle' => $this->vehicle]);
 
-        $component->assertSet('showRightLayout', false)
-            ->assertSeeHtml('max-w-xl')
-            ->assertSeeHtml('showRightLayout')
-            ->assertSeeHtml('x-show="showRightLayout"')
-            ->assertSee('Riwayat & Dokumen')
-            ->assertSee('Buka Detail')
-            ->assertSeeHtml('openTab(\'inspections\')')
-            ->assertSeeHtml('openTab(\'documents\')')
-            ->assertSeeHtml('openTab(\'services\')')
-            ->assertDontSeeHtml('<span class="hidden sm:inline">Tutup</span>');
+        $component->assertSet('showRightLayout', true)
+            ->assertSeeHtml('max-w-7xl')
+            ->assertDontSeeHtml('max-w-xl')
+            ->assertDontSee('Buka Detail')
+            ->assertSee(__('fleet.show.inspections_title'))
+            ->assertSee(__('fleet.show.empty_inspections'));
 
-        // 2. Toggling right layout opens the panel
-        $component->call('toggleRightLayout')
-            ->assertSet('showRightLayout', true);
+        // 2. Tab switching updates tab property
+        $component->call('setTab', 'documents')
+            ->assertSet('tab', 'documents')
+            ->call('setTab', 'services')
+            ->assertSet('tab', 'services')
+            ->call('setTab', 'inspections')
+            ->assertSet('tab', 'inspections');
 
-        // 3. Selecting a tab automatically sets showRightLayout to true
-        $component->set('showRightLayout', false)
-            ->assertSet('showRightLayout', false)
-            ->call('setTab', 'documents')
-            ->assertSet('showRightLayout', true)
-            ->assertSet('tab', 'documents');
-
-        // 4. Mounting with explicit tab query param opens the panel immediately
+        // 3. Mounting with explicit tab query param opens that tab
         Livewire::actingAs($this->user)
             ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'services'])
-            ->assertSet('showRightLayout', true)
             ->assertSet('tab', 'services');
+
+        // 4. Paired P2H journeys render properly with driver, delta distance, and search filtering
+        $checkOut = VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'inspection_type' => 'check_out',
+            'driver_name' => 'Bambang Sudirno',
+            'trip_purpose' => 'Kunjungan Proyek Cikarang',
+            'odometer' => 10000,
+            'fuel_percentage' => 90,
+            'checklist_results' => [],
+            'severity' => 'none',
+            'inspector_id' => $this->user->id,
+            'checked_at' => now()->subHours(4),
+        ]);
+
+        $checkIn = VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'parent_inspection_id' => $checkOut->id,
+            'inspection_type' => 'check_in',
+            'driver_name' => 'Bambang Sudirno',
+            'trip_purpose' => 'Kunjungan Proyek Cikarang',
+            'odometer' => 10085,
+            'fuel_percentage' => 75,
+            'checklist_results' => [],
+            'severity' => 'minor',
+            'defect_notes' => 'Baret halus pintu kiri belakang',
+            'inspector_id' => $this->user->id,
+            'checked_at' => now()->subHours(1),
+        ]);
+
+        $inspectionComponent = Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'tab' => 'inspections']);
+
+        $inspectionComponent->assertSee(__('fleet.show.th_date_time'))
+            ->assertSee(__('fleet.show.th_driver_purpose'))
+            ->assertSee(__('fleet.show.th_distance_odo'))
+            ->assertSee(__('fleet.show.th_fuel'))
+            ->assertSee(__('fleet.show.th_status'))
+            ->assertSee('Bambang Sudirno')
+            ->assertSee('Kunjungan Proyek Cikarang')
+            ->assertSeeHtml('+85 km')
+            ->assertSeeHtml('90% → 75%')
+            ->assertSee(__('fleet.inspection.severity_minor'))
+            ->assertSee('Baret halus pintu kiri belakang');
+
+        // 5. Live search filters by driver name
+        $inspectionComponent->set('p2hSearch', 'NonExistentDriver')
+            ->assertDontSee('Bambang Sudirno')
+            ->set('p2hSearch', 'Bambang')
+            ->assertSee('Bambang Sudirno');
+
+        // 6. Defect toggle filters
+        $inspectionComponent->set('p2hSearch', '')
+            ->set('p2hDefect', 'defects_only')
+            ->assertSee('Bambang Sudirno');
     }
 
     public function test_vehicles_index_table_view_multi_select_category_and_status_filtering(): void
@@ -1796,22 +1852,25 @@ class VehicleInspectionAndComplianceTest extends TestCase
             'severity' => VehicleInspection::SEVERITY_NONE,
         ]);
 
-        $component = Livewire::actingAs($this->user)
-            ->test(VehiclesOperations::class);
+        $radarComponent = Livewire::actingAs($this->user)
+            ->test(VehiclesRadar::class);
 
-        // 1. Initial operations view shows Live Operational Radar
-        $component->assertSeeHtml('Live Operational Radar')
+        // 1. Dedicated radar view shows Live Operational Radar
+        $radarComponent->assertSeeHtml('Live Operational Radar')
             ->assertSee('Budi Santoso')
             ->assertSee('Antar Tamu Direksi')
+            ->assertSee('Gate Security')
             ->assertSee('Berjalan 2 jam')
             ->assertDontSee('Check-In Sekarang')
             ->assertSeeHtml('wire:poll.30s');
 
-        // 2. Count active trips in property
-        $this->assertCount(1, $component->get('liveActiveTrips'));
+        // 2. Count active trips in property strictly matches vehicle count
+        $this->assertCount(1, $radarComponent->get('liveActiveTrips'));
 
-        // 3. Ongoing trip is NOT duplicated in dayLog completed_trips
-        $dayLog = $component->get('dayLog');
+        // 3. Ongoing trip is NOT duplicated in operations dayLog completed_trips
+        $operationsComponent = Livewire::actingAs($this->user)
+            ->test(VehiclesOperations::class);
+        $dayLog = $operationsComponent->get('dayLog');
         $this->assertCount(0, $dayLog->completed_trips);
     }
 
@@ -1965,5 +2024,154 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->withQueryParams(['tab' => 'operations'])
             ->test(VehiclesIndex::class)
             ->assertRedirect(route('vehicles.operations'));
+    }
+
+    public function test_dedicated_live_radar_authorization_scoping_and_orphan_checkouts(): void
+    {
+        Role::firstOrCreate(['name' => 'super-admin']);
+        $this->user->assignRole('super-admin');
+
+        // 1. Create a legitimate active ongoing trip for $this->vehicle
+        VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'inspector_id' => $this->user->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_OUT,
+            'checked_at' => now()->subHours(1),
+            'driver_name' => 'Active Driver',
+            'trip_purpose' => 'Antar Logistik Urgent',
+            'created_by' => 'Gate Security',
+            'odometer' => 50000,
+            'fuel_percentage' => 85,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+        ]);
+
+        // 2. Create a second vehicle that has an old abandoned checkout from 5 days ago,
+        // but was later checked out and returned back to the pool
+        $secondVehicle = Vehicle::create([
+            'plate_number' => 'B 9999 ORP',
+            'brand' => 'Toyota',
+            'model' => 'Innova Zenix',
+            'category' => 'passenger',
+            'fuel_type' => 'petrol',
+            'status' => VehicleStatus::ACTIVE,
+        ]);
+
+        // Orphan checkout (never closed)
+        $orphanInspection = VehicleInspection::create([
+            'vehicle_id' => $secondVehicle->id,
+            'inspector_id' => $this->user->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_OUT,
+            'checked_at' => now()->subDays(5),
+            'driver_name' => 'Old Driver',
+            'trip_purpose' => 'Perjalanan Lama',
+            'created_by' => 'Gate Security',
+            'odometer' => 10000,
+            'fuel_percentage' => 70,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+        ]);
+
+        // Newer checkout and check-in for second vehicle (it is currently returned in pool)
+        $newerOut = VehicleInspection::create([
+            'vehicle_id' => $secondVehicle->id,
+            'inspector_id' => $this->user->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_OUT,
+            'checked_at' => now()->subHours(5),
+            'driver_name' => 'New Driver',
+            'trip_purpose' => 'Tugas Pagi',
+            'created_by' => 'Gate Security',
+            'odometer' => 10100,
+            'fuel_percentage' => 60,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+        ]);
+
+        VehicleInspection::create([
+            'vehicle_id' => $secondVehicle->id,
+            'inspector_id' => $this->user->id,
+            'parent_inspection_id' => $newerOut->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_IN,
+            'checked_at' => now()->subHours(2),
+            'driver_name' => 'New Driver',
+            'trip_purpose' => 'Tugas Pagi',
+            'created_by' => 'Gate Security',
+            'odometer' => 10150,
+            'fuel_percentage' => 55,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+        ]);
+
+        // 3. Test Live Radar: Strictly 1 card for active vehicle ($this->vehicle)
+        $radarComponent = Livewire::actingAs($this->user)
+            ->test(VehiclesRadar::class);
+
+        $this->assertCount(1, $radarComponent->get('liveActiveTrips'));
+        $radarComponent->assertSee('Active Driver')
+            ->assertSee('Antar Logistik Urgent')
+            ->assertDontSeeHtml('wire:key="live-radar-' . $secondVehicle->id);
+
+        // 4. Test Orphan Checkouts detection in Live Radar
+        $orphans = $radarComponent->get('orphanCheckouts');
+        $this->assertCount(1, $orphans);
+        $this->assertEquals($orphanInspection->id, $orphans->first()->id);
+
+        $radarComponent->assertSeeHtml('Catatan Keberangkatan Lama Belum Terselesaikan')
+            ->assertSee('B 9999 ORP')
+            ->assertSee('Old Driver');
+
+        // 5. Test Live Radar authorization for fleet.view users
+        $viewerUser = User::factory()->create();
+        $viewerUser->givePermissionTo('fleet.view');
+
+        $this->actingAs($viewerUser)
+            ->get(route('vehicles.radar'))
+            ->assertOk();
+
+        // 6. Test Live Radar 403 Forbidden for unauthorized users
+        $unauthorizedUser = User::factory()->create();
+        $this->actingAs($unauthorizedUser)
+            ->get(route('vehicles.radar'))
+            ->assertForbidden();
+    }
+
+    public function test_cross_navigation_links_between_catalog_radar_and_operations(): void
+    {
+        Role::firstOrCreate(['name' => 'super-admin']);
+        $this->user->assignRole('super-admin');
+
+        // 1. Manager on Catalog (/vehicles) sees all 3 links
+        Livewire::actingAs($this->user)
+            ->test(VehiclesIndex::class)
+            ->assertSeeHtml(route('vehicles.radar'))
+            ->assertSeeHtml(route('vehicles.operations'))
+            ->assertSee('Live Radar')
+            ->assertSee('Operasional Harian');
+
+        // 2. Manager on Live Radar (/vehicles/radar) has auto-refresh and refresh button, without redundant header navigation buttons
+        Livewire::actingAs($this->user)
+            ->test(VehiclesRadar::class)
+            ->assertSee(__('fleet.operations.auto_refresh'))
+            ->assertSeeHtml('wire:click="$refresh"');
+
+        // 3. Manager on Daily Operations (/vehicles/operations) has breadcrumb, without redundant header navigation buttons
+        Livewire::actingAs($this->user)
+            ->test(VehiclesOperations::class)
+            ->assertSeeHtml(route('vehicles.index'))
+            ->assertSee('Operasional Harian');
+
+        // 4. Non-manager with fleet.view sees Catalog and Radar, but NOT Operations
+        $viewerUser = User::factory()->create();
+        $viewerUser->givePermissionTo('fleet.view');
+
+        Livewire::actingAs($viewerUser)
+            ->test(VehiclesIndex::class)
+            ->assertSeeHtml(route('vehicles.radar'))
+            ->assertDontSeeHtml(route('vehicles.operations'));
+
+        Livewire::actingAs($viewerUser)
+            ->test(VehiclesRadar::class)
+            ->assertSeeHtml(route('vehicles.index'))
+            ->assertDontSeeHtml(route('vehicles.operations'));
     }
 }

@@ -60,17 +60,23 @@
         </div>
 
         <div class="flex items-center gap-2">
+            {{-- Live Radar Jump --}}
+            <a href="{{ route('vehicles.radar') }}" wire:navigate
+                class="inline-flex items-center justify-center rounded-xl bg-amber-50 border border-amber-200/80 hover:bg-amber-100 text-amber-900 px-3.5 py-2 text-xs font-semibold transition active:scale-[0.98] shadow-2xs">
+                <i class="bi bi-broadcast mr-1.5 text-xs text-amber-600"></i>
+                <span>{{ __('fleet.operations.tab_radar') }}</span>
+                @if ($metrics['on_trip'] > 0)
+                    <span class="ml-1.5 inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-200 text-amber-900 ring-1 ring-inset ring-amber-300">
+                        <span class="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse mr-1"></span>
+                        {{ $metrics['on_trip'] }}
+                    </span>
+                @endif
+            </a>
             @if ($canManage)
                 <a href="{{ route('vehicles.operations') }}" wire:navigate
                     class="inline-flex items-center justify-center rounded-xl bg-indigo-50 border border-indigo-200/80 hover:bg-indigo-100 text-indigo-700 px-3.5 py-2 text-xs font-semibold transition active:scale-[0.98] shadow-2xs">
-                    <i class="bi bi-broadcast mr-1.5 text-xs text-indigo-600"></i>
+                    <i class="bi bi-clock-history mr-1.5 text-xs text-indigo-600"></i>
                     <span>{{ __('fleet.operations.tab_operations') }}</span>
-                    @if ($metrics['on_trip'] > 0)
-                        <span class="ml-1.5 inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-300">
-                            <span class="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse mr-1"></span>
-                            {{ $metrics['on_trip'] }}
-                        </span>
-                    @endif
                 </a>
             @endif
             @if ($canInspect)

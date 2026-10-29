@@ -26,7 +26,22 @@ class Show extends Component
     #[Url]
     public string $tab = 'inspections'; // 'services', 'inspections', 'documents'
 
-    public bool $showRightLayout = false;
+    public bool $showRightLayout = true;
+
+    // P2H Journey filters
+    public string $p2hSearch = '';
+
+    public string $p2hDefect = 'all'; // 'all', 'defects_only'
+
+    public function updatedP2hSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedP2hDefect(): void
+    {
+        $this->resetPage();
+    }
 
     // Service filters
     public string $year = 'all';
@@ -43,7 +58,7 @@ class Show extends Component
 
     public bool $canViewCosts = false;
 
-    // Inspection filters
+    // Legacy Inspection filters (preserved for backward compatibility)
     public string $inspectionType = 'all';
 
     public string $inspectionSeverity = 'all'; // 'all', 'defects_only', 'critical_only'
@@ -615,23 +630,82 @@ class Show extends Component
         $lifetimeCost = (clone $baseServices)->sum('total_cost');
         $ytdCost = (clone $baseServices)->whereYear('service_date', now()->year)->sum('total_cost');
 
-        // 2. Inspections
-        $inspections = VehicleInspection::query()
-            ->with(['inspector', 'parentCheckOut'])
+        // 2. Active Trip (if on trip right now)
+        $activeTrip = null;
+        if ($this->vehicle->is_out_on_trip && $this->vehicle->activeCheckOut) {
+            $activeTrip = $this->vehicle->activeCheckOut;
+            $depTime = $activeTrip->checked_at ?? $activeTrip->created_at;
+            $elapsedMinutes = $depTime ? (int) $depTime->diffInMinutes(now()) : 0;
+            if ($elapsedMinutes < 60) {
+                $activeTrip->elapsed_text = $elapsedMinutes . ' ' . __('fleet.operations.minutes');
+            } elseif ($elapsedMinutes < 1440) {
+                $hours = floor($elapsedMinutes / 60);
+                $mins = $elapsedMinutes % 60;
+                $activeTrip->elapsed_text = $hours . ' ' . __('fleet.operations.hours') . ($mins > 0 ? ' ' . $mins . ' ' . __('fleet.operations.minutes') : '');
+            } else {
+                $days = floor($elapsedMinutes / 1440);
+                $hours = floor(($elapsedMinutes % 1440) / 60);
+                $activeTrip->elapsed_text = $days . ' ' . __('fleet.operations.days') . ($hours > 0 ? ' ' . $hours . ' ' . __('fleet.operations.hours') : '');
+            }
+        }
+
+        // 3. P2H Completed Journeys & Unclosed Checkouts
+        $journeysQuery = VehicleInspection::query()
+            ->with(['inspector', 'parentCheckOut.inspector'])
             ->where('vehicle_id', $this->vehicle->id)
-            ->when($this->inspectionType !== 'all', fn ($q) => $q->where('inspection_type', $this->inspectionType))
-            ->when($this->inspectionSeverity === 'defects_only', fn ($q) => $q->whereIn('severity', ['minor', 'critical_grounded']))
-            ->when($this->inspectionSeverity === 'critical_only', fn ($q) => $q->where('severity', 'critical_grounded'))
-            ->orderByDesc('created_at')
+            ->where(function ($q) {
+                $q->where('inspection_type', VehicleInspection::TYPE_CHECK_IN)
+                    ->orWhere(function ($oq) {
+                        $oq->where('inspection_type', VehicleInspection::TYPE_CHECK_OUT)
+                            ->whereDoesntHave('checkInRecord');
+                    });
+            });
+
+        // Filter: Defects only
+        if ($this->p2hDefect === 'defects_only' || $this->inspectionSeverity === 'defects_only') {
+            $journeysQuery->where(function ($q) {
+                $q->whereIn('severity', [VehicleInspection::SEVERITY_MINOR, VehicleInspection::SEVERITY_CRITICAL])
+                    ->orWhereNotNull('defect_notes')
+                    ->orWhereHas('parentCheckOut', function ($pq) {
+                        $pq->whereIn('severity', [VehicleInspection::SEVERITY_MINOR, VehicleInspection::SEVERITY_CRITICAL])
+                            ->orWhereNotNull('defect_notes');
+                    });
+            });
+        } elseif ($this->inspectionSeverity === 'critical_only') {
+            $journeysQuery->where(function ($q) {
+                $q->where('severity', VehicleInspection::SEVERITY_CRITICAL)
+                    ->orWhereHas('parentCheckOut', function ($pq) {
+                        $pq->where('severity', VehicleInspection::SEVERITY_CRITICAL);
+                    });
+            });
+        }
+
+        // Filter: Search by driver, purpose, or created_by
+        if ($this->p2hSearch !== '') {
+            $term = $this->p2hSearch;
+            $journeysQuery->where(function ($q) use ($term) {
+                $q->where('driver_name', 'like', '%' . $term . '%')
+                    ->orWhere('trip_purpose', 'like', '%' . $term . '%')
+                    ->orWhere('created_by', 'like', '%' . $term . '%')
+                    ->orWhereHas('parentCheckOut', function ($pq) use ($term) {
+                        $pq->where('driver_name', 'like', '%' . $term . '%')
+                            ->orWhere('trip_purpose', 'like', '%' . $term . '%');
+                    });
+            });
+        }
+
+        $inspections = $journeysQuery
+            ->orderByDesc('checked_at')
+            ->orderByDesc('id')
             ->paginate(15);
 
-        // 3. Documents
+        // 4. Documents
         $documents = VehicleDocument::query()
             ->with('creator')
             ->where('vehicle_id', $this->vehicle->id)
             ->orderBy('expired_date')
             ->get();
 
-        return view('livewire.vehicles.show', compact('records', 'lifetimeCost', 'ytdCost', 'inspections', 'documents', 'availableYears'));
+        return view('livewire.vehicles.show', compact('records', 'lifetimeCost', 'ytdCost', 'inspections', 'documents', 'availableYears', 'activeTrip'));
     }
 }

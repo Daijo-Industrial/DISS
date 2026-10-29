@@ -1,15 +1,7 @@
-<div class="mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5 transition-all duration-300"
-    :class="showRightLayout ? 'max-w-7xl' : 'max-w-xl'"
-    x-data="{
-        showRightLayout: @entangle('showRightLayout'),
-        openTab(tabName) {
-            this.showRightLayout = true;
-            $wire.setTab(tabName);
-        }
-    }">
-    {{-- Breadcrumb Navigation & Top Action Bar --}}
+<div class="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5">
+    {{-- Breadcrumb Navigation & Top Info Bar --}}
     <div class="flex flex-wrap items-center justify-between gap-2 min-w-0">
-        <a href="{{ route('vehicles.index') }}"
+        <a href="{{ route('vehicles.index') }}" wire:navigate
             class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition shrink-0">
             <i class="bi bi-chevron-left text-[11px]"></i>
             <span>{{ __('fleet.show.back_to_index') }}</span>
@@ -21,18 +13,6 @@
                     VIN: {{ $vehicle->vin }}
                 </span>
             @endif
-
-            {{-- Toggle Right Layout Button with Tab Total Counter --}}
-            <button type="button" @click="showRightLayout = !showRightLayout"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition cursor-pointer active:scale-95 shadow-2xs"
-                :class="showRightLayout ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-bold' : 'bg-white border-slate-200/80 text-slate-700 hover:bg-slate-50'">
-                <i class="bi" :class="showRightLayout ? 'bi-layout-sidebar-inset-reverse' : 'bi-layout-sidebar-reverse'"></i>
-                <span x-text="showRightLayout ? 'Tutup Panel Detail' : 'Buka Detail'"></span>
-                <span class="rounded-full px-1.5 py-0.2 text-[10px] font-bold"
-                    :class="showRightLayout ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-700'">
-                    {{ $inspections->total() + $documents->count() + $records->total() }}
-                </span>
-            </button>
         </div>
     </div>
 
@@ -44,15 +24,13 @@
     @endphp
 
     {{-- 2-COLUMN SPLIT COCKPIT LAYOUT --}}
-    <div class="grid grid-cols-1 gap-5 items-start min-w-0"
-        :class="showRightLayout ? 'lg:grid-cols-12' : ''">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start min-w-0">
 
-        {{-- LEFT COLUMN: Sticky Cockpit & Vehicle Identity (lg:col-span-4 when expanded, full space of max-w-xl when collapsed) --}}
+        {{-- LEFT COLUMN: Sticky Cockpit & Vehicle Identity (lg:col-span-4) --}}
         @include('livewire.vehicles.partials.show-cockpit')
 
-        {{-- RIGHT COLUMN: Tab Navigation & Rich Content Panels (Initially hidden, accessible via toggle or tab buttons) --}}
-        <div x-show="showRightLayout" x-cloak @if (!request()->has('tab')) style="display: none;" @endif
-            class="lg:col-span-8 space-y-4 min-w-0">
+        {{-- RIGHT COLUMN: Tab Navigation & Rich Content Panels (lg:col-span-8) --}}
+        <div class="lg:col-span-8 space-y-4 min-w-0">
             {{-- APPLE SEGMENTED TAB CONTROL --}}
             <div class="overflow-x-auto pb-1 sm:pb-0 -mx-3 px-3 sm:mx-0 sm:px-0 no-scrollbar">
                 <div class="inline-flex items-center p-1 bg-slate-100/90 rounded-2xl border border-slate-200/60 min-w-full w-max sm:w-full">
