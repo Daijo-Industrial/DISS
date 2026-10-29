@@ -28,6 +28,7 @@ class EloquentAttendanceRepository implements AttendanceRepository
                 'departments.name as department_name',
                 DB::raw('SUM(alpha) as alpha'),
                 DB::raw('SUM(telat) as telat'),
+                DB::raw('SUM(cuti) as cuti'),
                 DB::raw('SUM(izin) as izin'),
                 DB::raw('SUM(sakit) as sakit'),
             )
@@ -86,7 +87,7 @@ class EloquentAttendanceRepository implements AttendanceRepository
         string $department,
         ?string $category = null,
     ): Collection {
-        $validCategories = ['alpha', 'telat', 'izin', 'sakit'];
+        $validCategories = ['alpha', 'telat', 'cuti', 'izin', 'sakit'];
 
         $query = AttendanceRecord::join('employees', 'attendance_records.nik', '=', 'employees.NIK')
             ->join('departments', 'employees.dept_code', '=', 'departments.dept_no')
@@ -124,6 +125,7 @@ class EloquentAttendanceRepository implements AttendanceRepository
         $row = AttendanceRecord::selectRaw('
             SUM(alpha) as alpha,
             SUM(telat) as telat,
+            SUM(cuti)  as cuti,
             SUM(izin)  as izin,
             SUM(sakit) as sakit
         ')->first();
@@ -131,6 +133,7 @@ class EloquentAttendanceRepository implements AttendanceRepository
         return [
             'alpha' => (int) ($row->alpha ?? 0),
             'telat' => (int) ($row->telat ?? 0),
+            'cuti'  => (int) ($row->cuti  ?? 0),
             'izin'  => (int) ($row->izin  ?? 0),
             'sakit' => (int) ($row->sakit ?? 0),
         ];

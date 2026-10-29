@@ -7,15 +7,24 @@ use App\Domains\Ticketing\Entities\Ticket;
 use App\Domains\Ticketing\Entities\TicketCategory;
 use App\Domains\Ticketing\Enums\TicketPriority;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class SupportBubble extends Component
 {
+    use WithFileUploads;
+
     public bool $isOpen = false;
 
     public string $activeTab = 'new'; // 'new' or 'my_tickets'
 
     // New Ticket Form
+    public string $request_type = 'bug'; // 'bug', 'feature', 'other'
+
+    public string $custom_title = '';
+
     public string $title = '';
 
     public string $description = '';
@@ -24,10 +33,19 @@ class SupportBubble extends Component
 
     public string $priority = 'Medium';
 
+    public string $current_url = '';
+
+    public $screenshot = null;
+
     // Notification Polling State
     public bool $hasUnreadUpdates = false;
 
-    #[\Livewire\Attributes\On('open-support-bubble')]
+    public function mount()
+    {
+        $this->current_url = url()->current();
+    }
+
+    #[On('open-support-bubble')]
     public function openBubble($data = [])
     {
         $this->isOpen = true;
@@ -35,9 +53,36 @@ class SupportBubble extends Component
         if (isset($data['tab'])) {
             $this->activeTab = $data['tab'];
         }
+        if (isset($data['url']) && ! empty($data['url'])) {
+            $this->current_url = $data['url'];
+        } elseif (empty($this->current_url)) {
+            $this->current_url = url()->previous() ?: url()->current();
+        }
     }
 
-    // We can pull categories dynamically
+    public function removeScreenshot()
+    {
+        $this->screenshot = null;
+    }
+
+    public function resolveDefaultCategoryId(): int
+    {
+        $targetName = match ($this->request_type) {
+            'feature' => 'Feature Request',
+            'other' => 'General Inquiry / Other',
+            default => 'Software / Application Bug',
+        };
+
+        $category = TicketCategory::where('name', $targetName)->first();
+
+        if (! $category) {
+            $category = TicketCategory::where('is_active', true)->first();
+        }
+
+        return $category ? $category->id : 1;
+    }
+
+    // We pull categories dynamically
     public function getCategoriesProperty()
     {
         return TicketCategory::where('is_active', true)->get();
@@ -52,39 +97,66 @@ class SupportBubble extends Component
 
         return Ticket::with('category')->where('reporter_id', $user->employee->nik)
             ->latest('updated_at')
+            ->take(15)
             ->get();
     }
 
     public function submitTicket(CreateTicket $action)
     {
         $this->validate([
-            'title' => 'required|string|max:255',
+            'request_type' => 'required|in:bug,feature,other',
+            'custom_title' => 'nullable|string|max:255',
+            'title' => 'nullable|string|max:255',
             'description' => 'required|string',
-            'category_id' => 'required|exists:ticket_categories,id',
-            'priority' => 'required|in:Low,Medium,High,Critical',
+            'category_id' => 'nullable|exists:ticket_categories,id',
+            'priority' => 'nullable|in:Low,Medium,High,Critical',
+            'current_url' => ['nullable', 'string', 'max:1000', 'regex:/^(https?:\/\/|\/)[^\s]+$/i'],
+            'screenshot' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         $user = Auth::user();
         if (! $user || ! $user->employee) {
-            session()->flash('error', 'You must be linked to an employee record to submit a ticket.');
+            session()->flash('error', __('ticketing.concierge.messages.employee_link_required'));
 
             return;
         }
 
-        $priorityEnum = TicketPriority::from($this->priority);
+        $screenshotPath = null;
+        if ($this->screenshot) {
+            $screenshotPath = $this->screenshot->store('tickets/screenshots', 'public');
+        }
+
+        $deviceInfo = request()->header('User-Agent');
+        $priorityEnum = TicketPriority::tryFrom($this->priority) ?? TicketPriority::MEDIUM;
+        $resolvedCategoryId = $this->category_id ?: $this->resolveDefaultCategoryId();
+
+        $finalTitle = trim($this->custom_title ?: $this->title);
+        if (empty($finalTitle)) {
+            $prefix = match ($this->request_type) {
+                'feature' => '[Feature]',
+                'other' => '[Support]',
+                default => '[Bug]',
+            };
+            $snippet = Str::limit(trim($this->description), 50, '...');
+            $finalTitle = "{$prefix} {$snippet}";
+        }
 
         $action->execute(
             $user->employee->nik,
-            $this->category_id,
-            $this->title,
+            $resolvedCategoryId,
+            $finalTitle,
             $this->description,
-            $priorityEnum
+            $priorityEnum,
+            $user->email,
+            $this->current_url ?: null,
+            $screenshotPath,
+            $deviceInfo
         );
 
-        $this->reset(['title', 'description', 'category_id', 'priority']);
+        $this->reset(['request_type', 'custom_title', 'title', 'description', 'category_id', 'priority', 'screenshot']);
         $this->activeTab = 'my_tickets';
 
-        session()->flash('success', 'Ticket submitted successfully!');
+        session()->flash('success', __('ticketing.concierge.messages.ticket_submitted'));
     }
 
     // Polled every 30s to check for new PIC activities on the user's active tickets

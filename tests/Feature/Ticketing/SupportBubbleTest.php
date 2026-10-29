@@ -46,14 +46,27 @@ class SupportBubbleTest extends TestCase
         $component->assertSet('hasUnreadUpdates', false);
     }
 
-    public function test_support_bubble_renders_bounded_category_and_priority_dropdowns()
+    public function test_support_bubble_renders_simplified_request_types_and_description()
     {
         Livewire::test(SupportBubble::class)
             ->set('isOpen', true)
-            ->assertSeeHtml("openDropdown === 'category'")
-            ->assertSeeHtml("openDropdown === 'priority'")
-            ->assertSeeHtml('max-h-52 w-full overflow-y-auto')
-            ->assertSeeHtml('truncate pr-2')
+            ->assertSet('request_type', 'bug')
+            ->assertSee(__('ticketing.concierge.form.type_bug'))
+            ->assertSee(__('ticketing.concierge.form.type_feature'))
+            ->assertSee(__('ticketing.concierge.form.type_other'))
+            ->assertSee(__('ticketing.concierge.form.custom_title'))
+            ->assertSee(__('ticketing.concierge.form.details'))
+            ->assertDontSee(__('ticketing.concierge.form.page_url'))
             ->assertStatus(200);
+    }
+
+    public function test_support_bubble_switches_request_type_properly()
+    {
+        Livewire::test(SupportBubble::class)
+            ->set('isOpen', true)
+            ->set('request_type', 'feature')
+            ->assertSet('request_type', 'feature')
+            ->set('request_type', 'other')
+            ->assertSet('request_type', 'other');
     }
 }

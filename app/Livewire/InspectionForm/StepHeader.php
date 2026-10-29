@@ -2,7 +2,10 @@
 
 namespace App\Livewire\InspectionForm;
 
+use App\Models\InspectionForm\InspectionReport;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class StepHeader extends Component
@@ -45,22 +48,25 @@ class StepHeader extends Component
 
     protected $listeners = ['dropdownSelected'];
 
-    protected $rules = [
-        'document_number' => 'required|string|unique:inspection_reports,document_number',
-        'customer' => 'required|string',
-        'inspection_date' => 'required|date',
-        'part_number' => 'required|string',
-        'part_name' => 'required|string',
-        'weight' => 'required|numeric',
-        'weight_uom' => 'required|string',
-        'material' => 'required|string',
-        'color' => 'required|string',
-        'tool_number_or_cav_number' => 'required|string',
-        'machine_number' => 'required|string',
-        'shift' => 'required|integer|min:1|max:3',
-        'operator' => 'required|string',
-        'inspector' => 'required|string|max:255',
-    ];
+    public function rules(): array
+    {
+        return [
+            'document_number' => ['required', 'string', Rule::unique(InspectionReport::class, 'document_number')],
+            'customer' => 'required|string',
+            'inspection_date' => 'required|date',
+            'part_number' => 'required|string',
+            'part_name' => 'required|string',
+            'weight' => 'required|numeric',
+            'weight_uom' => 'required|string',
+            'material' => 'required|string',
+            'color' => 'required|string',
+            'tool_number_or_cav_number' => 'required|string',
+            'machine_number' => 'required|string',
+            'shift' => 'required|integer|min:1|max:3',
+            'operator' => 'required|string',
+            'inspector' => 'required|string|max:255',
+        ];
+    }
 
     /** Current payload for hashing */
     protected function snapshot(): array
@@ -117,6 +123,7 @@ class StepHeader extends Component
         return $hash && $hash === md5(json_encode($this->snapshot()));
     }
 
+    #[On('dropdownSelected')]
     public function dropdownSelected($payload = null)
     {
         if (! is_array($payload)) {
@@ -127,11 +134,13 @@ class StepHeader extends Component
         if (isset($payload['item_no']) && isset($payload['description'])) {
             $this->part_number = $payload['item_no'];
             $this->part_name = $payload['description'];
+            $this->resetErrorBag(['part_number', 'part_name']);
         }
 
         // Generic fallback (e.g. customer, operator, etc.)
         if (! empty($payload['field']) && isset($payload['value'])) {
             $this->{$payload['field']} = $payload['value'];
+            $this->resetErrorBag($payload['field']);
         }
     }
 

@@ -2,9 +2,14 @@
 
 namespace App\Providers;
 
+use App\Application\PurchaseOrder\Listeners\HandlePurchaseOrderApprovalNotifications;
 use App\Application\PurchaseRequest\Listeners\HandlePurchaseRequestApprovalNotifications;
+use App\Domains\Ticketing\Events\TicketCreated;
+use App\Domains\Ticketing\Events\TicketResolved;
 use App\Events\ApprovalCompleted;
 use App\Listeners\BroadcastNotificationPushed;
+use App\Listeners\SendNewTicketNotification;
+use App\Listeners\SendTicketResolvedNotification;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -17,15 +22,20 @@ class EventServiceProvider extends ServiceProvider
      *
      * @var array<class-string, array<int, class-string>>
      */
-   protected $listen = [
+    protected $listen = [
         Registered::class => [SendEmailVerificationNotification::class],
         NotificationSent::class => [BroadcastNotificationPushed::class],
         ApprovalCompleted::class => [
             HandlePurchaseRequestApprovalNotifications::class,
-            \App\Application\PurchaseOrder\Listeners\HandlePurchaseOrderApprovalNotifications::class,
+            HandlePurchaseOrderApprovalNotifications::class,
         ],
-   ];
-   
+        TicketCreated::class => [
+            SendNewTicketNotification::class,
+        ],
+        TicketResolved::class => [
+            SendTicketResolvedNotification::class,
+        ],
+    ];
 
     /**
      * Register any events for your application.

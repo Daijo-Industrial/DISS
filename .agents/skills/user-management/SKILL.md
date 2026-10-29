@@ -1,40 +1,41 @@
 ---
 name: user-management
-description: Domain knowledge, user repository architecture, page visit telemetry (user_page_visits), dormant user tracking (>30d), and tabbed admin edit conventions in DISS.
+description: Domain knowledge, user repository architecture, page visit telemetry, dormant user tracking (>30d), and tabbed admin edit conventions in DISS.
 ---
 
 # User Management & Activity Telemetry
 
 ## 1. Domain & Persistence Architecture
-- **Layering**:
-  - `App\Domain\User\Entities\User`: Pure domain entity with immutability helpers (`emailVerifiedAt`, `lastVisitedAt`, `createdAt`).
-  - `App\Domain\User\Repositories\UserRepository`: Interface for user persistence, pagination with `onlyDormant`, and `countDormantUsers(int $days = 30)`.
-  - `App\Infrastructure\Persistence\Eloquent\Repositories\EloquentUserRepository`: Eloquent implementation with subquery optimization:
-    `(SELECT MAX(last_visited_at) FROM user_page_visits WHERE user_page_visits.user_id = users.id) as last_visited_at`
-  - `App\Application\User\DTOs\UserWithEmployeeSummary`: Flat DTO for presentation, including timestamps.
+
+- **`User` Entity** (`App\Domain\User\Entities\User`): Immutability helpers (`emailVerifiedAt`, `lastVisitedAt`, `createdAt`).
+- **`UserRepository`** (`App\Domain\User\Repositories\UserRepository`): Interface for pagination with `onlyDormant`, and `countDormantUsers(int $days = 30)`.
+- **`EloquentUserRepository`** (`App\Infrastructure\Persistence\Eloquent\Repositories\EloquentUserRepository`): Subquery optimization:
+  `(SELECT MAX(last_visited_at) FROM user_page_visits WHERE user_page_visits.user_id = users.id) as last_visited_at`
+- **DTO**: `App\Application\User\DTOs\UserWithEmployeeSummary`.
 
 ## 2. Activity Telemetry & Dormancy Rules
+
 - **Table**: `user_page_visits` (`user_id`, `route_name`, `visit_count`, `last_visited_at`).
-- **Telemetry Middleware**: `TrackPageVisits` updates visit counts and timestamps via upsert on named routes.
+- **Middleware**: `TrackPageVisits` records page hits and timestamps on named routes.
 - **Dormancy Condition**:
-  An account is considered dormant if:
-  1. `is_active = true`, AND
-  2. `last_visited_at < now() - 30 days` OR (`last_visited_at IS NULL` AND `created_at < now() - 30 days`).
-- **User Index UI**:
-  - Show subtle relative time: `• Active <diffForHumans>` vs `• Dormant (Never visited)` / `• Dormant (<diffForHumans>)`.
-  - Filter chip: `[⚠️ X Dormant (>30d)]`.
+  An account is dormant if `is_active = true` AND:
+  - `last_visited_at < now() - 30 days`, OR
+  - `last_visited_at IS NULL` AND `created_at < now() - 30 days`.
+- **UI Indicators**: Relative timestamps (`• Active <diffForHumans>` vs `• Dormant`) and filter chip `[⚠️ X Dormant (>30d)]`.
 
-## 3. User Edit Layout & Tabbed Workflow
-- **Layout**: Extend `new.layouts.app`, wrap in `max-w-6xl mx-auto`.
-- **Header**: User initial avatar, Name, Email, Verified status badge, Active status pill, Dormant badge, joined date, and `← Back to Users`.
+## 3. User Edit Layout & Tabs
+
+- **Layout**: Extends `new.layouts.app` wrapped in `max-w-6xl mx-auto`.
+- **Header**: Initial avatar, Name, Email, Status badges, and `← Back to Users`.
 - **4-Tab Interface** (`#[Url(history: true)] public string $tab = 'profile'`):
-  1. `profile`: Name, Email, Employee linkage search, Active toggle switch, `saveProfile()`.
-  2. `roles`: Module-grouped role chips, legacy direct permissions notice, `saveRoles()`.
-  3. `activity`: Telemetry metrics (Last Active, Total Hits, Distinct Routes), Dormant notice, Top 10 routes.
-  4. `security`: Password reset form (`savePassword()`), direct administrative email verification override (`toggleEmailVerification()`).
+  1. `profile`: Identity, Employee linkage search, Active toggle switch.
+  2. `roles`: Module-grouped role chips, legacy direct permissions notice.
+  3. `activity`: Telemetry metrics (Last Active, Total Hits, Distinct Routes), Top 10 routes.
+  4. `security`: Password reset, direct email verification override.
 
-## 4. Development & Testing Runbooks
+## 4. Runbooks
+
 ```bash
-# Run user administration & telemetry test suite (11 tests, 48 assertions)
+# Run user administration & telemetry tests
 docker exec diss-laravel.test-1 php artisan test --filter=UserIndexTest
 ```

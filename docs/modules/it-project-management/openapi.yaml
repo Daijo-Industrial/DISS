@@ -1,0 +1,2008 @@
+openapi: 3.0.3
+info:
+  title: DISS IT Project & KPI Management REST API
+  description: Headless, API-first module in Daijo Industrial Support System (DISS)
+    for IT project lifecycle management, dual SLA metrics, verifiable checkpoint evidence,
+    and executive dashboards.
+  version: 1.0.0
+  contact:
+    name: IT Department - PT Daijo Industrial
+    email: it@daijo.co.id
+servers:
+- url: https://diss.daijo.co.id/api/v1
+  description: Production Server
+- url: https://staging-diss.daijo.co.id/api/v1
+  description: Staging Server
+- url: http://localhost/api/v1
+  description: Local Sail / Nginx Server
+- url: http://127.0.0.1:8000/api/v1
+  description: Local Artisan Server
+- url: http://localhost:3000/api/v1
+  description: Bruno Local Mock Server
+tags:
+- name: Auth
+  description: Token Authentication & Profile
+- name: Dashboard
+  description: Aggregated KPI Cards, Dual SLA Metrics & Leaderboards
+- name: Projects
+  description: Project Master CRUD & Composite Queries
+- name: Workflow
+  description: Stage Transitions, Hold, Resume, and Closure Gates
+- name: Checkpoints
+  description: Milestone Checkpoints & Evidence Attachments
+- name: Extensions
+  description: Schedule Deadline Extensions
+security:
+- BearerAuth: []
+paths:
+  /auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Authenticate user & obtain Sanctum Bearer token
+      description: Authenticates user credentials and returns a personal access token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: it.lead@example.com
+                password:
+                  type: string
+                  format: password
+                  example: Str0ngP@ssw0rd!#2026
+                device_name:
+                  type: string
+                  example: android-client
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Login successful
+                data:
+                  token: 1|sanctum_mock_token_abc123xyz789
+                  token_type: Bearer
+                  user:
+                    id: 1
+                    name: IT Lead Engineer
+                    email: it.lead@example.com
+                    employee_id: EMP-001
+                    department:
+                      id: 1
+                      name: Information Technology
+                      code: IT
+                    roles:
+                    - IT Head
+                    - Admin
+        '422':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                success: false
+                message: The provided credentials are incorrect.
+                errors:
+                  email:
+                  - The provided credentials are incorrect.
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /auth/me:
+    get:
+      tags:
+      - Auth
+      summary: Get authenticated user profile and roles
+      description: Retrieves the authenticated user profile and assigned roles.
+      responses:
+        '200':
+          description: Authenticated user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: User profile retrieved successfully
+                data:
+                  id: 1
+                  name: IT Lead Engineer
+                  email: it.lead@example.com
+                  employee_id: EMP-001
+                  department:
+                    id: 1
+                    name: Information Technology
+                    code: IT
+                  roles:
+                  - IT Head
+                  - Admin
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /auth/logout:
+    post:
+      tags:
+      - Auth
+      summary: Revoke current access token
+      description: Revokes and deletes the current access token.
+      responses:
+        '200':
+          description: Token revoked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Successfully logged out
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /projects/dashboard/summary:
+    get:
+      tags:
+      - Dashboard
+      summary: Get executive dashboard KPI summary cards (Dual SLA, counts, health)
+      parameters:
+      - name: department_id
+        in: query
+        schema:
+          type: integer
+        description: Filter by requester department ID
+      - name: primary_pic_id
+        in: query
+        schema:
+          type: integer
+        description: Filter by primary PIC user ID
+      - name: priority
+        in: query
+        schema:
+          $ref: '#/components/schemas/ProjectPriority'
+      - name: from_date
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: to_date
+        in: query
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: Aggregated KPI summary metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: KPI summary retrieved successfully
+                data:
+                  total_projects: 24
+                  active_projects: 14
+                  on_hold_projects: 2
+                  cancelled_projects: 1
+                  completed_projects: 7
+                  health_breakdown:
+                    on_track: 10
+                    at_risk: 3
+                    overdue: 1
+                  dual_sla:
+                    original_sla_rate: 85.71
+                    original_sla_on_time_count: 6
+                    revised_schedule_rate: 100.0
+                    revised_schedule_on_time_count: 7
+                  governance:
+                    cancellation_rate: 4.17
+                    total_extensions: 5
+                    average_extensions_per_project: 0.21
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /projects/dashboard/stage-distribution:
+    get:
+      tags:
+      - Dashboard
+      summary: Get distribution count of projects across lifecycle stages
+      parameters:
+      - name: department_id
+        in: query
+        schema:
+          type: integer
+      - name: status
+        in: query
+        schema:
+          $ref: '#/components/schemas/ProjectStatus'
+      responses:
+        '200':
+          description: Project counts per stage
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Stage distribution retrieved successfully
+                data:
+                  DRAFT: 2
+                  INITIATION: 3
+                  PLANNING: 4
+                  DEVELOPMENT: 7
+                  MONITORING: 3
+                  REVIEW: 2
+                  CLOSURE: 3
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /projects/dashboard/pic-leaderboard:
+    get:
+      tags:
+      - Dashboard
+      summary: Get PIC leaderboard ranking with individual SLA metrics
+      parameters:
+      - name: department_id
+        in: query
+        schema:
+          type: integer
+      - name: from_date
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: to_date
+        in: query
+        schema:
+          type: string
+          format: date
+      responses:
+        '200':
+          description: PIC leaderboard ranking list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: PIC leaderboard retrieved successfully
+                data:
+                - pic:
+                    id: 1
+                    name: IT Lead Engineer
+                    email: it.lead@example.com
+                    employee_id: EMP-001
+                  total_projects: 12
+                  active_projects: 7
+                  completed_projects: 5
+                  overdue_active_projects: 0
+                  original_on_time_count: 4
+                  revised_on_time_count: 5
+                  original_sla_rate: 80.0
+                  revised_schedule_rate: 100.0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /projects/dashboard/upcoming-deadlines:
+    get:
+      tags:
+      - Dashboard
+      summary: Get active projects approaching deadlines within window
+      parameters:
+      - name: days
+        in: query
+        schema:
+          type: integer
+          default: 30
+        description: Lookahead days window
+      responses:
+        '200':
+          description: List of upcoming deadline projects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Upcoming deadlines retrieved successfully
+                data:
+                - id: a2f66269-31f8-4867-b748-bbac05ddfa18
+                  project_code: IT-2026-0001
+                  name: MES Machine Telemetry v2
+                  description: Integration of factory floor PLC machines to DISS real-time
+                    telemetry dashboard.
+                  priority: HIGH
+                  stage: DEVELOPMENT
+                  status: ACTIVE
+                  health_status: ON_TRACK
+                  health_status_label: On Track
+                  start_date: '2026-10-15'
+                  original_due_date: '2026-12-31'
+                  due_date: '2026-12-31'
+                  finished_date: null
+                  progress_percent: 65.5
+                  deadline_extension_count: 0
+                  requester_name: Production Team Lead
+                  department:
+                    id: 2
+                    name: Molding Production
+                    code: MOLD
+                  pic:
+                    id: 1
+                    name: IT Lead Engineer
+                    email: it.lead@example.com
+                    employee_id: EMP-001
+                  created_at: '2026-10-14T08:00:00Z'
+                  updated_at: '2026-10-14T09:30:00Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /projects:
+    get:
+      tags:
+      - Projects
+      summary: List paginated projects with filters
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          default: 1
+      - name: per_page
+        in: query
+        schema:
+          type: integer
+          default: 15
+      - name: stage
+        in: query
+        schema:
+          $ref: '#/components/schemas/ProjectStage'
+      - name: status
+        in: query
+        schema:
+          $ref: '#/components/schemas/ProjectStatus'
+      - name: priority
+        in: query
+        schema:
+          $ref: '#/components/schemas/ProjectPriority'
+      - name: department_id
+        in: query
+        schema:
+          type: integer
+      - name: pic_id
+        in: query
+        schema:
+          type: integer
+      - name: search
+        in: query
+        schema:
+          type: string
+        description: Search code, name, description
+      responses:
+        '200':
+          description: Paginated projects response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProjectResource'
+                  links:
+                    type: object
+                  meta:
+                    type: object
+              example:
+                data:
+                - id: a2f66269-31f8-4867-b748-bbac05ddfa18
+                  project_code: IT-2026-0001
+                  name: MES Machine Telemetry v2
+                  description: Integration of factory floor PLC machines to DISS real-time
+                    telemetry dashboard.
+                  priority: HIGH
+                  stage: DEVELOPMENT
+                  status: ACTIVE
+                  health_status: ON_TRACK
+                  health_status_label: On Track
+                  start_date: '2026-10-15'
+                  original_due_date: '2026-12-31'
+                  due_date: '2026-12-31'
+                  finished_date: null
+                  progress_percent: 65.5
+                  deadline_extension_count: 0
+                  requester_name: Production Team Lead
+                  department:
+                    id: 2
+                    name: Molding Production
+                    code: MOLD
+                  pic:
+                    id: 1
+                    name: IT Lead Engineer
+                    email: it.lead@example.com
+                    employee_id: EMP-001
+                  created_at: '2026-10-14T08:00:00Z'
+                  updated_at: '2026-10-14T09:30:00Z'
+                links:
+                  first: https://diss.daijo.co.id/api/v1/projects?page=1
+                  last: https://diss.daijo.co.id/api/v1/projects?page=1
+                  prev: null
+                  next: null
+                meta:
+                  current_page: 1
+                  from: 1
+                  last_page: 1
+                  per_page: 15
+                  to: 1
+                  total: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+      - Projects
+      summary: Create a new project master
+      description: Creates a new IT project record in DRAFT stage. Automatically generates
+        project code.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              - requester_name
+              - requester_department_id
+              - primary_pic_id
+              - due_date
+              properties:
+                name:
+                  type: string
+                  example: MES Machine Telemetry v2
+                description:
+                  type: string
+                  example: Integration of factory floor PLC machines to DISS real-time
+                    telemetry dashboard.
+                requester_name:
+                  type: string
+                  example: Production Team Lead
+                requester_department_id:
+                  type: integer
+                  example: 2
+                primary_pic_id:
+                  type: integer
+                  example: 1
+                priority:
+                  $ref: '#/components/schemas/ProjectPriority'
+                start_date:
+                  type: string
+                  format: date
+                  example: '2026-10-15'
+                due_date:
+                  type: string
+                  format: date
+                  example: '2026-12-31'
+      responses:
+        '201':
+          description: Project created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Project created successfully
+                data:
+                  id: a2f66269-31f8-4867-b748-bbac05ddfa18
+                  project_code: IT-2026-0001
+                  name: MES Machine Telemetry v2
+                  description: Integration of factory floor PLC machines to DISS real-time
+                    telemetry dashboard.
+                  priority: HIGH
+                  stage: DRAFT
+                  status: ACTIVE
+                  health_status: ON_TRACK
+                  health_status_label: On Track
+                  start_date: '2026-10-15'
+                  original_due_date: '2026-12-31'
+                  due_date: '2026-12-31'
+                  finished_date: null
+                  progress_percent: 0.0
+                  deadline_extension_count: 0
+                  requester_name: Production Team Lead
+                  department:
+                    id: 2
+                    name: Molding Production
+                    code: MOLD
+                  pic:
+                    id: 1
+                    name: IT Lead Engineer
+                    email: it.lead@example.com
+                    employee_id: EMP-001
+                  created_at: '2026-10-14T08:00:00Z'
+                  updated_at: '2026-10-14T08:00:00Z'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                success: false
+                message: Validation failed
+                errors:
+                  due_date:
+                  - The due date must be a date after or equal to start date.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /projects/{id}:
+    get:
+      tags:
+      - Projects
+      summary: Get complete project detail (Composite)
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Project composite detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Project details retrieved successfully
+                data:
+                  id: a2f66269-31f8-4867-b748-bbac05ddfa18
+                  project_code: IT-2026-0001
+                  name: MES Machine Telemetry v2
+                  description: Integration of factory floor PLC machines to DISS real-time
+                    telemetry dashboard.
+                  priority: HIGH
+                  stage: DEVELOPMENT
+                  status: ACTIVE
+                  health_status: ON_TRACK
+                  health_status_label: On Track
+                  start_date: '2026-10-15'
+                  original_due_date: '2026-12-31'
+                  due_date: '2026-12-31'
+                  finished_date: null
+                  progress_percent: 50.0
+                  deadline_extension_count: 0
+                  hold_details: null
+                  cancellation_details: null
+                  requester_name: Production Team Lead
+                  department:
+                    id: 2
+                    name: Molding Production
+                    code: MOLD
+                  pic:
+                    id: 1
+                    name: IT Lead Engineer
+                    email: it.lead@example.com
+                    employee_id: EMP-001
+                  creator:
+                    id: 1
+                    name: IT Lead Engineer
+                  checkpoints:
+                  - id: c1f7a183-4921-4d32-8499-123456789abc
+                    project_id: a2f66269-31f8-4867-b748-bbac05ddfa18
+                    title: Architecture & Network Diagram Sign-Off
+                    description: Approval from IT Infrastructure team on machine gateway
+                      subnet allocation.
+                    sequence_order: 1
+                    is_required: true
+                    status: COMPLETED
+                    due_date: '2026-11-15'
+                    completed_date: '2026-11-10'
+                    checked_by:
+                      id: 1
+                      name: IT Lead Engineer
+                    notes: Gate requirement for development rollout.
+                    attachments: []
+                    created_at: '2026-10-14T08:30:00Z'
+                    updated_at: '2026-11-10T14:00:00Z'
+                  extensions: []
+                  stage_histories:
+                  - id: 1
+                    from_stage: DRAFT
+                    to_stage: INITIATION
+                    is_override: false
+                    override_reason: null
+                    changed_by:
+                      id: 1
+                      name: IT Lead Engineer
+                    created_at: '2026-10-14T08:15:00Z'
+                  created_at: '2026-10-14T08:00:00Z'
+                  updated_at: '2026-10-14T09:30:00Z'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags:
+      - Projects
+      summary: Update project metadata
+      description: Modifies project name, description, or priority. Restricted to
+        assigned PIC or IT Manager+.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: MES Machine Telemetry v2.1
+                description:
+                  type: string
+                  example: Updated scope including second line sensors.
+                priority:
+                  $ref: '#/components/schemas/ProjectPriority'
+      responses:
+        '200':
+          description: Project updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Project updated successfully
+                data:
+                  id: a2f66269-31f8-4867-b748-bbac05ddfa18
+                  project_code: IT-2026-0001
+                  name: MES Machine Telemetry v2.1
+                  description: Updated scope including second line sensors.
+                  priority: HIGH
+                  stage: DEVELOPMENT
+                  status: ACTIVE
+                  health_status: ON_TRACK
+                  health_status_label: On Track
+                  start_date: '2026-10-15'
+                  original_due_date: '2026-12-31'
+                  due_date: '2026-12-31'
+                  finished_date: null
+                  progress_percent: 50.0
+                  deadline_extension_count: 0
+                  requester_name: Production Team Lead
+                  department:
+                    id: 2
+                    name: Molding Production
+                    code: MOLD
+                  pic:
+                    id: 1
+                    name: IT Lead Engineer
+                    email: it.lead@example.com
+                    employee_id: EMP-001
+                  created_at: '2026-10-14T08:00:00Z'
+                  updated_at: '2026-10-14T10:00:00Z'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+      - Projects
+      summary: Soft delete a project
+      description: Soft deletes a project. Restricted to IT Manager+.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Project soft deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Project deleted successfully
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /projects/{id}/transition-stage:
+    post:
+      tags:
+      - Workflow
+      summary: Advance or revert project stage
+      description: Transitions project stage. Out-of-order transitions require 'is_override
+        = true' and IT Head+ role.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - target_stage
+              properties:
+                target_stage:
+                  $ref: '#/components/schemas/ProjectStage'
+                  example: INITIATION
+                is_override:
+                  type: boolean
+                  default: false
+                reason:
+                  type: string
+                  nullable: true
+                  example: null
+      responses:
+        '200':
+          description: Stage transitioned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Project transitioned to INITIATION successfully
+                data:
+                  id: a2f66269-31f8-4867-b748-bbac05ddfa18
+                  stage: INITIATION
+                  status: ACTIVE
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Invalid stage transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                success: false
+                message: Invalid stage transition from DRAFT to CLOSURE.
+                errors:
+                  target_stage:
+                  - Stage cannot skip sequential pipeline without authorized override
+                    flag.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /projects/{id}/hold:
+    post:
+      tags:
+      - Workflow
+      summary: Put active project On-Hold
+      description: Pauses project execution and sets status to ON_HOLD. Restricted
+        to IT Manager+.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason
+              properties:
+                reason:
+                  type: string
+                  example: Awaiting PLC spare part shipment from vendor overseas.
+      responses:
+        '200':
+          description: Project placed on hold
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Project placed on hold successfully
+                data:
+                  id: a2f66269-31f8-4867-b748-bbac05ddfa18
+                  status: ON_HOLD
+                  paused_at: '2026-10-14T11:00:00Z'
+                  hold_reason: Awaiting PLC spare part shipment from vendor overseas.
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /projects/{id}/resume:
+    post:
+      tags:
+      - Workflow
+      summary: Resume On-Hold project back to ACTIVE
+      description: Resumes on-hold project back to ACTIVE. Restricted to IT Manager+.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                extend_due_date:
+                  type: boolean
+                  default: true
+                  description: Auto-extend due date by pause duration
+      responses:
+        '200':
+          description: Project resumed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Project resumed successfully
+                data:
+                  id: a2f66269-31f8-4867-b748-bbac05ddfa18
+                  status: ACTIVE
+                  due_date: '2027-01-05'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /projects/{id}/cancel:
+    post:
+      tags:
+      - Workflow
+      summary: Cancel project with structured reason category
+      description: Cancels project with structured reason category. Restricted to
+        IT Manager+.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - reason_category
+              - notes
+              properties:
+                reason_category:
+                  $ref: '#/components/schemas/CancellationCategory'
+                notes:
+                  type: string
+                  example: Requester department postponed automation to next fiscal
+                    year.
+      responses:
+        '200':
+          description: Project cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Project cancelled successfully
+                data:
+                  id: a2f66269-31f8-4867-b748-bbac05ddfa18
+                  status: CANCELLED
+                  cancelled_at: '2026-10-14T11:30:00Z'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /projects/{id}/approve-closure:
+    post:
+      tags:
+      - Workflow
+      summary: Approve Review -> Closure transition (Enforces completion gate)
+      description: Approves closure transition. All required checkpoints must be completed.
+        Restricted to IT Manager+.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comments:
+                  type: string
+                  example: All deliverables and machine telemetry integration verified.
+      responses:
+        '200':
+          description: Project closure approved and marked COMPLETED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Project closure approved successfully
+                data:
+                  id: a2f66269-31f8-4867-b748-bbac05ddfa18
+                  stage: CLOSURE
+                  status: COMPLETED
+                  finished_date: '2026-12-20'
+                  progress_percent: 100.0
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Gate violation (Required checkpoints incomplete)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                success: false
+                message: 'Cannot close project: Checkpoint ''Architecture & Network
+                  Diagram Sign-Off'' is not completed.'
+                errors:
+                  closure_gate:
+                  - 1 required checkpoint remains incomplete.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /projects/{id}/reject-closure:
+    post:
+      tags:
+      - Workflow
+      summary: Reject closure and return project to DEVELOPMENT
+      description: Rejects closure sign-off and reverts lifecycle stage back to DEVELOPMENT
+        with required rejection notes. Restricted to IT Manager+.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - comments
+              properties:
+                comments:
+                  type: string
+                  example: Telemetry data packet drops observed on Line 3; fix required
+                    before closure.
+      responses:
+        '200':
+          description: Closure rejected and reverted to DEVELOPMENT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Project closure rejected and returned to DEVELOPMENT
+                data:
+                  id: a2f66269-31f8-4867-b748-bbac05ddfa18
+                  stage: DEVELOPMENT
+                  status: ACTIVE
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /projects/{projectId}/checkpoints:
+    get:
+      tags:
+      - Checkpoints
+      summary: List all checkpoints for a project
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: List of checkpoints
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CheckpointResource'
+              example:
+                data:
+                - id: c1f7a183-4921-4d32-8499-123456789abc
+                  project_id: a2f66269-31f8-4867-b748-bbac05ddfa18
+                  title: Architecture & Network Diagram Sign-Off
+                  description: Approval from IT Infrastructure team on machine gateway
+                    subnet allocation.
+                  sequence_order: 1
+                  is_required: true
+                  status: COMPLETED
+                  due_date: '2026-11-15'
+                  completed_date: '2026-11-10'
+                  checked_by:
+                    id: 1
+                    name: IT Lead Engineer
+                  notes: Gate requirement for development rollout.
+                  attachments: []
+                  created_at: '2026-10-14T08:30:00Z'
+                  updated_at: '2026-11-10T14:00:00Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+      - Checkpoints
+      summary: Create a new checkpoint under project
+      description: Creates a milestone checkpoint. Restricted to assigned PIC or IT
+        Manager+.
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - title
+              - sequence_order
+              properties:
+                title:
+                  type: string
+                  example: Architecture & Network Diagram Sign-Off
+                description:
+                  type: string
+                  example: Approval from IT Infrastructure team on machine gateway
+                    subnet allocation.
+                sequence_order:
+                  type: integer
+                  example: 1
+                is_required:
+                  type: boolean
+                  default: true
+                due_date:
+                  type: string
+                  format: date
+                  example: '2026-11-15'
+                notes:
+                  type: string
+                  example: Gate requirement for development rollout.
+      responses:
+        '201':
+          description: Checkpoint created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Checkpoint created successfully
+                data:
+                  id: c1f7a183-4921-4d32-8499-123456789abc
+                  project_id: a2f66269-31f8-4867-b748-bbac05ddfa18
+                  title: Architecture & Network Diagram Sign-Off
+                  description: Approval from IT Infrastructure team on machine gateway
+                    subnet allocation.
+                  sequence_order: 1
+                  is_required: true
+                  status: PENDING
+                  due_date: '2026-11-15'
+                  completed_date: null
+                  notes: Gate requirement for development rollout.
+                  created_at: '2026-10-14T08:30:00Z'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /checkpoints/{id}:
+    put:
+      tags:
+      - Checkpoints
+      summary: Update checkpoint details
+      description: Updates checkpoint details. Restricted to assigned PIC or IT Manager+.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: Updated Checkpoint Title
+                description:
+                  type: string
+                  example: Updated scope details.
+                is_required:
+                  type: boolean
+                  example: true
+                due_date:
+                  type: string
+                  format: date
+                  example: '2026-11-20'
+                notes:
+                  type: string
+                  example: Updated notes.
+      responses:
+        '200':
+          description: Checkpoint updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Checkpoint updated successfully
+                data:
+                  id: c1f7a183-4921-4d32-8499-123456789abc
+                  title: Updated Checkpoint Title
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+      - Checkpoints
+      summary: Delete a checkpoint
+      description: Deletes a checkpoint. Restricted to assigned PIC or IT Manager+.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Checkpoint deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Checkpoint deleted successfully
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /checkpoints/{id}/complete:
+    post:
+      tags:
+      - Checkpoints
+      summary: Mark checkpoint COMPLETED (Auto-recalculates project progress)
+      description: Marks checkpoint completed and recalculates overall project progress
+        percent.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Checkpoint completed and progress recalculated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Checkpoint completed successfully
+                data:
+                  id: c1f7a183-4921-4d32-8499-123456789abc
+                  status: COMPLETED
+                  completed_date: '2026-10-14'
+                  progress_percent: 100.0
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /checkpoints/{id}/attachments:
+    post:
+      tags:
+      - Checkpoints
+      summary: Upload verifiable evidence document/file (Multipart)
+      description: 'Uploads evidence file (max 15MB; allowed types: pdf, jpg, png,
+        docx, xlsx, zip).'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 'Evidence file (max 15MB; allowed types: pdf, jpg,
+                    png, docx, xlsx, zip)'
+      responses:
+        '201':
+          description: Evidence attachment uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Attachment uploaded successfully
+                data:
+                  id: d4e5f6a7-b8c9-4012-9345-67890abcdef1
+                  file_name: plc_subnet_diagram.pdf
+                  file_size: 2048576
+                  mime_type: application/pdf
+                  uploaded_by:
+                    id: 1
+                    name: IT Lead Engineer
+                  created_at: '2026-10-14T09:00:00Z'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /checkpoints/attachments/{attachmentId}/download:
+    get:
+      tags:
+      - Checkpoints
+      summary: Download verifiable evidence file stream
+      description: Streams evidence file binary with security headers.
+      parameters:
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: File binary stream with security headers
+          headers:
+            X-Content-Type-Options:
+              schema:
+                type: string
+                example: nosniff
+              description: Prevents MIME-sniffing.
+            Content-Disposition:
+              schema:
+                type: string
+                example: attachment; filename="plc_subnet_diagram.pdf"
+              description: Forces browser download.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /projects/{projectId}/extensions:
+    get:
+      tags:
+      - Extensions
+      summary: List audit history of deadline extensions
+      description: Returns full chronological audit history of deadline extensions.
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: List of deadline extensions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProjectDeadlineExtensionResource'
+              example:
+                data:
+                - id: e5f6a7b8-c9d0-4123-8456-7890abcdef12
+                  old_due_date: '2026-12-31'
+                  new_due_date: '2027-01-31'
+                  reason_category: SCOPE_CHANGE
+                  reason_category_label: Scope Change
+                  reason_details: Added 2 additional assembly lines to telemetry monitoring
+                    pipeline.
+                  requested_by:
+                    id: 1
+                    name: IT Lead Engineer
+                  approved_by:
+                    id: 1
+                    name: IT Lead Engineer
+                  created_at: '2026-10-14T10:00:00Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+      - Extensions
+      summary: Request / grant governed deadline extension
+      description: Requests or grants a schedule extension. Restricted to IT Manager+.
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - new_due_date
+              - reason_category
+              - reason_details
+              properties:
+                new_due_date:
+                  type: string
+                  format: date
+                  example: '2027-01-31'
+                reason_category:
+                  $ref: '#/components/schemas/ExtensionReasonCategory'
+                reason_details:
+                  type: string
+                  example: Added 2 additional assembly lines to telemetry monitoring
+                    pipeline.
+      responses:
+        '201':
+          description: Deadline extension created & schedule updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardEnvelope'
+              example:
+                success: true
+                message: Deadline extension approved and schedule updated
+                data:
+                  id: e5f6a7b8-c9d0-4123-8456-7890abcdef12
+                  old_due_date: '2026-12-31'
+                  new_due_date: '2027-01-31'
+                  reason_category: SCOPE_CHANGE
+                  reason_category_label: Scope Change
+                  reason_details: Added 2 additional assembly lines to telemetry monitoring
+                    pipeline.
+                  deadline_extension_count: 1
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                success: false
+                message: The new due date must be a date after the current due date.
+                errors:
+                  new_due_date:
+                  - The new due date must be a date after 2026-12-31.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum Token
+      description: 'Laravel Sanctum token passed in ''Authorization: Bearer <token>''.'
+  headers:
+    X-Request-ID:
+      schema:
+        type: string
+        format: uuid
+      description: Unique request identifier for log correlation.
+    Retry-After:
+      schema:
+        type: integer
+      description: Seconds remaining until rate limit window resets.
+  responses:
+    Unauthorized:
+      description: Authentication token missing, expired, or invalid.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Unauthenticated.
+          example:
+            message: Unauthenticated.
+    Forbidden:
+      description: Authenticated user lacks required role or permission.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: User does not have the required role to perform this action.
+          example:
+            success: false
+            message: User does not have the required role to perform this action.
+    NotFound:
+      description: Requested resource not found.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: Resource not found
+          example:
+            success: false
+            message: Project not found
+    ValidationError:
+      description: Input validation or domain constraint failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            success: false
+            message: Validation failed
+            errors:
+              field_name:
+              - The specified field value is invalid.
+    TooManyRequests:
+      description: Rate limit exceeded. Please retry later.
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/Retry-After'
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: Too many attempts. Please retry in 60 seconds.
+          example:
+            success: false
+            message: Too many attempts. Please retry in 60 seconds.
+    InternalServerError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: An unexpected server error occurred.
+          example:
+            success: false
+            message: An unexpected server error occurred.
+  schemas:
+    StandardEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Operation completed successfully
+        data:
+          type: object
+      required:
+      - success
+      - message
+    ErrorEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Validation failed
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            due_date:
+            - The due date must be a date after or equal to start date.
+      required:
+      - success
+      - message
+    UserMinimal:
+      type: object
+      description: User profile summary.
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: IT Lead Engineer
+        email:
+          type: string
+          format: email
+          example: it.lead@example.com
+        employee_id:
+          type: string
+          nullable: true
+          example: EMP-001
+    DepartmentMinimal:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Information Technology
+        code:
+          type: string
+          example: IT
+    ProjectPriority:
+      type: string
+      enum:
+      - LOW
+      - MEDIUM
+      - HIGH
+      - CRITICAL
+      example: HIGH
+    ProjectStage:
+      type: string
+      enum:
+      - DRAFT
+      - INITIATION
+      - PLANNING
+      - DEVELOPMENT
+      - MONITORING
+      - REVIEW
+      - CLOSURE
+      example: DEVELOPMENT
+    ProjectStatus:
+      type: string
+      enum:
+      - ACTIVE
+      - ON_HOLD
+      - CANCELLED
+      - COMPLETED
+      example: ACTIVE
+    KpiHealthStatus:
+      type: string
+      enum:
+      - ON_TRACK
+      - AT_RISK
+      - OVERDUE
+      - ON_HOLD
+      - CANCELLED
+      - ON_TIME
+      - LATE
+      example: ON_TRACK
+    CheckpointStatus:
+      type: string
+      enum:
+      - PENDING
+      - COMPLETED
+      - SKIPPED
+      example: PENDING
+    ExtensionReasonCategory:
+      type: string
+      enum:
+      - SCOPE_CHANGE
+      - VENDOR_DELAY
+      - MANAGEMENT_PREEMPTION
+      - PAUSE_EXTENSION
+      - OTHER
+      example: SCOPE_CHANGE
+    CancellationCategory:
+      type: string
+      enum:
+      - REQUESTER_DEPEN_DEP_PRIORITIZED
+      - BUDGET_CUT
+      - TECHNICAL_INFEASIBILITY
+      - DUPLICATE
+      - OTHER
+      example: REQUESTER_DEPEN_DEP_PRIORITIZED
+    ProjectResource:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: a2f66269-31f8-4867-b748-bbac05ddfa18
+        project_code:
+          type: string
+          example: IT-2026-0001
+        name:
+          type: string
+          example: MES Machine Telemetry v2
+        description:
+          type: string
+          nullable: true
+          example: Integration of factory floor PLC machines to DISS real-time telemetry
+            dashboard.
+        priority:
+          $ref: '#/components/schemas/ProjectPriority'
+        stage:
+          $ref: '#/components/schemas/ProjectStage'
+        status:
+          $ref: '#/components/schemas/ProjectStatus'
+        health_status:
+          $ref: '#/components/schemas/KpiHealthStatus'
+        health_status_label:
+          type: string
+          example: On Track
+        start_date:
+          type: string
+          format: date
+          nullable: true
+          example: '2026-10-15'
+        original_due_date:
+          type: string
+          format: date
+          example: '2026-12-31'
+        due_date:
+          type: string
+          format: date
+          example: '2026-12-31'
+        finished_date:
+          type: string
+          format: date
+          nullable: true
+          example: null
+        progress_percent:
+          type: number
+          format: float
+          example: 65.5
+        deadline_extension_count:
+          type: integer
+          example: 0
+        requester_name:
+          type: string
+          example: Production Team Lead
+        department:
+          $ref: '#/components/schemas/DepartmentMinimal'
+        pic:
+          $ref: '#/components/schemas/UserMinimal'
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-10-14T08:00:00Z'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-10-14T09:30:00Z'
+    CheckpointAttachmentResource:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d4e5f6a7-b8c9-4012-9345-67890abcdef1
+        file_name:
+          type: string
+          example: plc_subnet_diagram.pdf
+        file_size:
+          type: integer
+          example: 2048576
+          description: File size in bytes (max 15MB)
+        mime_type:
+          type: string
+          example: application/pdf
+        uploaded_by:
+          $ref: '#/components/schemas/UserMinimal'
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-10-14T09:00:00Z'
+    CheckpointResource:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: c1f7a183-4921-4d32-8499-123456789abc
+        project_id:
+          type: string
+          format: uuid
+          example: a2f66269-31f8-4867-b748-bbac05ddfa18
+        title:
+          type: string
+          example: Architecture & Network Diagram Sign-Off
+        description:
+          type: string
+          nullable: true
+          example: Approval from IT Infrastructure team on machine gateway subnet
+            allocation.
+        sequence_order:
+          type: integer
+          example: 1
+        is_required:
+          type: boolean
+          example: true
+        status:
+          $ref: '#/components/schemas/CheckpointStatus'
+        due_date:
+          type: string
+          format: date
+          nullable: true
+          example: '2026-11-15'
+        completed_date:
+          type: string
+          format: date
+          nullable: true
+          example: '2026-11-10'
+        checked_by:
+          $ref: '#/components/schemas/UserMinimal'
+        notes:
+          type: string
+          nullable: true
+          example: Gate requirement for development rollout.
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckpointAttachmentResource'
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-10-14T08:30:00Z'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-11-10T14:00:00Z'
+    ProjectDeadlineExtensionResource:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: e5f6a7b8-c9d0-4123-8456-7890abcdef12
+        old_due_date:
+          type: string
+          format: date
+          example: '2026-12-31'
+        new_due_date:
+          type: string
+          format: date
+          example: '2027-01-31'
+        reason_category:
+          $ref: '#/components/schemas/ExtensionReasonCategory'
+        reason_category_label:
+          type: string
+          example: Scope Change
+        reason_details:
+          type: string
+          example: Added 2 additional assembly lines to telemetry monitoring pipeline.
+        requested_by:
+          $ref: '#/components/schemas/UserMinimal'
+        approved_by:
+          $ref: '#/components/schemas/UserMinimal'
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-10-14T10:00:00Z'
+    ProjectStageHistoryResource:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        from_stage:
+          $ref: '#/components/schemas/ProjectStage'
+        to_stage:
+          $ref: '#/components/schemas/ProjectStage'
+        is_override:
+          type: boolean
+          example: false
+        override_reason:
+          type: string
+          nullable: true
+          example: null
+        changed_by:
+          $ref: '#/components/schemas/UserMinimal'
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-10-14T08:15:00Z'
+    ProjectDetailResource:
+      allOf:
+      - $ref: '#/components/schemas/ProjectResource'
+      - type: object
+        properties:
+          hold_details:
+            type: object
+            nullable: true
+            properties:
+              paused_at:
+                type: string
+                format: date-time
+                example: '2026-11-01T10:00:00Z'
+              hold_reason:
+                type: string
+                example: Awaiting PLC spare part shipment from vendor overseas.
+          cancellation_details:
+            type: object
+            nullable: true
+            properties:
+              cancelled_at:
+                type: string
+                format: date-time
+                example: '2026-11-05T14:00:00Z'
+              reason_category:
+                type: string
+                example: REQUESTER_DEPEN_DEP_PRIORITIZED
+              notes:
+                type: string
+                example: Requester department postponed automation to next fiscal
+                  year.
+          creator:
+            $ref: '#/components/schemas/UserMinimal'
+          checkpoints:
+            type: array
+            items:
+              $ref: '#/components/schemas/CheckpointResource'
+          extensions:
+            type: array
+            items:
+              $ref: '#/components/schemas/ProjectDeadlineExtensionResource'
+          stage_histories:
+            type: array
+            items:
+              $ref: '#/components/schemas/ProjectStageHistoryResource'

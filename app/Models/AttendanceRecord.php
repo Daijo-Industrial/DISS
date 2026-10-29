@@ -15,6 +15,7 @@ class AttendanceRecord extends Model
         'shift_date',
         'alpha',
         'telat',
+        'cuti',
         'izin',
         'sakit',
         'synced_at',

@@ -13,9 +13,12 @@ class TicketDashboard extends Component
 
     public function mount(CalculateKpiMetrics $calculator)
     {
-        // For MVP: Show KPI metrics for the currently logged-in IT Person (PIC)
-        // In a full admin panel, we'd pass a selected User object.
-        $this->metrics = $calculator->execute(Auth::user());
+        $user = Auth::user();
+        if (! $user || ! ($user->hasRole('super-admin') || $user->hasRole('admin') || $user->hasAnyPermission(['ticketing.manage', 'system.admin']))) {
+            abort(403);
+        }
+
+        $this->metrics = $calculator->execute($user);
     }
 
     #[Layout('new.layouts.app')]

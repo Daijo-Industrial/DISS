@@ -6,7 +6,7 @@ use App\Infrastructure\Persistence\Eloquent\Models\Employee;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Infrastructure\Persistence\Eloquent\Models\Employee>
+ * @extends Factory<Employee>
  */
 class EmployeeFactory extends Factory
 {
@@ -36,9 +36,9 @@ class EmployeeFactory extends Factory
             'dept_code' => fake()->randomElement(['001', '002', '003', '004', '005']),
             'start_date' => fake()->dateTimeBetween('-10 years', '-1 year'),
             'employment_scheme' => fake()->randomElement(['YAYASAN', 'YAYASAN KARAWANG', 'KONTRAK', 'MAGANG']),
-            'grade_level' => fake()->randomElement(['Staff', 'Supervisor', 'Manager']),
+            'grade_level' => fake()->numberBetween(1, 5),
             'jatah_cuti_tahun' => fake()->numberBetween(12, 18),
-            'organization_structure' => fake()->randomElement(['Production', 'Quality', 'Maintenance', 'HR']),
+            'organization_structure' => fake()->randomElement(['PRD', 'QA', 'MTC', 'HR']),
             'end_date' => null,
             'employment_type' => fake()->randomElement(['Active', 'Inactive']),
             'branch' => fake()->randomElement(['Jakarta', 'Karawang']),

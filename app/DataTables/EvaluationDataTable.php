@@ -168,6 +168,7 @@ class EvaluationDataTable extends DataTable
                 // Read live attendance aggregates injected by the JOIN subquery.
                 $alpha = (int) ($row->att_alpha ?? 0);
                 $telat = (int) ($row->att_telat ?? 0);
+                $cuti  = (int) ($row->att_cuti  ?? 0);
                 $izin  = (int) ($row->att_izin  ?? 0);
                 $sakit = (int) ($row->att_sakit ?? 0);
 
@@ -175,7 +176,7 @@ class EvaluationDataTable extends DataTable
                     return '<span class="text-slate-400 font-semibold text-xs italic">' . svg('bx-info-circle', 'w-4 h-4')->toHtml() . ' Data belum ada</span>';
                 }
 
-                if ($alpha === 0 && $telat === 0 && $izin === 0 && $sakit === 0) {
+                if ($alpha === 0 && $telat === 0 && $cuti === 0 && $izin === 0 && $sakit === 0) {
                     return '<span class="text-emerald-600 font-semibold text-xs">' . svg('bx-check-circle', 'w-4 h-4')->toHtml() . ' Sempurna</span>';
                 }
 
@@ -185,6 +186,9 @@ class EvaluationDataTable extends DataTable
                 }
                 if ($telat > 0) {
                     $badges[] = '<span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold border border-amber-200" title="Telat">T: ' . $telat . '</span>';
+                }
+                if ($cuti > 0) {
+                    $badges[] = '<span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold border border-emerald-200" title="Cuti">C: ' . $cuti . '</span>';
                 }
                 if ($izin > 0) {
                     $badges[] = '<span class="px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 font-bold border border-sky-200" title="Izin">I: ' . $izin . '</span>';
@@ -355,6 +359,10 @@ class EvaluationDataTable extends DataTable
             $q->when($this->filterYear,  fn ($q) => $q->whereYear('shift_date', $this->filterYear))
               ->when($this->filterMonth, fn ($q) => $q->whereMonth('shift_date', $this->filterMonth));
         }], 'telat')
+        ->withSum(['attendanceRecords as att_cuti' => function ($q) {
+            $q->when($this->filterYear,  fn ($q) => $q->whereYear('shift_date', $this->filterYear))
+              ->when($this->filterMonth, fn ($q) => $q->whereMonth('shift_date', $this->filterMonth));
+        }], 'cuti')
         ->withSum(['attendanceRecords as att_izin' => function ($q) {
             $q->when($this->filterYear,  fn ($q) => $q->whereYear('shift_date', $this->filterYear))
               ->when($this->filterMonth, fn ($q) => $q->whereMonth('shift_date', $this->filterMonth));

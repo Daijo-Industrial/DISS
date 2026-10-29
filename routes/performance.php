@@ -77,6 +77,16 @@ Route::middleware(['auth', 'evaluation.access'])->group(function () {
         ->middleware('role:super-admin')
         ->name('evaluation.history');
 
+    // Batch recalculate evaluation scores from live attendance (super-admin only — must be before wildcard {month}/{year})
+    Route::post('/evaluation/recalculate', [EvaluationController::class, 'recalculate'])
+        ->middleware('role:super-admin')
+        ->name('evaluation.recalculate');
+
+    // Import Cuti Izin Excel (super-admin only — must be before wildcard {month}/{year})
+    Route::post('/evaluation/import-cuti-izin', [EvaluationController::class, 'importCutiIzin'])
+        ->middleware('role:super-admin')
+        ->name('evaluation.import-cuti-izin');
+
     // ──────────────────────────────────────────────
     // Yayasan JPayroll Export — must be before {month}/{year} wildcard
     // ──────────────────────────────────────────────

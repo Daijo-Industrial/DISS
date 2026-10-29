@@ -83,30 +83,57 @@ class SearchableDropdown extends Component
 
     public function select($value)
     {
-        $record = $this->model::where($this->column, $value)->first();
+        $record = null;
+        if (class_exists($this->model)) {
+            $record = $this->model::where($this->column, $value)->first();
+        }
 
-        if (! $record) {
+        if ($record) {
+            $this->search = $record->{$this->column};
+            $this->value = $record->{$this->column};
+            $this->results = [];
+
+            // For fields like part_number or part_name, emit full record
+            if (in_array($this->name, ['part_number', 'part_name'])) {
+                $this->dispatch('dropdownSelected', [
+                    'field' => $this->name,
+                    'item_no' => $record->item_no,
+                    'description' => $record->description,
+                ]);
+            } else {
+                // Emit plain value for other fields (e.g. customer)
+                $this->dispatch('dropdownSelected', [
+                    'field' => $this->name,
+                    'value' => $record->{$this->column},
+                ]);
+            }
+        } else {
+            $this->search = $value;
+            $this->value = $value;
+            $this->results = [];
+
+            $this->dispatch('dropdownSelected', [
+                'field' => $this->name,
+                'value' => $value,
+            ]);
+        }
+    }
+
+    public function selectCustom(?string $value): void
+    {
+        $trimmed = trim((string) $value);
+        if ($trimmed === '') {
+            $this->value = null;
+            $this->search = '';
+            $this->results = [];
+            $this->dispatch('dropdownSelected', [
+                'field' => $this->name,
+                'value' => null,
+            ]);
             return;
         }
 
-        $this->search = $record->{$this->column};
-        $this->value = $record->{$this->column};
-        $this->results = [];
-
-        // For fields like part_number or part_name, emit full record
-        if (in_array($this->name, ['part_number', 'part_name'])) {
-            $this->dispatch('dropdownSelected', [
-                'field' => $this->name,
-                'item_no' => $record->item_no,
-                'description' => $record->description,
-            ]);
-        } else {
-            // Emit plain value for other fields (e.g. customer)
-            $this->dispatch('dropdownSelected', [
-                'field' => $this->name,
-                'value' => $record->{$this->column},
-            ]);
-        }
+        $this->select($trimmed);
     }
 
     public function render()

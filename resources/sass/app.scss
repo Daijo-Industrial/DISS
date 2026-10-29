@@ -32,3 +32,8 @@
 @import 'datatables.net-buttons-bs5/css/buttons.bootstrap5.min.css';
 @import 'datatables.net-select-bs5/css/select.bootstrap5.css';
 
+// Fix Tailwind CSS .collapse conflict with Bootstrap accordion
+.accordion-collapse {
+  visibility: visible;
+}
+

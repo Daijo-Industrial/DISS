@@ -13,6 +13,7 @@ final class AttendanceDto
         public readonly CarbonImmutable $shiftDate,
         public readonly int $alpha,
         public readonly int $telat,
+        public readonly int $cuti,
         public readonly int $izin,
         public readonly int $sakit,
     ) {}
@@ -31,7 +32,8 @@ final class AttendanceDto
             shiftDate: $date->startOfDay(),
             alpha: (int) ($r['ABS'] ?? 0),
             telat: (int) ($r['LT'] ?? 0),
-            izin: (int) ($r['CT'] ?? 0),
+            cuti: (int) ($r['CT'] ?? 0),
+            izin: 0,
             sakit: $sakit,
         );
     }

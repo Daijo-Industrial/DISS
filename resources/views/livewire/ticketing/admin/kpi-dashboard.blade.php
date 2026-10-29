@@ -2,14 +2,13 @@
 
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-black text-slate-900 tracking-tight">IT Department KPIs</h1>
-            <p class="text-sm font-medium text-slate-500 mt-1">Aggregated performance and support metrics across all IT
-                staff.</p>
+            <h1 class="text-2xl font-black text-slate-900 tracking-tight">{{ __('ticketing.admin_kpi.title') }}</h1>
+            <p class="text-sm font-medium text-slate-500 mt-1">{{ __('ticketing.admin_kpi.subtitle') }}</p>
         </div>
         <div>
             <a href="{{ route('ticketing.list') ?? '#' }}"
                 class="text-sm font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
-                &larr; Back to Tickets
+                &larr; {{ __('ticketing.admin_kpi.back_to_tickets') }}
             </a>
         </div>
     </div>
@@ -30,8 +29,11 @@
                 </div>
                 <div>
                     <h2 class="text-lg font-bold text-slate-900">{{ $pic->name ?? 'Unknown' }}</h2>
-                    <div class="text-xs font-semibold text-slate-500">Period:
-                        {{ \Carbon\Carbon::parse($metrics['period']['start'])->format('M Y') }}</div>
+                    <div class="text-xs font-semibold text-slate-500">
+                        {{ __('ticketing.admin_kpi.period', [
+                            'period' => \Carbon\Carbon::parse($metrics['period']['start'])->translatedFormat('F Y')
+                        ]) }}
+                    </div>
                 </div>
             </div>
 
@@ -50,7 +52,7 @@
                         </div>
                         <div>
                             <div class="text-2xl font-black text-slate-900">{{ $metrics['throughput'] }}</div>
-                            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Resolved</div>
+                            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{{ __('ticketing.admin_kpi.resolved') }}</div>
                         </div>
                     </div>
 
@@ -68,7 +70,7 @@
                                 class="text-2xl font-black @if ($metrics['sla_compliance'] >= 90) text-emerald-600 @else text-rose-600 @endif">
                                 {{ $metrics['sla_compliance'] }}%
                             </div>
-                            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">SLA Targets
+                            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{{ __('ticketing.admin_kpi.sla_targets') }}
                             </div>
                         </div>
                     </div>
@@ -87,7 +89,7 @@
                                 class="text-2xl font-black @if ($metrics['reopen_rate'] > 5) text-rose-600 @else text-slate-900 @endif">
                                 {{ $metrics['reopen_rate'] }}%
                             </div>
-                            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Re-open Rate
+                            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{{ __('ticketing.admin_kpi.reopen_rate') }}
                             </div>
                         </div>
                     </div>
@@ -103,7 +105,7 @@
                         </div>
                         <div>
                             <div class="text-2xl font-black text-slate-900">{{ $metrics['utilization'] }}</div>
-                            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Active WIP</div>
+                            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{{ __('ticketing.admin_kpi.active_wip') }}</div>
                         </div>
                     </div>
                 </div>
@@ -121,8 +123,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
             </svg>
-            <h3 class="text-sm font-bold text-slate-900">No PIC Data Available</h3>
-            <p class="text-sm text-slate-500 mt-1">There are no IT staff members with assigned tickets yet.</p>
+            <h3 class="text-sm font-bold text-slate-900">{{ __('ticketing.admin_kpi.empty_title') }}</h3>
+            <p class="text-sm text-slate-500 mt-1">{{ __('ticketing.admin_kpi.empty_subtitle') }}</p>
         </div>
     @endforelse
 
@@ -137,9 +139,14 @@
                     new Chart(document.getElementById('{{ $chartId }}'), {
                         type: 'line',
                         data: {
-                            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                            labels: [
+                                @json(__('ticketing.admin_kpi.week', ['num' => 1])),
+                                @json(__('ticketing.admin_kpi.week', ['num' => 2])),
+                                @json(__('ticketing.admin_kpi.week', ['num' => 3])),
+                                @json(__('ticketing.admin_kpi.week', ['num' => 4]))
+                            ],
                             datasets: [{
-                                label: 'Productivity Score',
+                                label: @json(__('ticketing.admin_kpi.productivity_score')),
                                 data: [{{ $metrics['throughput'] + 2 }},
                                     {{ $metrics['throughput'] - 1 }},
                                     {{ $metrics['throughput'] + 5 }}, {{ $metrics['throughput'] }}

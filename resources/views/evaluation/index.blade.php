@@ -425,6 +425,22 @@
                         @endif
 
                         @role('super-admin')
+                            {{-- Import Cuti Izin Excel Button --}}
+                            <button type="button" id="open-import-izin-modal-btn"
+                                class="inline-flex items-center gap-2 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800 border border-indigo-200 px-4 py-2 text-sm font-semibold shadow-sm transition-all hover:-translate-y-0.5"
+                                title="Upload file Excel Cuti Izin dari JPayroll">
+                                <x-bx-upload class="w-5 h-5 text-indigo-600" />
+                                <span>Import Cuti Izin</span>
+                            </button>
+
+                            {{-- Recalculate Scores Button --}}
+                            <button type="button" id="recalculate-scores-btn"
+                                class="inline-flex items-center gap-2 rounded-xl bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800 border border-amber-200 px-4 py-2 text-sm font-semibold shadow-sm transition-all hover:-translate-y-0.5"
+                                title="Hitung ulang snapshot kehadiran dan nilai total untuk periode ini">
+                                <x-bx-refresh class="w-5 h-5 text-amber-600" />
+                                <span>Hitung Ulang</span>
+                            </button>
+
                             {{-- Advanced Toggle Button --}}
                             <button type="button" @click="$dispatch('open-advanced-sidebar')"
                                 class="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm border border-slate-200 transition-all hover:bg-slate-200 hover:-translate-y-0.5">
@@ -489,6 +505,72 @@
                 @include('partials.edit-evaluation-modal')
             @endpush
         @endif
+
+            {{-- ═══ IMPORT CUTI IZIN MODAL (super-admin) ═══════════════════════════ --}}
+            @role('super-admin')
+                <div id="import-izin-modal" class="fixed inset-0 z-[9999] hidden" aria-modal="true" role="dialog">
+                    {{-- Backdrop --}}
+                    <div id="import-izin-backdrop" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+
+                    {{-- Dialog --}}
+                    <div class="fixed inset-0 z-10 overflow-y-auto flex items-center justify-center p-4">
+                        <div class="relative w-full max-w-lg rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden transform transition-all">
+                            {{-- Header --}}
+                            <div class="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+                                <div class="flex items-center gap-3">
+                                    <div class="p-2 bg-white/20 rounded-xl">
+                                        <x-bx-upload class="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <h3 class="text-base font-bold">Import Cuti Izin Excel</h3>
+                                        <p class="text-xs text-indigo-100">Upload format Attendance Summary Report dari JPayroll</p>
+                                    </div>
+                                </div>
+                                <button type="button" id="close-import-izin-modal-btn" class="text-white/70 hover:text-white transition-colors">
+                                    <x-bx-x class="w-6 h-6" />
+                                </button>
+                            </div>
+
+                            {{-- Form --}}
+                            <form id="import-cuti-izin-form" enctype="multipart/form-data" class="p-6 space-y-5">
+                                @csrf
+                                <div class="space-y-2">
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                                        Pilih File Excel (.xls / .xlsx)
+                                    </label>
+                                    <div class="border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-2xl p-6 text-center transition-all bg-slate-50/50 hover:bg-indigo-50/20">
+                                        <input type="file" name="file" id="cuti-izin-file-input" accept=".xls,.xlsx" required class="hidden">
+                                        <label for="cuti-izin-file-input" class="cursor-pointer flex flex-col items-center justify-center gap-2">
+                                            <x-bx-file class="w-10 h-10 text-indigo-500" />
+                                            <span class="text-sm font-semibold text-slate-700" id="file-name-label">Klik untuk memilih file Excel</span>
+                                            <span class="text-xs text-slate-400">Format JPayroll M1 (contoh: Cuti Izin September 2026.xls)</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="rounded-xl bg-amber-50 p-4 border border-amber-200 flex items-start gap-3">
+                                    <x-bx-info-circle class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                                    <div class="text-xs text-amber-800 space-y-1">
+                                        <p class="font-bold">Informasi Otomatis:</p>
+                                        <p>Periode bulan dan tahun akan terdeteksi otomatis dari header laporan Excel (misal: <em>PERIOD : 2026/09</em>).</p>
+                                        <p>Data izin pada <code>attendance_records</code> akan diperbarui dan nilai evaluasi karyawan langsung dihitung ulang.</p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-end gap-3 pt-2">
+                                    <button type="button" id="cancel-import-izin-btn" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
+                                        Batal
+                                    </button>
+                                    <button type="submit" id="submit-import-izin-btn" class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 text-sm font-semibold shadow-md shadow-indigo-200 transition-all">
+                                        <x-bx-upload class="w-4 h-4" />
+                                        <span>Mulai Import</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            @endrole
 
             {{-- ═══ HISTORY MODAL (super-admin) ════════════════════════════════ --}}
             @role('super-admin')
@@ -1151,6 +1233,153 @@
                             '<tr><td colspan="5" class="py-8 text-center text-rose-400">Gagal memuat history.</td></tr>';
                     });
                 }
+            })();
+
+            // ── Recalculate Button (super-admin only) ──────────────────────────────
+            (function() {
+                const recalcBtn = document.getElementById('recalculate-scores-btn');
+                if (!recalcBtn) return;
+
+                recalcBtn.addEventListener('click', function() {
+                    const month = document.getElementById('period-month').value;
+                    const year = document.getElementById('period-year').value;
+                    const monthSelect = document.getElementById('period-month');
+                    const monthName = monthSelect.options[monthSelect.selectedIndex]?.text?.trim() || month;
+
+                    Swal.fire({
+                        title: 'Hitung Ulang Evaluasi?',
+                        html: `Tindakan ini akan memperbarui snapshot kehadiran (Alpha, Telat, Izin, Sakit) dan menghitung ulang skor total untuk <strong>semua data evaluasi periode ${monthName} ${year}</strong>.<br><br><span class="text-xs text-slate-500">Gunakan fitur ini jika terdapat pembaruan atau sinkronisasi data absensi karyawan.</span>`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#f59e0b',
+                        cancelButtonColor: '#64748b',
+                        confirmButtonText: '<i class="bx bx-refresh mr-1"></i> Ya, Hitung Ulang!',
+                        cancelButtonText: 'Batal',
+                        showLoaderOnConfirm: true,
+                        preConfirm: () => {
+                            return axios.post('{{ route('evaluation.recalculate') }}', {
+                                month: parseInt(month),
+                                year: parseInt(year),
+                                type: 'all'
+                            })
+                            .then(response => response.data)
+                            .catch(error => {
+                                Swal.showValidationMessage(
+                                    error.response?.data?.message || 'Gagal menghitung ulang evaluasi.'
+                                );
+                            });
+                        },
+                        allowOutsideClick: () => !Swal.isLoading()
+                    }).then((result) => {
+                        if (result.isConfirmed && result.value?.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil!',
+                                text: result.value.message,
+                                timer: 2500,
+                                showConfirmButton: false
+                            });
+
+                            if (typeof window.reloadEvaluationTables === 'function') {
+                                window.reloadEvaluationTables();
+                            }
+                        }
+                    });
+                });
+            })();
+
+            // ── Import Cuti Izin Modal & Handler (super-admin only) ─────────────
+            (function() {
+                const modal = document.getElementById('import-izin-modal');
+                if (!modal) return;
+
+                const openBtn = document.getElementById('open-import-izin-modal-btn');
+                const closeBtn = document.getElementById('close-import-izin-modal-btn');
+                const cancelBtn = document.getElementById('cancel-import-izin-btn');
+                const backdrop = document.getElementById('import-izin-backdrop');
+                const form = document.getElementById('import-cuti-izin-form');
+                const fileInput = document.getElementById('cuti-izin-file-input');
+                const fileNameLabel = document.getElementById('file-name-label');
+                const submitBtn = document.getElementById('submit-import-izin-btn');
+
+                function openModal() {
+                    modal.classList.remove('hidden');
+                }
+
+                function closeModal() {
+                    modal.classList.add('hidden');
+                    form?.reset();
+                    if (fileNameLabel) {
+                        fileNameLabel.textContent = 'Klik untuk memilih file Excel';
+                    }
+                }
+
+                openBtn?.addEventListener('click', openModal);
+                closeBtn?.addEventListener('click', closeModal);
+                cancelBtn?.addEventListener('click', closeModal);
+                backdrop?.addEventListener('click', closeModal);
+
+                fileInput?.addEventListener('change', function() {
+                    if (this.files && this.files.length > 0) {
+                        fileNameLabel.textContent = this.files[0].name;
+                    } else {
+                        fileNameLabel.textContent = 'Klik untuk memilih file Excel';
+                    }
+                });
+
+                form?.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    if (!fileInput.files || fileInput.files.length === 0) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Pilih File',
+                            text: 'Silakan pilih file Excel terlebih dahulu.'
+                        });
+                        return;
+                    }
+
+                    const originalBtnHtml = submitBtn.innerHTML;
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '{!! addslashes(svg('bx-loader-alt', 'w-4 h-4 animate-spin mr-2 inline')->toHtml()) !!} <span>Mengimpor...</span>';
+
+                    const formData = new FormData(form);
+                    const monthVal = document.getElementById('period-month')?.value;
+                    const yearVal = document.getElementById('period-year')?.value;
+                    if (monthVal) formData.append('month', monthVal);
+                    if (yearVal) formData.append('year', yearVal);
+
+                    axios.post('{{ route('evaluation.import-cuti-izin') }}', formData, {
+                        headers: {
+                            'Content-Type': 'multipart/form-data'
+                        }
+                    })
+                    .then(response => {
+                        closeModal();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Import Berhasil!',
+                            text: response.data?.message || 'Data Cuti Izin berhasil diimpor.',
+                            confirmButtonColor: '#4f46e5'
+                        });
+
+                        if (typeof window.reloadEvaluationTables === 'function') {
+                            window.reloadEvaluationTables();
+                        }
+                    })
+                    .catch(error => {
+                        const message = error.response?.data?.message || 'Terjadi kesalahan saat mengimpor data.';
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal Import',
+                            text: message,
+                            confirmButtonColor: '#ef4444'
+                        });
+                    })
+                    .finally(() => {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalBtnHtml;
+                    });
+                });
             })();
 
         })();

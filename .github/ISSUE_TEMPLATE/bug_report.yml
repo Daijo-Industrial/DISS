@@ -1,0 +1,116 @@
+name: "🐛 Bug Report"
+description: Report an error, bug, or unexpected behavior in DISS
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Thank you for reporting a problem!
+        Please fill out this form with as much detail as possible to help us diagnose and resolve the issue quickly.
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Affected Module / Subsystem
+      description: Which part of DISS is experiencing the problem?
+      options:
+        - Fleet Management (P2H / Vehicle Inspection / KIR & STNK)
+        - Procurement & Purchasing (PO, PR, Vendor)
+        - SAP Synchronization & Forecast (sap:sync / DelSched / BoM)
+        - Purchasing Supplier Evaluation
+        - IT Project & KPI Management
+        - Finance & Invoices / Budget Reports
+        - HR & Locker Management
+        - Quality & Compliance
+        - User Management & Authentication (Spatie Roles / Logins)
+        - Other / Cross-module
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      description: Where did this issue occur?
+      options:
+        - Production
+        - Staging
+        - Local Development
+    validations:
+      required: true
+
+  - type: input
+    id: url_or_route
+    attributes:
+      label: Page URL, Route, or Artisan Command
+      description: Where does this happen in the application?
+      placeholder: "e.g. /fleet/inspections/create or php artisan sap:sync"
+    validations:
+      required: false
+
+  - type: input
+    id: user_role
+    attributes:
+      label: User Role / Account
+      description: Which user role or permission level encountered this issue?
+      placeholder: "e.g. Fleet Driver, Purchasing Officer, IT Admin, Superadmin"
+    validations:
+      required: false
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what went wrong.
+      placeholder: What happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction_steps
+    attributes:
+      label: Steps to Reproduce
+      description: Detail the exact sequence of steps to reproduce the behavior.
+      value: |
+        1. Log in as [...]
+        2. Go to [...]
+        3. Click / submit [...]
+        4. See error [...]
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected Behavior
+      description: What should have happened instead?
+      placeholder: Describe the expected behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: error_logs
+    attributes:
+      label: Error Message & Logs
+      description: |
+        Paste relevant stack traces from `storage/logs/laravel.log`, browser console errors, or network payload responses.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or Screen Recordings
+      description: Drag and drop any screenshots or screen recordings that illustrate the problem.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: Any other relevant details (e.g. specific vehicle license plate, SAP material code, browser version).
+    validations:
+      required: false

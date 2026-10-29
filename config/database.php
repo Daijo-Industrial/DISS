@@ -16,6 +16,10 @@ return [
 
     'default' => env('DB_CONNECTION', 'mysql'),
 
+    'inspection_connection' => env('USE_MES_INSPECTION_DB', true)
+        ? env('INSPECTION_DB_CONNECTION', 'mes_mysql')
+        : env('DB_CONNECTION', 'mysql'),
+
     /*
     |--------------------------------------------------------------------------
     | Database Connections
@@ -55,6 +59,28 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql')
+                ? array_filter([
+                    PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                ])
+                : [],
+        ],
+
+        'mes_mysql' => [
+            'driver' => 'mysql',
+            'url' => env('MES_DATABASE_URL'),
+            'host' => env('MES_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('MES_DB_PORT', env('DB_PORT', '3306')),
+            'database' => env('MES_DB_DATABASE', 'DAIJO_MES'),
+            'username' => env('MES_DB_USERNAME', env('DB_USERNAME', 'sail')),
+            'password' => env('MES_DB_PASSWORD', env('DB_PASSWORD', 'password')),
+            'unix_socket' => env('MES_DB_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => false,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql')
                 ? array_filter([

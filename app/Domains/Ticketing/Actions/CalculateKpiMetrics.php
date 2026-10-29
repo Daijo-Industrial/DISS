@@ -28,7 +28,7 @@ class CalculateKpiMetrics
 
         foreach ($resolvedTickets as $t) {
             $ttrMinutes = $t->resolved_at->diffInMinutes($t->created_at) - $t->total_hold_time_minutes;
-            $slaMinutes = $t->category->sla_hours * 60;
+            $slaMinutes = $t->getEffectiveSlaMinutes() ?? 1440;
 
             if ($ttrMinutes <= $slaMinutes) {
                 $slaMetCount++;

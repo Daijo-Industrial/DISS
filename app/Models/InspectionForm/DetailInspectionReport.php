@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class DetailInspectionReport extends Model
 {
-    use HasFactory;
+    use HasFactory, UsesInspectionConnection;
 
     protected $fillable = [
         'inspection_report_document_number',
