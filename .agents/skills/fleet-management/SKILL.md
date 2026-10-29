@@ -92,10 +92,11 @@ Managed by `App\Livewire\Vehicles\InspectionForm`:
 - **Bilingual Parity**: All P2H UI strings must have matching keys in `lang/id/fleet.php` and `lang/en/fleet.php`.
 - **Permissions (`PermissionRegistry.php`)**:
   - `fleet.view`: View fleet lists and cockpit overview.
-  - `fleet.inspect`: Access scanner (`/vehicles/scan`), quick action P2H buttons in index cards/table, and submit P2H logs.
+  - `fleet.inspect`: Operational inspector (access `/vehicles/scan`, quick check-in/out buttons in index/cockpit, submit P2H logs).
   - `fleet.documents`: View legal documents tab and download files.
   - `fleet.view-costs`: View financial figures and service costs.
-  - `fleet.manage`: Full administrative access (create, edit, delete, document management, QR print, daily operations cockpit). Users with `fleet.manage` without `fleet.inspect` do not see quick action P2H buttons but retain full access to view all P2H inspection logs.
+  - `fleet.manage`: Administrative access (create, edit, delete, document management, QR print, daily operations cockpit).
+  - **Inspection Decoupling Invariant**: `$canInspect` in `Vehicles\Index` & `Vehicles\Show` strictly checks `$user->can('fleet.inspect')` and must never inherit from `fleet.manage`. Users with `fleet.manage` without `fleet.inspect` do not see quick-action P2H buttons, but retain full access to view inspection logs and the `/vehicles/operations` cockpit.
 
 ## 8. Runbooks
 
