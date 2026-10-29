@@ -73,18 +73,20 @@ Managed by `App\Livewire\Vehicles\InspectionForm`:
 
 ## 7. UI Conventions & Responsiveness
 
-- **Dedicated Fleet Operations & Management Cockpit (`/vehicles/operations` - `vehicles/operations.blade.php`)**:
+- **Dedicated Live Radar (`/vehicles/radar` - `vehicles/radar.blade.php`)**:
+  - Gated by `fleet.view` or `fleet.manage`.
+  - **Live Operational Telemetry**: Strictly 1 card per vehicle on trip via `Vehicle::whereHas('activeCheckOut')`, eliminating duplicate cards and aligning card count with header metric.
+  - **Historical Orphan Checkouts Alert**: Collapsible alert for older unclosed checkouts not belonging to current `activeCheckOut`, with direct links to vehicle inspection history.
+  - Auto-refresh polling (`wire:poll.30s`) and manual refresh trigger.
+- **Dedicated Daily Operations Cockpit (`/vehicles/operations` - `vehicles/operations.blade.php`)**:
   - Restricted strictly to managers with `fleet.manage` permission (`abort(403)` otherwise).
-  - **Live Operational Radar (Now)**: Real-time telemetry for active ongoing trips (`now()`), elapsed duration counters (`Berjalan X jam Y menit`), and link to Vehicle Cockpit. Zero quick check-in buttons (operational check-in is done via `/vehicles/scan`).
   - **Daily Operational Log**: Single-day historical audit log for a chosen date (defaults to Today). Quick presets for `[Hari Ini]` and `[Kemarin]`, HTML5 custom date picker, and intuitive `[‹]` / `[›]` day-steppers without infinite scrolling.
   - **Progressive Disclosure**: Compact glanceable cards showing Plate, Model, Driver, Duration, Distance, and Health Status (`Normal` vs `Defect Reported`). 1-click drill-down expands fuel delta, odometer readings, and defect photo evidence with lightbox triggers.
-  - **Zero Duplication**: Active ongoing trips are strictly exclusive to the Live Radar and never duplicated in the Daily Log.
-  - Auto-refresh polling (`wire:poll.30s`) and manual refresh trigger.
+  - **Zero Duplication**: Active ongoing trips are strictly exclusive to Live Radar and never duplicated in the Daily Log.
 - **Vehicle Index (`vehicles/index.blade.php`)**:
   - Category filter defaults to `passenger`.
   - Filter drawer (`x-collapse`) houses operational status and gallery sorting.
   - Table view features column header sorting and interactive multi-select popovers for Category and Status.
-  - Direct header action button jumping to dedicated Fleet Operations (`/vehicles/operations`) with active on-trip badge counter.
 - **Vehicle Detail Cockpit (`vehicles/show.blade.php`)**:
   - Initial load presents focused `max-w-xl` cockpit. Expanding tabs transitions to `max-w-7xl` 2-column layout (`lg:col-span-4` sticky cockpit, `lg:col-span-8` tab details).
   - Tab quick access card shows real-time badge counts for P2H, Documents, and Services.

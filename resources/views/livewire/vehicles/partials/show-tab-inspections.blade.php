@@ -1,218 +1,422 @@
 {{-- ========================================================================= --}}
-{{-- TAB 1: LOGBOOK PEMERIKSAAN HARIAN (P2H) - TIMELINE ACTIVITY VIEW          --}}
+{{-- TAB 1: LOGBOOK PEMERIKSAAN HARIAN (P2H) - PAIRED JOURNEY LOGBOOK         --}}
 {{-- ========================================================================= --}}
-<div class="rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs space-y-4 min-w-0">
-    {{-- Header with Title & Dual Filters --}}
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3 min-w-0">
-        <div>
-            <h2 class="text-sm font-bold text-slate-900">{{ __('fleet.show.inspections_title') }}</h2>
-            <p class="text-xs text-slate-400">{{ __('fleet.show.inspections_desc') }}</p>
-        </div>
+<div class="space-y-4 min-w-0">
 
-        {{-- Dual Filter Controls: Type + Severity --}}
-        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto [&>select]:flex-1 sm:[&>select]:flex-none">
-            <select wire:model.live="inspectionType"
-                class="rounded-xl border border-slate-200 bg-slate-50/70 py-1.5 px-3 text-xs text-slate-700 focus:outline-none cursor-pointer">
-                <option value="all">{{ __('fleet.show.filter_type_all') }}</option>
-                <option value="check_out">{{ __('fleet.show.filter_type_checkout') }}</option>
-                <option value="check_in">{{ __('fleet.show.filter_type_checkin') }}</option>
-            </select>
-
-            <select wire:model.live="inspectionSeverity"
-                class="rounded-xl border border-slate-200 bg-slate-50/70 py-1.5 px-3 text-xs text-slate-700 focus:outline-none cursor-pointer">
-                <option value="all">{{ __('fleet.show.filter_severity_all') }}</option>
-                <option value="defects_only">{{ __('fleet.show.filter_severity_defects') }}</option>
-                <option value="critical_only">{{ __('fleet.show.filter_severity_critical') }}</option>
-            </select>
-        </div>
-    </div>
-
-    @if ($inspections->isEmpty())
-        <div class="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-xs text-slate-400">
-            <i class="bi bi-clipboard-x text-2xl text-slate-300 block mb-1"></i>
-            {{ __('fleet.show.empty_inspections') }}
-        </div>
-    @else
-        {{-- CONTINUOUS TIMELINE FEED CONTAINER --}}
-        <div class="relative pl-6 sm:pl-8 space-y-3 min-w-0 before:absolute before:left-3 sm:before:left-3.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200/80">
-            @foreach ($inspections as $ins)
-                @php
-                    $isOutTrip = $ins->inspection_type === 'check_out';
-                    $hasDefect = (bool) $ins->defect_notes || in_array($ins->severity, ['minor', 'critical_grounded']);
-                    $isCritical = $ins->severity === 'critical_grounded';
-
-                    $chkResults = is_array($ins->checklist_results) ? $ins->checklist_results : json_decode($ins->checklist_results, true);
-                    $totalPhotos = 0;
-                    if (!empty($chkResults)) {
-                        foreach ($chkResults as $r) {
-                            if (!empty($r['photos'])) {
-                                $totalPhotos += count($r['photos']);
-                            }
-                        }
-                    }
-                    if (!empty($ins->defect_photos)) {
-                        $totalPhotos += count($ins->defect_photos);
-                    }
-                @endphp
-
-                <div x-data="{ showDetails: false }" class="relative group min-w-0">
-                    {{-- Timeline Bullet Node on the Vertical Thread --}}
-                    <div @click="showDetails = !showDetails"
-                        class="absolute -left-6 sm:-left-8 top-1.5 flex items-center justify-center cursor-pointer"
-                        title="{{ __('fleet.show.view_checklist_details') }}">
-                        <span class="h-6 w-6 sm:h-7 sm:w-7 rounded-full flex items-center justify-center text-xs ring-4 ring-white shadow-2xs transition
-                            {{ $isCritical ? 'bg-rose-500 text-white' : ($hasDefect ? 'bg-amber-500 text-white' : ($isOutTrip ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 border border-slate-200')) }}">
-                            <i class="bi {{ $isOutTrip ? 'bi-box-arrow-up-right text-[10px]' : 'bi-box-arrow-in-down text-[10px]' }}"></i>
-                        </span>
-                    </div>
-
-                    {{-- Timeline Item Body: Compact Row (Whole Card Clickable) --}}
-                    <div @click="showDetails = !showDetails"
-                        role="button"
-                        tabindex="0"
-                        :aria-expanded="showDetails.toString()"
-                        @keydown.enter="showDetails = !showDetails"
-                        @keydown.space.prevent="showDetails = !showDetails"
-                        class="rounded-2xl border transition p-3 sm:p-3.5 cursor-pointer outline-none focus:outline-none focus:ring-0 min-w-0
-                        {{ $isCritical ? 'border-rose-200 bg-rose-50/25 hover:border-rose-300 hover:bg-rose-50/40' : ($hasDefect ? 'border-amber-200 bg-amber-50/20 hover:border-amber-300 hover:bg-amber-50/35' : 'border-slate-200/80 bg-white hover:border-slate-300 hover:bg-slate-50/50 shadow-2xs') }}">
-
-                        {{-- Line 1: Type, Badges, Driver, Time, and Metrics --}}
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 min-w-0">
-                            {{-- Left: Event Identification --}}
-                            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
-                                <span class="text-xs font-bold text-slate-900 shrink-0">
-                                    {{ $isOutTrip ? __('fleet.inspection.type_checkout') : __('fleet.inspection.type_checkin') }}
-                                </span>
-
-                                <span class="rounded-md px-2 py-0.5 text-[10px] font-bold shrink-0 {{ $ins->severity_badge_classes }}">
-                                    {{ $ins->severity_label }}
-                                </span>
-
-                                <span class="text-xs text-slate-600 truncate max-w-[200px] sm:max-w-none">
-                                    Driver: <strong>{{ $ins->driver_name }}</strong>
-                                    @if ($ins->created_by)
-                                        <span class="text-slate-400 font-normal">• Dibuat: <strong>{{ $ins->created_by }}</strong></span>
-                                    @endif
-                                </span>
-
-                                <span class="text-[11px] text-slate-400 shrink-0">
-                                    • {{ ($ins->checked_at ?? $ins->created_at)->isoFormat('DD MMM YYYY, HH:mm') }}
-                                </span>
-                            </div>
-
-                            {{-- Right: Key Telemetry (Odometer & Fuel & Delta) --}}
-                            <div class="flex flex-wrap items-center justify-between sm:justify-end gap-2 text-xs text-slate-600 w-full sm:w-auto min-w-0 pt-1.5 sm:pt-0 border-t border-slate-100 sm:border-0">
-                                <div class="flex items-center gap-2 font-mono">
-                                    <span class="font-bold text-slate-900">{{ number_format($ins->odometer) }} km</span>
-                                    <span class="text-slate-300">|</span>
-                                    <span class="text-[11px] text-slate-500 font-sans">{{ __('fleet.common.fuel') }}: {{ $ins->fuel_percentage }}%</span>
-
-                                    @if ($ins->trip_distance)
-                                        <span class="rounded-lg bg-slate-100 border border-slate-200/70 px-1.5 py-0.2 text-[10px] font-bold text-slate-800">
-                                            +{{ number_format($ins->trip_distance) }} km
-                                        </span>
-                                    @endif
-                                </div>
-
-                                {{-- Compact Toggle Indicator --}}
-                                <div title="{{ __('fleet.show.view_checklist_details') }}"
-                                    class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-600 bg-slate-50 border border-slate-200/60 group-hover:bg-slate-100 group-hover:border-slate-300 transition shrink-0 ml-auto sm:ml-0">
-                                    <i class="bi bi-list-check"></i>
-                                    @if ($totalPhotos > 0)
-                                        <span class="rounded-full bg-slate-200/80 text-slate-800 px-1.5 py-0.2 text-[9px] font-bold">
-                                            <i class="bi bi-camera"></i> {{ $totalPhotos }}
-                                        </span>
-                                    @endif
-                                    <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="showDetails ? 'rotate-180' : ''"></i>
-                                </div>
-                            </div>
+    {{-- ACTIVE TRIP BANNER (If currently out on trip) --}}
+    @if ($activeTrip)
+        <div class="rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50/90 via-amber-50/50 to-white p-4 sm:p-5 shadow-2xs space-y-3 min-w-0">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
+                <div class="flex items-start gap-3 min-w-0">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-2xs">
+                        <i class="bi bi-geo-alt-fill text-base animate-pulse"></i>
+                    </span>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h3 class="text-xs sm:text-sm font-bold text-amber-950">
+                                {{ __('fleet.show.active_journey_title') }}
+                            </h3>
+                            <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                                <span class="h-1.5 w-1.5 rounded-full bg-amber-500 animate-ping"></span>
+                                {{ $activeTrip->elapsed_text }}
+                            </span>
                         </div>
+                        <p class="text-xs text-amber-800/90 mt-0.5 break-words">
+                            {{ __('fleet.show.active_journey_desc', ['time' => ($activeTrip->checked_at ?? $activeTrip->created_at)->isoFormat('HH:mm') . ' WIB']) }}
+                            • Driver: <strong>{{ $activeTrip->driver_name }}</strong>
+                            • Odo Awal: <strong>{{ number_format($activeTrip->odometer) }} km</strong>
+                            @if ($activeTrip->trip_purpose)
+                                • <span class="italic">"{{ $activeTrip->trip_purpose }}"</span>
+                            @endif
+                        </p>
+                    </div>
+                </div>
 
-                        {{-- Line 2: Purpose or Defect Alerts (Shown only if present) --}}
-                        @if ($ins->trip_purpose || $ins->defect_notes)
-                            <div class="mt-2 pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs min-w-0">
-                                @if ($ins->trip_purpose)
-                                    <div class="text-[11px] text-slate-500 italic truncate max-w-md">
-                                        <i class="bi bi-geo-alt text-slate-400 mr-1 not-italic"></i>"{{ $ins->trip_purpose }}"
+                @if ($canInspect && !$vehicle->is_sold)
+                    <a href="{{ route('vehicles.inspect', ['vehicle' => $vehicle, 'type' => 'check_in']) }}"
+                        class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition active:scale-95 shrink-0">
+                        <i class="bi bi-box-arrow-in-down text-sm"></i>
+                        <span>{{ __('fleet.show.btn_checkin') }} →</span>
+                    </a>
+                @endif
+            </div>
+        </div>
+    @endif
+
+    {{-- MAIN CARD: TITLE, FILTERS, & JOURNEYS TABLE --}}
+    <div class="rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs space-y-4 min-w-0">
+        {{-- Minimal Filter Toolbar --}}
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3.5 min-w-0">
+            <div>
+                <h2 class="text-sm font-bold text-slate-900">{{ __('fleet.show.inspections_title') }}</h2>
+                <p class="text-xs text-slate-400">{{ __('fleet.show.inspections_desc') }}</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                {{-- Live Search Input --}}
+                <div class="relative min-w-[200px] sm:min-w-[240px] flex-1 sm:flex-none">
+                    <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
+                        <i class="bi bi-search text-xs"></i>
+                    </span>
+                    <input type="text" wire:model.live.debounce.300ms="p2hSearch"
+                        placeholder="{{ __('fleet.show.search_p2h_placeholder') }}"
+                        class="w-full pl-8 pr-7 py-1.5 rounded-xl border border-slate-200 bg-slate-50/70 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition shadow-2xs">
+                    @if ($p2hSearch !== '')
+                        <button type="button" wire:click="$set('p2hSearch', '')"
+                            class="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer">
+                            <i class="bi bi-x-circle-fill text-xs"></i>
+                        </button>
+                    @endif
+                </div>
+
+                {{-- Defect Toggle Pill Group --}}
+                <div class="inline-flex items-center p-0.5 rounded-xl bg-slate-100 border border-slate-200/70 shadow-2xs text-xs">
+                    <button type="button" wire:click="$set('p2hDefect', 'all')"
+                        class="px-2.5 py-1 rounded-lg font-semibold transition cursor-pointer {{ $p2hDefect === 'all' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800' }}">
+                        {{ __('fleet.show.filter_all_trips') }}
+                    </button>
+                    <button type="button" wire:click="$set('p2hDefect', 'defects_only')"
+                        class="px-2.5 py-1 rounded-lg font-semibold transition cursor-pointer inline-flex items-center gap-1 {{ $p2hDefect === 'defects_only' ? 'bg-rose-500 text-white shadow-2xs' : 'text-slate-500 hover:text-rose-600' }}">
+                        <span>{{ __('fleet.show.filter_defects_only') }}</span>
+                        @if ($p2hDefect !== 'defects_only')
+                            <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
+                        @endif
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        @if ($inspections->isEmpty())
+            <div class="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-xs text-slate-400">
+                <i class="bi bi-clipboard-x text-2xl text-slate-300 block mb-1"></i>
+                {{ __('fleet.show.empty_inspections') }}
+            </div>
+        @else
+            <div class="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-2xs min-w-0">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                            <th class="py-2.5 px-3.5">{{ __('fleet.show.th_date_time') }}</th>
+                            <th class="py-2.5 px-3.5">{{ __('fleet.show.th_driver_purpose') }}</th>
+                            <th class="py-2.5 px-3.5 text-right">{{ __('fleet.show.th_distance_odo') }}</th>
+                            <th class="py-2.5 px-3.5 text-center">{{ __('fleet.show.th_fuel') }}</th>
+                            <th class="py-2.5 px-3.5 text-center">{{ __('fleet.show.th_status') }}</th>
+                            <th class="py-2.5 px-3.5 text-center w-10"></th>
+                        </tr>
+                    </thead>
+                    @foreach ($inspections as $ins)
+                        @php
+                            $parent = $ins->parentCheckOut;
+                            $isCheckIn = $ins->inspection_type === 'check_in';
+                            $depTime = $isCheckIn && $parent ? ($parent->checked_at ?? $parent->created_at) : ($ins->checked_at ?? $ins->created_at);
+                            $retTime = $isCheckIn ? ($ins->checked_at ?? $ins->created_at) : null;
+
+                            // Duration calculation
+                            $durationText = null;
+                            if ($depTime && $retTime) {
+                                $diffMin = (int) $depTime->diffInMinutes($retTime);
+                                if ($diffMin < 60) {
+                                    $durationText = $diffMin . 'm';
+                                } else {
+                                    $hrs = floor($diffMin / 60);
+                                    $m = $diffMin % 60;
+                                    $durationText = $hrs . 'j' . ($m > 0 ? ' ' . $m . 'm' : '');
+                                }
+                            }
+
+                            // Telemetry
+                            $driver = $ins->driver_name ?: ($parent?->driver_name ?: '-');
+                            $purpose = $ins->trip_purpose ?: ($parent?->trip_purpose ?: '');
+                            $depOdo = $isCheckIn && $parent ? $parent->odometer : $ins->odometer;
+                            $retOdo = $isCheckIn ? $ins->odometer : null;
+                            $tripDist = $isCheckIn && $parent ? $ins->trip_distance : null;
+
+                            $depFuel = $isCheckIn && $parent ? $parent->fuel_percentage : $ins->fuel_percentage;
+                            $retFuel = $isCheckIn ? $ins->fuel_percentage : null;
+
+                            // Defect evaluation
+                            $hasDefect = in_array($ins->severity, ['minor', 'critical_grounded'])
+                                || ($parent && in_array($parent->severity, ['minor', 'critical_grounded']))
+                                || !empty($ins->defect_notes)
+                                || ($parent && !empty($parent->defect_notes));
+                            $isCritical = $ins->severity === 'critical_grounded'
+                                || ($parent && $parent->severity === 'critical_grounded');
+
+                            // Checklist & photos aggregation
+                            $chkResults = is_array($ins->checklist_results) ? $ins->checklist_results : (json_decode($ins->checklist_results, true) ?: []);
+                            $parentChkResults = $parent ? (is_array($parent->checklist_results) ? $parent->checklist_results : (json_decode($parent->checklist_results, true) ?: [])) : [];
+
+                            $allPhotos = [];
+                            foreach ($chkResults as $k => $item) {
+                                if (!empty($item['photos'])) {
+                                    foreach ($item['photos'] as $p) {
+                                        $allPhotos[] = ['path' => $p, 'label' => ($item['label'] ?? ($item['title'] ?? ucfirst($k))) . ($isCheckIn ? ' (Kembali)' : ' (Berangkat)')];
+                                    }
+                                }
+                            }
+                            if (!empty($ins->defect_photos)) {
+                                foreach ($ins->defect_photos as $dp) {
+                                    $allPhotos[] = ['path' => $dp, 'label' => 'Defek Utama' . ($isCheckIn ? ' (Kembali)' : ' (Berangkat)')];
+                                }
+                            }
+                            foreach ($parentChkResults as $pk => $pitem) {
+                                if (!empty($pitem['photos'])) {
+                                    foreach ($pitem['photos'] as $pp) {
+                                        $allPhotos[] = ['path' => $pp, 'label' => ($pitem['label'] ?? ($pitem['title'] ?? ucfirst($pk))) . ' (Berangkat)'];
+                                    }
+                                }
+                            }
+                            if ($parent && !empty($parent->defect_photos)) {
+                                foreach ($parent->defect_photos as $pdp) {
+                                    $allPhotos[] = ['path' => $pdp, 'label' => 'Defek Utama (Berangkat)'];
+                                }
+                            }
+
+                            $defectNotesText = $ins->defect_notes ?: ($parent?->defect_notes ?: '');
+                        @endphp
+
+                        <tbody x-data="{ open: false }" class="border-b border-slate-100 last:border-b-0">
+                            {{-- Glanceable Single-Line Journey Row --}}
+                            <tr @click="open = !open"
+                                class="hover:bg-slate-50/80 transition cursor-pointer select-none {{ $hasDefect ? ($isCritical ? 'bg-rose-50/20' : 'bg-amber-50/20') : '' }}">
+                                {{-- 1. Date, Time & Duration --}}
+                                <td class="py-3 px-3.5 whitespace-nowrap">
+                                    <div class="font-bold text-slate-900">
+                                        {{ ($retTime ?? $depTime)->isoFormat('D MMM YYYY') }}
                                     </div>
-                                @endif
+                                    <div class="flex items-center gap-1.5 mt-0.5 text-[11px] text-slate-500 font-mono">
+                                        @if ($isCheckIn && $parent)
+                                            <span>{{ $depTime->format('H:i') }} → {{ $retTime->format('H:i') }}</span>
+                                            @if ($durationText)
+                                                <span class="rounded bg-slate-100 border border-slate-200/60 px-1 py-0.2 text-[9px] font-sans font-bold text-slate-700">
+                                                    {{ $durationText }}
+                                                </span>
+                                            @endif
+                                        @else
+                                            <span>{{ $depTime->format('H:i') }} WIB</span>
+                                            <span class="rounded bg-amber-50 border border-amber-200/60 px-1 py-0.2 text-[9px] font-sans font-bold text-amber-700">
+                                                {{ __('fleet.show.unclosed_trip') }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                </td>
 
-                                @if ($ins->defect_notes)
-                                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 {{ $isCritical ? 'text-rose-700' : 'text-amber-800' }} font-semibold text-xs bg-white/60 px-2.5 py-1.5 rounded-xl border {{ $isCritical ? 'border-rose-200' : 'border-amber-200' }} min-w-0 w-full sm:w-auto">
-                                        <div class="flex items-center gap-1.5 min-w-0">
-                                            <i class="bi bi-exclamation-triangle-fill shrink-0"></i>
-                                            <span class="truncate">{{ $ins->defect_notes }}</span>
+                                {{-- 2. Driver & Purpose --}}
+                                <td class="py-3 px-3.5 max-w-[200px] min-w-[150px]">
+                                    <span class="font-bold text-slate-900 block truncate" title="{{ $driver }}">
+                                        {{ $driver }}
+                                    </span>
+                                    @if ($purpose)
+                                        <span class="text-[11px] text-slate-500 italic block truncate" title="{{ $purpose }}">
+                                            "{{ $purpose }}"
+                                        </span>
+                                    @endif
+                                </td>
+
+                                {{-- 3. Distance & Odometer --}}
+                                <td class="py-3 px-3.5 text-right whitespace-nowrap">
+                                    @if ($tripDist !== null)
+                                        <span class="font-mono text-xs font-black text-slate-900 block">
+                                            +{{ number_format($tripDist) }} km
+                                        </span>
+                                        <span class="font-mono text-[10px] text-slate-400 block">
+                                            {{ number_format($depOdo) }} → {{ number_format($retOdo) }}
+                                        </span>
+                                    @else
+                                        <span class="font-mono text-xs font-bold text-slate-800 block">
+                                            {{ number_format($depOdo) }} km
+                                        </span>
+                                        <span class="text-[10px] text-slate-400 block font-sans">
+                                            (Berangkat)
+                                        </span>
+                                    @endif
+                                </td>
+
+                                {{-- 4. Fuel Delta --}}
+                                <td class="py-3 px-3.5 text-center whitespace-nowrap">
+                                    @if ($retFuel !== null && $depFuel !== null)
+                                        <span class="font-mono text-xs font-semibold text-slate-800">
+                                            {{ $depFuel }}% → {{ $retFuel }}%
+                                        </span>
+                                        @if ($retFuel < $depFuel)
+                                            <span class="text-[10px] font-mono text-rose-500 font-semibold block">
+                                                (-{{ $depFuel - $retFuel }}%)
+                                            </span>
+                                        @endif
+                                    @else
+                                        <span class="font-mono text-xs text-slate-600">
+                                            {{ $depFuel ?? $retFuel ?? '-' }}%
+                                        </span>
+                                    @endif
+                                </td>
+
+                                {{-- 5. Status Pill --}}
+                                <td class="py-3 px-3.5 text-center whitespace-nowrap">
+                                    @if ($isCritical)
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200/80 px-2 py-0.5 text-[10px] font-bold text-rose-700">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
+                                            {{ __('fleet.inspection.severity_critical') }}
+                                        </span>
+                                    @elseif ($hasDefect)
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200/80 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                                            {{ __('fleet.inspection.severity_minor') }}
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                                            {{ __('fleet.inspection.severity_none') }}
+                                        </span>
+                                    @endif
+                                </td>
+
+                                {{-- 6. Actions / Chevron --}}
+                                <td class="py-3 px-3.5 text-center whitespace-nowrap">
+                                    <div class="inline-flex items-center gap-1">
+                                        @if (count($allPhotos) > 0)
+                                            <span class="rounded-full bg-slate-100 text-slate-600 px-1.5 py-0.2 text-[9px] font-bold flex items-center gap-0.5" title="{{ count($allPhotos) }} Foto Tersedia">
+                                                <i class="bi bi-camera"></i>
+                                                {{ count($allPhotos) }}
+                                            </span>
+                                        @endif
+                                        <button type="button"
+                                            class="h-6 w-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition cursor-pointer">
+                                            <i class="bi bi-chevron-down text-xs transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            {{-- Expandable Journey Drawer --}}
+                            <tr x-show="open" x-cloak class="bg-slate-50/60">
+                                <td colspan="6" class="p-3 sm:p-4 border-t border-slate-100 space-y-3">
+                                    {{-- Row 1: Dual Telemetry (Departure & Return Details) --}}
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                        {{-- Departure Telemetry Card --}}
+                                        <div class="rounded-xl border border-slate-200/70 bg-white p-2.5 sm:p-3 space-y-1">
+                                            <div class="flex items-center justify-between text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                                                <span>{{ __('fleet.show.departure_telemetry') }}</span>
+                                                <i class="bi bi-box-arrow-up-right text-slate-500"></i>
+                                            </div>
+                                            <div class="font-bold text-slate-900">
+                                                {{ $depTime->isoFormat('D MMM YYYY, HH:mm') }} WIB
+                                            </div>
+                                            <div class="text-[11px] text-slate-600 flex flex-wrap gap-x-3 gap-y-0.5">
+                                                <span>Petugas: <strong>{{ $parent?->created_by ?: ($parent?->inspector?->name ?: ($ins->created_by ?: ($ins->inspector?->name ?? '-'))) }}</strong></span>
+                                                <span>Odo: <strong>{{ number_format($depOdo) }} km</strong></span>
+                                                <span>BBM: <strong>{{ $depFuel ?? '-' }}%</strong></span>
+                                            </div>
                                         </div>
 
-                                        <a href="{{ route('services.create', ['vehicle' => $vehicle, 'odometer' => $ins->odometer, 'notes' => 'Temuan P2H: ' . $ins->defect_notes]) }}"
-                                            @click.stop
-                                            class="inline-flex items-center justify-center gap-1 rounded-lg bg-slate-900 px-2 py-1 text-[10px] font-bold text-white hover:bg-slate-800 transition shrink-0 shadow-2xs self-end sm:self-auto">
-                                            <i class="bi bi-wrench"></i> {{ __('fleet.show.escalate_service_btn') }}
-                                        </a>
-                                    </div>
-                                @endif
-                            </div>
-                        @endif
-
-                        {{-- Expanded Checklist & Photos Details Drawer --}}
-                        <div x-show="showDetails" x-cloak @click.stop class="mt-3 pt-3 border-t border-dashed border-slate-200 space-y-3 cursor-default">
-                            @if (!empty($chkResults))
-                                <div class="grid gap-2 sm:grid-cols-2">
-                                    @foreach ($chkResults as $itemKey => $item)
-                                        @php
-                                            $statusOk = ($item['status'] ?? 'ok') === 'ok';
-                                            $pointPhotos = $item['photos'] ?? [];
-                                        @endphp
-                                        <div class="rounded-xl border p-2 text-xs min-w-0 {{ $statusOk ? 'border-slate-100 bg-slate-50/70' : 'border-rose-200 bg-rose-50/50' }}">
-                                            <div class="flex items-center justify-between gap-1.5 min-w-0">
-                                                <span class="font-bold min-w-0 break-words {{ $statusOk ? 'text-slate-800' : 'text-rose-900' }}">
-                                                    {{ $item['label'] ?? ucfirst($itemKey) }}
-                                                </span>
-                                                <span class="rounded-md px-1.5 py-0.2 text-[10px] font-bold shrink-0 {{ $statusOk ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800' }}">
-                                                    {{ $statusOk ? __('fleet.show.checklist_ok') : __('fleet.show.checklist_issue') }}
-                                                </span>
+                                        {{-- Return Telemetry Card --}}
+                                        <div class="rounded-xl border border-slate-200/70 bg-white p-2.5 sm:p-3 space-y-1">
+                                            <div class="flex items-center justify-between text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                                                <span>{{ __('fleet.show.return_telemetry') }}</span>
+                                                <i class="bi bi-box-arrow-in-down text-slate-500"></i>
                                             </div>
-
-                                            @if (!empty($item['notes']))
-                                                <p class="mt-1 text-[11px] text-slate-600">
-                                                    <span class="font-semibold text-slate-500">{{ __('fleet.show.checklist_remark') }}</span> {{ $item['notes'] }}
-                                                </p>
-                                            @endif
-
-                                            @if (!empty($pointPhotos))
-                                                <div class="mt-2 flex flex-wrap gap-1.5">
-                                                    @foreach ($pointPhotos as $pPath)
-                                                        <button type="button" @click.prevent="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $pPath) }}', title: 'Foto Temuan P2H: {{ addslashes($item['label'] ?? ucfirst($itemKey)) }}', subtitle: '{{ $vehicle->plate_number }} • {{ ($ins->checked_at ?? $ins->created_at)->format('d M Y H:i') }}' })"
-                                                            class="group relative block cursor-pointer" title="Perbesar foto">
-                                                            <img src="{{ asset('storage/' . $pPath) }}" class="h-10 w-10 object-cover rounded-md border border-slate-200 group-hover:opacity-80 group-hover:ring-2 group-hover:ring-slate-400 transition shadow-2xs">
-                                                        </button>
-                                                    @endforeach
+                                            @if ($retTime)
+                                                <div class="font-bold text-slate-900">
+                                                    {{ $retTime->isoFormat('D MMM YYYY, HH:mm') }} WIB
+                                                </div>
+                                                <div class="text-[11px] text-slate-600 flex flex-wrap gap-x-3 gap-y-0.5">
+                                                    <span>Petugas: <strong>{{ $ins->created_by ?: ($ins->inspector?->name ?? '-') }}</strong></span>
+                                                    <span>Odo: <strong>{{ number_format($retOdo) }} km</strong></span>
+                                                    <span>BBM: <strong>{{ $retFuel ?? '-' }}%</strong></span>
+                                                </div>
+                                            @else
+                                                <div class="text-xs text-amber-700 font-semibold py-1">
+                                                    {{ __('fleet.show.unclosed_trip') }}
                                                 </div>
                                             @endif
                                         </div>
-                                    @endforeach
-                                </div>
-                            @endif
-
-                            @if (!empty($ins->defect_photos))
-                                <div class="pt-2 border-t border-slate-100">
-                                    <span class="text-[11px] font-bold text-slate-700 block mb-1">{{ __('fleet.show.additional_defect_photos') }}</span>
-                                    <div class="flex flex-wrap gap-2">
-                                        @foreach ($ins->defect_photos as $dPhoto)
-                                            <button type="button" @click.prevent="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $dPhoto) }}', title: 'Foto Bukti Kerusakan Utama P2H', subtitle: '{{ $vehicle->plate_number }} • {{ ($ins->checked_at ?? $ins->created_at)->format('d M Y H:i') }}' })"
-                                                class="group relative block cursor-pointer" title="Perbesar foto">
-                                                <img src="{{ asset('storage/' . $dPhoto) }}" class="h-12 w-12 object-cover rounded-lg border border-slate-200 group-hover:opacity-80 group-hover:ring-2 group-hover:ring-slate-400 transition shadow-xs">
-                                            </button>
-                                        @endforeach
                                     </div>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            @endforeach
-        </div>
 
-        <div class="pt-2">{{ $inspections->links() }}</div>
-    @endif
+                                    {{-- Defect Finding & Escalate to Workshop Service Banner --}}
+                                    @if ($hasDefect)
+                                        <div class="rounded-xl border {{ $isCritical ? 'border-rose-200 bg-rose-50/70 text-rose-950' : 'border-amber-200 bg-amber-50/70 text-amber-950' }} p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                                            <div class="flex items-start gap-2 min-w-0">
+                                                <i class="bi bi-exclamation-triangle-fill text-sm {{ $isCritical ? 'text-rose-600' : 'text-amber-600' }} shrink-0 mt-0.5"></i>
+                                                <div class="text-xs min-w-0">
+                                                    <span class="font-bold block">{{ __('fleet.show.finding_label') }}</span>
+                                                    <p class="text-xs break-words {{ $isCritical ? 'text-rose-900' : 'text-amber-900' }}">
+                                                        {{ $defectNotesText ?: 'Ditemukan catatan ketidaksesuaian pada item checklist di bawah.' }}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            @if ($canManage)
+                                                <a href="{{ route('services.create', ['vehicle' => $vehicle, 'odometer' => $ins->odometer, 'notes' => 'Temuan P2H: ' . $defectNotesText]) }}"
+                                                    class="inline-flex items-center justify-center gap-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 text-xs font-bold shadow-2xs transition shrink-0 self-end sm:self-auto">
+                                                    <i class="bi bi-wrench text-xs"></i>
+                                                    <span>{{ __('fleet.show.escalate_service_btn') }} →</span>
+                                                </a>
+                                            @endif
+                                        </div>
+                                    @endif
+
+                                    {{-- 7-Point Checklist Grid --}}
+                                    @if (!empty($chkResults))
+                                        <div class="space-y-1.5">
+                                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                                Hasil Pemeriksaan 7 Titik ({{ $isCheckIn ? 'Check-in' : 'Check-out' }})
+                                            </span>
+                                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                @foreach ($chkResults as $itemKey => $item)
+                                                    @php
+                                                        $statusOk = ($item['status'] ?? 'ok') === 'ok' || ($item['status'] ?? '') === 'good';
+                                                        $itemLabel = $item['label'] ?? ($item['title'] ?? ucfirst($itemKey));
+                                                    @endphp
+                                                    <div class="rounded-xl border p-2 text-xs min-w-0 {{ $statusOk ? 'border-slate-200/60 bg-white' : 'border-rose-200 bg-rose-50/50' }}">
+                                                        <div class="flex items-center justify-between gap-1 min-w-0">
+                                                            <span class="font-bold min-w-0 break-words truncate {{ $statusOk ? 'text-slate-800' : 'text-rose-900' }}" title="{{ $itemLabel }}">
+                                                                {{ $itemLabel }}
+                                                            </span>
+                                                            <span class="rounded-md px-1.5 py-0.2 text-[9px] font-bold shrink-0 {{ $statusOk ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800' }}">
+                                                                {{ $statusOk ? __('fleet.show.checklist_ok') : __('fleet.show.checklist_issue') }}
+                                                            </span>
+                                                        </div>
+
+                                                        @if (!empty($item['notes']))
+                                                            <p class="mt-1 text-[10px] text-slate-600 line-clamp-2" title="{{ $item['notes'] }}">
+                                                                <span class="font-semibold text-slate-400">{{ __('fleet.show.checklist_remark') }}</span> {{ $item['notes'] }}
+                                                            </p>
+                                                        @endif
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    {{-- Photo Evidence Thumbnails Gallery --}}
+                                    @if (count($allPhotos) > 0)
+                                        <div class="space-y-1.5 pt-1 border-t border-slate-200/60">
+                                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                                Foto Bukti Pemeriksaan ({{ count($allPhotos) }})
+                                            </span>
+                                            <div class="flex flex-wrap gap-2">
+                                                @foreach ($allPhotos as $photoItem)
+                                                    <button type="button"
+                                                        @click.prevent="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $photoItem['path']) }}', title: '{{ addslashes($photoItem['label']) }}', subtitle: '{{ $vehicle->plate_number }} • {{ ($ins->checked_at ?? $ins->created_at)->format('d M Y H:i') }}' })"
+                                                        class="group relative block cursor-pointer rounded-xl overflow-hidden border border-slate-200/80 shadow-2xs hover:ring-2 hover:ring-indigo-500 transition"
+                                                        title="Perbesar: {{ $photoItem['label'] }}">
+                                                        <img src="{{ asset('storage/' . $photoItem['path']) }}" alt="{{ $photoItem['label'] }}"
+                                                            class="h-14 w-14 sm:h-16 sm:w-16 object-cover group-hover:scale-105 transition duration-200">
+                                                        <div class="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs">
+                                                            <i class="bi bi-zoom-in"></i>
+                                                        </div>
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
+                                </td>
+                            </tr>
+                        </tbody>
+                    @endforeach
+                </table>
+            </div>
+
+            <div class="pt-2">{{ $inspections->links() }}</div>
+        @endif
+    </div>
 </div>

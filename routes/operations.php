@@ -11,6 +11,7 @@ use App\Livewire\Vehicles\Form as VehiclesForm;
 use App\Livewire\Vehicles\Index as VehiclesIndex;
 use App\Livewire\Vehicles\InspectionForm;
 use App\Livewire\Vehicles\Operations;
+use App\Livewire\Vehicles\Radar;
 use App\Livewire\Vehicles\Scan;
 use App\Livewire\Vehicles\Show as VehiclesShow;
 use Illuminate\Support\Facades\Route;
@@ -50,6 +51,7 @@ Route::middleware('auth')->group(function () {
 
     // Vehicles
     Route::get('/vehicles', VehiclesIndex::class)->name('vehicles.index');
+    Route::get('/vehicles/radar', Radar::class)->name('vehicles.radar')->middleware('can:fleet.view');
     Route::get('/vehicles/operations', Operations::class)->name('vehicles.operations')->middleware('can:fleet.manage');
     Route::get('/vehicles/scan', Scan::class)->name('vehicles.scan');
     Route::get('/vehicles/{vehicle}', VehiclesShow::class)->name('vehicles.show');

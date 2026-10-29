@@ -123,40 +123,6 @@ class Operations extends Component
         return $query;
     }
 
-    public function getLiveActiveTripsProperty()
-    {
-        $query = VehicleInspection::query()
-            ->where('inspection_type', VehicleInspection::TYPE_CHECK_OUT)
-            ->whereDoesntHave('checkInRecord');
-
-        $this->filterVehicleQuery($query, 'vehicle');
-
-        return $query->with(['vehicle', 'inspector'])
-            ->orderByDesc('checked_at')
-            ->get()
-            ->map(function ($checkout) {
-                $departureTime = $checkout->checked_at ?? $checkout->created_at;
-                $elapsedMinutes = $departureTime ? (int) $departureTime->diffInMinutes(now()) : 0;
-
-                if ($elapsedMinutes < 60) {
-                    $elapsedText = $elapsedMinutes . ' ' . __('fleet.operations.minutes');
-                } elseif ($elapsedMinutes < 1440) {
-                    $hours = floor($elapsedMinutes / 60);
-                    $mins = $elapsedMinutes % 60;
-                    $elapsedText = $hours . ' ' . __('fleet.operations.hours') . ($mins > 0 ? ' ' . $mins . ' ' . __('fleet.operations.minutes') : '');
-                } else {
-                    $days = floor($elapsedMinutes / 1440);
-                    $hours = floor(($elapsedMinutes % 1440) / 60);
-                    $elapsedText = $days . ' ' . __('fleet.operations.days') . ($hours > 0 ? ' ' . $hours . ' ' . __('fleet.operations.hours') : '');
-                }
-
-                $checkout->elapsed_text = $elapsedText;
-                $checkout->elapsed_minutes = $elapsedMinutes;
-
-                return $checkout;
-            });
-    }
-
     public function getDayLogProperty(): object
     {
         $dateStr = $this->selectedDate;
@@ -217,7 +183,7 @@ class Operations extends Component
                     'defect_severity' => $defectSeverity,
                     'defect_notes' => $defectNotes,
                     'defect_photos' => $defectPhotos,
-                    'inspector_name' => $checkIn->inspector?->name ?: ($checkIn->created_by ?? '—'),
+                    'inspector_name' => $checkIn->created_by ?: ($checkIn->inspector?->name ?? '—'),
                     'check_in' => $checkIn,
                     'check_out' => $departure,
                 ];
@@ -302,7 +268,6 @@ class Operations extends Component
             'canManage' => $this->canManage,
             'canViewCosts' => $this->canViewCosts,
             'metrics' => $this->metrics,
-            'liveActiveTrips' => $this->liveActiveTrips,
             'dayLog' => $this->dayLog,
         ]);
     }

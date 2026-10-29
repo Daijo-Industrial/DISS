@@ -133,8 +133,8 @@
 
                     {{-- Footer: Inspector Info & Cockpit Link --}}
                     <div class="mt-3.5 pt-2.5 border-t border-amber-200/50 flex items-center justify-between text-xs">
-                        <span class="text-[11px] text-slate-400 font-medium truncate" title="{{ __('fleet.operations.inspector') }}: {{ $trip->inspector_name }}">
-                            {{ $trip->inspector_name }}
+                        <span class="text-[11px] text-slate-400 font-medium truncate" title="{{ __('fleet.operations.inspector') }}: {{ $trip->created_by ?: ($trip->inspector?->name ?? ($trip->inspector_name ?? '—')) }}">
+                            {{ $trip->created_by ?: ($trip->inspector?->name ?? ($trip->inspector_name ?? '—')) }}
                         </span>
                         @if ($v)
                             <a href="{{ route('vehicles.show', $v) }}" wire:navigate
