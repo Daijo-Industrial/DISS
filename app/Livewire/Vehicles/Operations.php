@@ -21,6 +21,9 @@ class Operations extends Component
     #[Url(as: 'cat')]
     public string $category = 'all'; // 'all', 'passenger', 'commercial_truck', 'pickup', 'other'
 
+    #[Url(as: 'view')]
+    public string $activityFilter = 'all'; // 'all', 'trips', 'defects', 'services'
+
     public bool $canManage = false;
 
     public bool $canViewCosts = false;
@@ -53,6 +56,110 @@ class Operations extends Component
         } elseif ($preset === 'yesterday') {
             $this->selectedDate = now()->subDay()->toDateString();
         }
+    }
+
+    public function setCategory(string $category): void
+    {
+        $this->category = $category;
+    }
+
+    public function setActivityFilter(string $filter): void
+    {
+        $this->activityFilter = $filter;
+    }
+
+    public function resetFilters(): void
+    {
+        $this->q = '';
+        $this->category = 'all';
+        $this->activityFilter = 'all';
+    }
+
+    public function selectDate(string $date): void
+    {
+        try {
+            $parsed = Carbon::parse($date);
+            if (! $parsed->isFuture()) {
+                $this->selectedDate = $parsed->toDateString();
+            }
+        } catch (\Throwable $e) {
+            // Keep current date on parse error
+        }
+    }
+
+    public function goToToday(): void
+    {
+        $this->selectedDate = now()->toDateString();
+    }
+
+    public function previousWeek(): void
+    {
+        try {
+            $this->selectedDate = Carbon::parse($this->selectedDate)->subWeek()->toDateString();
+        } catch (\Throwable $e) {
+            $this->selectedDate = now()->subWeek()->toDateString();
+        }
+    }
+
+    public function nextWeek(): void
+    {
+        if ($this->canGoNextWeek) {
+            try {
+                $next = Carbon::parse($this->selectedDate)->addWeek();
+                if ($next->isFuture()) {
+                    $this->selectedDate = now()->toDateString();
+                } else {
+                    $this->selectedDate = $next->toDateString();
+                }
+            } catch (\Throwable $e) {
+                $this->selectedDate = now()->toDateString();
+            }
+        }
+    }
+
+    public function getCanGoNextWeekProperty(): bool
+    {
+        try {
+            $selected = Carbon::parse($this->selectedDate);
+            $startOfCurrentWeek = now()->startOfWeek(CarbonInterface::MONDAY);
+            $startOfSelectedWeek = $selected->copy()->startOfWeek(CarbonInterface::MONDAY);
+
+            return $startOfSelectedWeek->lt($startOfCurrentWeek);
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    public function getWeekDaysProperty(): array
+    {
+        try {
+            $selected = Carbon::parse($this->selectedDate);
+        } catch (\Throwable $e) {
+            $selected = now();
+        }
+
+        $startOfWeek = $selected->copy()->startOfWeek(CarbonInterface::MONDAY);
+        $todayStr = now()->toDateString();
+
+        $days = [];
+        for ($i = 0; $i < 7; $i++) {
+            $day = $startOfWeek->copy()->addDays($i);
+            $dateStr = $day->toDateString();
+            $isFuture = $day->isFuture();
+            $isSelected = $dateStr === $this->selectedDate;
+            $isToday = $dateStr === $todayStr;
+
+            $days[] = [
+                'date' => $dateStr,
+                'day_number' => $day->format('j'),
+                'day_short' => $day->translatedFormat('D'),
+                'is_selected' => $isSelected,
+                'is_today' => $isToday,
+                'is_future' => $isFuture,
+            ];
+        }
+
+        return $days;
     }
 
     public function previousDay(): void
@@ -148,6 +255,7 @@ class Operations extends Component
             ->get()
             ->map(function ($checkIn) {
                 $departure = $checkIn->parentCheckOut;
+                $isDirectCheckIn = is_null($departure);
                 $depTime = $departure ? ($departure->checked_at ?? $departure->created_at) : null;
                 $retTime = $checkIn->checked_at ?? $checkIn->created_at;
 
@@ -168,16 +276,17 @@ class Operations extends Component
                 return (object) [
                     'id' => $checkIn->id,
                     'type' => 'trip_completed',
+                    'is_direct_check_in' => $isDirectCheckIn,
                     'vehicle' => $checkIn->vehicle,
                     'driver_name' => $checkIn->driver_name ?: ($departure?->driver_name ?? '—'),
-                    'trip_purpose' => $departure?->trip_purpose ?? '—',
+                    'trip_purpose' => $checkIn->trip_purpose ?: ($departure?->trip_purpose ?? '—'),
                     'dep_time' => $depTime,
                     'ret_time' => $retTime,
                     'duration_text' => $durationText,
-                    'dep_odometer' => $departure?->odometer,
+                    'dep_odometer' => $isDirectCheckIn ? null : $departure?->odometer,
                     'ret_odometer' => $checkIn->odometer,
-                    'distance' => $checkIn->trip_distance ?? 0,
-                    'dep_fuel' => $departure?->fuel_percentage,
+                    'distance' => $isDirectCheckIn ? null : ($checkIn->trip_distance ?? 0),
+                    'dep_fuel' => $isDirectCheckIn ? null : $departure?->fuel_percentage,
                     'ret_fuel' => $checkIn->fuel_percentage,
                     'has_defect' => $hasDefect,
                     'defect_severity' => $defectSeverity,
@@ -218,6 +327,27 @@ class Operations extends Component
         $totalDefects = $completedTrips->where('has_defect', true)->count();
         $totalTrips = $completedTrips->count();
 
+        // Filter displayed items according to selected activity filter
+        $displayedTrips = match ($this->activityFilter) {
+            'defects' => $completedTrips->where('has_defect', true),
+            'services' => collect(),
+            default => $completedTrips,
+        };
+
+        $displayedServices = match ($this->activityFilter) {
+            'trips', 'defects' => collect(),
+            default => $services,
+        };
+
+        // Merge completed trips and services into a unified chronological timeline
+        $timelineEvents = $displayedTrips->concat($displayedServices)->sortByDesc(function ($item) {
+            if ($item->type === 'trip_completed') {
+                return $item->ret_time ? $item->ret_time->timestamp : 0;
+            }
+
+            return $item->service_date ? Carbon::parse($item->service_date)->timestamp : 0;
+        })->values();
+
         if ($this->isToday) {
             $label = __('fleet.operations.filter_today') . ' — ' . $dateCarbon->translatedFormat('l, d F Y');
         } elseif ($this->isYesterday) {
@@ -236,9 +366,11 @@ class Operations extends Component
             'total_distance' => $totalDistance,
             'total_defects' => $totalDefects,
             'total_services' => $services->count(),
-            'completed_trips' => $completedTrips->values(),
-            'services' => $services->values(),
-            'has_activity' => ($totalTrips + $services->count()) > 0,
+            'completed_trips' => $displayedTrips->values(),
+            'services' => $displayedServices->values(),
+            'timeline_events' => $timelineEvents,
+            'has_activity' => $timelineEvents->count() > 0,
+            'has_any_day_activity' => ($totalTrips + $services->count()) > 0,
         ];
     }
 
@@ -262,12 +394,65 @@ class Operations extends Component
         ];
     }
 
+    public function getLiveActiveTripsProperty()
+    {
+        $query = Vehicle::query()
+            ->whereNull('deleted_at')
+            ->whereNotIn('status', ['sold', 'retired'])
+            ->whereNull('sold_at')
+            ->whereHas('activeCheckOut');
+
+        if ($this->category !== 'all') {
+            $query->where('category', $this->category);
+        }
+
+        if ($this->q !== '') {
+            $term = $this->q;
+            $query->where(function ($w) use ($term) {
+                $w->where('plate_number', 'like', '%' . $term . '%')
+                    ->orWhere('brand', 'like', '%' . $term . '%')
+                    ->orWhere('model', 'like', '%' . $term . '%')
+                    ->orWhere('driver_name', 'like', '%' . $term . '%');
+            });
+        }
+
+        return $query->with(['activeCheckOut.inspector'])
+            ->get()
+            ->map(function ($vehicle) {
+                $checkout = $vehicle->activeCheckOut;
+                $departureTime = $checkout->checked_at ?? $checkout->created_at;
+                $elapsedMinutes = $departureTime ? (int) $departureTime->diffInMinutes(now()) : 0;
+
+                if ($elapsedMinutes < 60) {
+                    $elapsedText = $elapsedMinutes . ' ' . __('fleet.operations.minutes');
+                } elseif ($elapsedMinutes < 1440) {
+                    $hours = floor($elapsedMinutes / 60);
+                    $mins = $elapsedMinutes % 60;
+                    $elapsedText = $hours . ' ' . __('fleet.operations.hours') . ($mins > 0 ? ' ' . $mins . ' ' . __('fleet.operations.minutes') : '');
+                } else {
+                    $days = floor($elapsedMinutes / 1440);
+                    $hours = floor(($elapsedMinutes % 1440) / 60);
+                    $elapsedText = $days . ' ' . __('fleet.operations.days') . ($hours > 0 ? ' ' . $hours . ' ' . __('fleet.operations.hours') : '');
+                }
+
+                $checkout->elapsed_text = $elapsedText;
+                $checkout->elapsed_minutes = $elapsedMinutes;
+                $checkout->vehicle = $vehicle;
+
+                return $checkout;
+            })
+            ->sortByDesc(fn ($checkout) => $checkout->checked_at ?? $checkout->created_at)
+            ->values();
+    }
+
     public function render()
     {
         return view('livewire.vehicles.operations', [
             'canManage' => $this->canManage,
             'canViewCosts' => $this->canViewCosts,
+            'activityFilter' => $this->activityFilter,
             'metrics' => $this->metrics,
+            'liveActiveTrips' => $this->isToday ? $this->liveActiveTrips : collect(),
             'dayLog' => $this->dayLog,
         ]);
     }

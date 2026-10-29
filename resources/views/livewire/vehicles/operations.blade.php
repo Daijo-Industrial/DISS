@@ -36,8 +36,50 @@
                 </p>
             </div>
         </div>
+    </div>
 
+    {{-- Search & Category Filter Bar --}}
+    <div class="rounded-2xl border border-slate-200/80 bg-white p-3 sm:p-3.5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        {{-- Search Input --}}
+        <div class="relative w-full md:max-w-xs">
+            <i class="bi bi-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+            <input type="text" placeholder="{{ __('fleet.index.search_placeholder') }}"
+                wire:model.live.debounce.300ms="q"
+                class="w-full rounded-xl border border-slate-200/80 bg-slate-50/60 py-1.5 pl-8 pr-8 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition">
+            @if ($q !== '')
+                <button type="button" wire:click="$set('q','')" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 cursor-pointer">
+                    <i class="bi bi-x-circle text-xs"></i>
+                </button>
+            @endif
+        </div>
 
+        {{-- Category Pills --}}
+        <div class="flex flex-wrap items-center gap-1.5 text-xs">
+            @php
+                $categories = [
+                    'all' => __('fleet.categories.all'),
+                    'passenger' => __('fleet.categories.passenger'),
+                    'commercial_truck' => __('fleet.categories.commercial_truck'),
+                    'pickup' => __('fleet.categories.pickup'),
+                    'other' => __('fleet.categories.other'),
+                ];
+            @endphp
+
+            @foreach ($categories as $catKey => $catLabel)
+                <button type="button" wire:click="setCategory('{{ $catKey }}')"
+                    class="px-2.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer active:scale-95 {{ $category === $catKey ? 'bg-slate-900 text-white shadow-2xs font-bold' : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70 hover:text-slate-900' }}">
+                    {{ $catLabel }}
+                </button>
+            @endforeach
+
+            @if ($q !== '' || $category !== 'all')
+                <button type="button" wire:click="resetFilters"
+                    class="ml-1 text-[11px] font-semibold text-rose-600 hover:text-rose-800 transition cursor-pointer inline-flex items-center gap-1">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                    <span>Reset</span>
+                </button>
+            @endif
+        </div>
     </div>
 
     {{-- Daily Operational Timeline Log Feed --}}
