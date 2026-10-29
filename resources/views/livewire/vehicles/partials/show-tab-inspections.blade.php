@@ -92,23 +92,27 @@
                 {{ __('fleet.show.empty_inspections') }}
             </div>
         @else
-            <div class="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-2xs min-w-0">
+            <div class="rounded-2xl border border-slate-200/80 bg-white shadow-2xs overflow-hidden min-w-0">
                 <table class="w-full text-left border-collapse text-xs">
                     <thead>
                         <tr class="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                            <th class="py-2.5 px-3.5">{{ __('fleet.show.th_date_time') }}</th>
-                            <th class="py-2.5 px-3.5">{{ __('fleet.show.th_driver_purpose') }}</th>
-                            <th class="py-2.5 px-3.5 text-right">{{ __('fleet.show.th_distance_odo') }}</th>
-                            <th class="py-2.5 px-3.5 text-center">{{ __('fleet.show.th_fuel') }}</th>
-                            <th class="py-2.5 px-3.5 text-center">{{ __('fleet.show.th_status') }}</th>
-                            <th class="py-2.5 px-3.5 text-center w-10"></th>
+                            <th class="py-2.5 px-3">{{ __('fleet.show.th_date_time') }}</th>
+                            <th class="py-2.5 px-2.5">{{ __('fleet.show.th_driver_purpose') }}</th>
+                            <th class="py-2.5 px-2.5 text-right">{{ __('fleet.show.th_distance_odo') }}</th>
+                            <th class="py-2.5 px-2 text-center">{{ __('fleet.show.th_fuel') }}</th>
+                            <th class="py-2.5 px-2 text-center">{{ __('fleet.show.th_status') }}</th>
+                            <th class="py-2.5 px-1.5 text-center w-8"></th>
                         </tr>
                     </thead>
                     @foreach ($inspections as $ins)
                         @php
                             $parent = $ins->parentCheckOut;
                             $isCheckIn = $ins->inspection_type === 'check_in';
-                            $depTime = $isCheckIn && $parent ? ($parent->checked_at ?? $parent->created_at) : ($ins->checked_at ?? $ins->created_at);
+                            $isPaired = $isCheckIn && $parent;
+                            $isDirectCheckIn = $isCheckIn && !$parent;
+                            $isUnclosedCheckOut = !$isCheckIn;
+
+                            $depTime = ($isPaired || $isUnclosedCheckOut) ? ($parent ? ($parent->checked_at ?? $parent->created_at) : ($ins->checked_at ?? $ins->created_at)) : null;
                             $retTime = $isCheckIn ? ($ins->checked_at ?? $ins->created_at) : null;
 
                             // Duration calculation
@@ -127,11 +131,11 @@
                             // Telemetry
                             $driver = $ins->driver_name ?: ($parent?->driver_name ?: '-');
                             $purpose = $ins->trip_purpose ?: ($parent?->trip_purpose ?: '');
-                            $depOdo = $isCheckIn && $parent ? $parent->odometer : $ins->odometer;
+                            $depOdo = $isPaired ? $parent->odometer : ($isUnclosedCheckOut ? $ins->odometer : null);
                             $retOdo = $isCheckIn ? $ins->odometer : null;
-                            $tripDist = $isCheckIn && $parent ? $ins->trip_distance : null;
+                            $tripDist = $isPaired ? $ins->trip_distance : null;
 
-                            $depFuel = $isCheckIn && $parent ? $parent->fuel_percentage : $ins->fuel_percentage;
+                            $depFuel = $isPaired ? $parent->fuel_percentage : ($isUnclosedCheckOut ? $ins->fuel_percentage : null);
                             $retFuel = $isCheckIn ? $ins->fuel_percentage : null;
 
                             // Defect evaluation
@@ -180,41 +184,46 @@
                             <tr @click="open = !open"
                                 class="hover:bg-slate-50/80 transition cursor-pointer select-none {{ $hasDefect ? ($isCritical ? 'bg-rose-50/20' : 'bg-amber-50/20') : '' }}">
                                 {{-- 1. Date, Time & Duration --}}
-                                <td class="py-3 px-3.5 whitespace-nowrap">
-                                    <div class="font-bold text-slate-900">
+                                <td class="py-2.5 px-3 min-w-[130px]">
+                                    <div class="font-bold text-slate-900 leading-tight">
                                         {{ ($retTime ?? $depTime)->isoFormat('D MMM YYYY') }}
                                     </div>
-                                    <div class="flex items-center gap-1.5 mt-0.5 text-[11px] text-slate-500 font-mono">
-                                        @if ($isCheckIn && $parent)
-                                            <span>{{ $depTime->format('H:i') }} → {{ $retTime->format('H:i') }}</span>
+                                    <div class="flex items-center gap-1 mt-0.5 text-[11px] text-slate-500 font-mono">
+                                        @if ($isPaired)
+                                            <span>{{ $depTime->format('H:i') }}–{{ $retTime->format('H:i') }}</span>
                                             @if ($durationText)
                                                 <span class="rounded bg-slate-100 border border-slate-200/60 px-1 py-0.2 text-[9px] font-sans font-bold text-slate-700">
                                                     {{ $durationText }}
                                                 </span>
                                             @endif
+                                        @elseif ($isDirectCheckIn)
+                                            <span>{{ $retTime->format('H:i') }}</span>
+                                            <span class="rounded bg-indigo-50 border border-indigo-200/60 px-1 py-0.2 text-[9px] font-sans font-bold text-indigo-700 truncate" title="{{ __('fleet.show.direct_checkin') }}">
+                                                Check-in
+                                            </span>
                                         @else
-                                            <span>{{ $depTime->format('H:i') }} WIB</span>
-                                            <span class="rounded bg-amber-50 border border-amber-200/60 px-1 py-0.2 text-[9px] font-sans font-bold text-amber-700">
-                                                {{ __('fleet.show.unclosed_trip') }}
+                                            <span>{{ $depTime->format('H:i') }}</span>
+                                            <span class="rounded bg-amber-50 border border-amber-200/60 px-1 py-0.2 text-[9px] font-sans font-bold text-amber-700 truncate" title="{{ __('fleet.show.unclosed_trip') }}">
+                                                Check-out
                                             </span>
                                         @endif
                                     </div>
                                 </td>
 
                                 {{-- 2. Driver & Purpose --}}
-                                <td class="py-3 px-3.5 max-w-[200px] min-w-[150px]">
-                                    <span class="font-bold text-slate-900 block truncate" title="{{ $driver }}">
+                                <td class="py-2.5 px-2.5 min-w-0">
+                                    <span class="font-bold text-slate-900 block truncate max-w-[120px] sm:max-w-[160px]" title="{{ $driver }}">
                                         {{ $driver }}
                                     </span>
                                     @if ($purpose)
-                                        <span class="text-[11px] text-slate-500 italic block truncate" title="{{ $purpose }}">
+                                        <span class="text-[11px] text-slate-400 italic block truncate max-w-[120px] sm:max-w-[160px]" title="{{ $purpose }}">
                                             "{{ $purpose }}"
                                         </span>
                                     @endif
                                 </td>
 
                                 {{-- 3. Distance & Odometer --}}
-                                <td class="py-3 px-3.5 text-right whitespace-nowrap">
+                                <td class="py-2.5 px-2.5 text-right whitespace-nowrap">
                                     @if ($tripDist !== null)
                                         <span class="font-mono text-xs font-black text-slate-900 block">
                                             +{{ number_format($tripDist) }} km
@@ -222,20 +231,27 @@
                                         <span class="font-mono text-[10px] text-slate-400 block">
                                             {{ number_format($depOdo) }} → {{ number_format($retOdo) }}
                                         </span>
+                                    @elseif ($isDirectCheckIn)
+                                        <span class="font-mono text-xs font-bold text-slate-800 block">
+                                            {{ number_format($retOdo) }} km
+                                        </span>
+                                        <span class="text-[10px] text-slate-400 block font-sans">
+                                            ({{ __('fleet.show.telemetry_return') }})
+                                        </span>
                                     @else
                                         <span class="font-mono text-xs font-bold text-slate-800 block">
                                             {{ number_format($depOdo) }} km
                                         </span>
                                         <span class="text-[10px] text-slate-400 block font-sans">
-                                            (Berangkat)
+                                            ({{ __('fleet.show.telemetry_departure') }})
                                         </span>
                                     @endif
                                 </td>
 
                                 {{-- 4. Fuel Delta --}}
-                                <td class="py-3 px-3.5 text-center whitespace-nowrap">
+                                <td class="py-2.5 px-2 text-center whitespace-nowrap">
                                     @if ($retFuel !== null && $depFuel !== null)
-                                        <span class="font-mono text-xs font-semibold text-slate-800">
+                                        <span class="font-mono text-xs font-semibold text-slate-800 block">
                                             {{ $depFuel }}% → {{ $retFuel }}%
                                         </span>
                                         @if ($retFuel < $depFuel)
@@ -244,14 +260,14 @@
                                             </span>
                                         @endif
                                     @else
-                                        <span class="font-mono text-xs text-slate-600">
-                                            {{ $depFuel ?? $retFuel ?? '-' }}%
+                                        <span class="font-mono text-xs text-slate-600 block">
+                                            {{ $retFuel ?? $depFuel ?? '-' }}%
                                         </span>
                                     @endif
                                 </td>
 
                                 {{-- 5. Status Pill --}}
-                                <td class="py-3 px-3.5 text-center whitespace-nowrap">
+                                <td class="py-2.5 px-2 text-center whitespace-nowrap">
                                     @if ($isCritical)
                                         <span class="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200/80 px-2 py-0.5 text-[10px] font-bold text-rose-700">
                                             <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
@@ -271,7 +287,7 @@
                                 </td>
 
                                 {{-- 6. Actions / Chevron --}}
-                                <td class="py-3 px-3.5 text-center whitespace-nowrap">
+                                <td class="py-2.5 px-1.5 text-center whitespace-nowrap w-8">
                                     <div class="inline-flex items-center gap-1">
                                         @if (count($allPhotos) > 0)
                                             <span class="rounded-full bg-slate-100 text-slate-600 px-1.5 py-0.2 text-[9px] font-bold flex items-center gap-0.5" title="{{ count($allPhotos) }} Foto Tersedia">
@@ -298,14 +314,21 @@
                                                 <span>{{ __('fleet.show.departure_telemetry') }}</span>
                                                 <i class="bi bi-box-arrow-up-right text-slate-500"></i>
                                             </div>
-                                            <div class="font-bold text-slate-900">
-                                                {{ $depTime->isoFormat('D MMM YYYY, HH:mm') }} WIB
-                                            </div>
-                                            <div class="text-[11px] text-slate-600 flex flex-wrap gap-x-3 gap-y-0.5">
-                                                <span>Petugas: <strong>{{ $parent?->created_by ?: ($parent?->inspector?->name ?: ($ins->created_by ?: ($ins->inspector?->name ?? '-'))) }}</strong></span>
-                                                <span>Odo: <strong>{{ number_format($depOdo) }} km</strong></span>
-                                                <span>BBM: <strong>{{ $depFuel ?? '-' }}%</strong></span>
-                                            </div>
+                                            @if ($depTime)
+                                                <div class="font-bold text-slate-900">
+                                                    {{ $depTime->isoFormat('D MMM YYYY, HH:mm') }} WIB
+                                                </div>
+                                                <div class="text-[11px] text-slate-600 flex flex-wrap gap-x-3 gap-y-0.5">
+                                                    <span>Petugas: <strong>{{ ($parent ? ($parent->created_by ?: ($parent->inspector?->name ?? '—')) : ($ins->created_by ?: ($ins->inspector?->name ?? '—'))) }}</strong></span>
+                                                    <span>Odo: <strong>{{ number_format($depOdo) }} km</strong></span>
+                                                    <span>BBM: <strong>{{ $depFuel ?? '-' }}%</strong></span>
+                                                </div>
+                                            @else
+                                                <div class="text-xs text-slate-400 italic py-2 flex items-center gap-1.5">
+                                                    <i class="bi bi-dash-circle text-slate-300"></i>
+                                                    <span>{{ __('fleet.show.no_departure_data') }}</span>
+                                                </div>
+                                            @endif
                                         </div>
 
                                         {{-- Return Telemetry Card --}}
@@ -319,13 +342,14 @@
                                                     {{ $retTime->isoFormat('D MMM YYYY, HH:mm') }} WIB
                                                 </div>
                                                 <div class="text-[11px] text-slate-600 flex flex-wrap gap-x-3 gap-y-0.5">
-                                                    <span>Petugas: <strong>{{ $ins->created_by ?: ($ins->inspector?->name ?? '-') }}</strong></span>
+                                                    <span>Petugas: <strong>{{ $ins->created_by ?: ($ins->inspector?->name ?? '—') }}</strong></span>
                                                     <span>Odo: <strong>{{ number_format($retOdo) }} km</strong></span>
                                                     <span>BBM: <strong>{{ $retFuel ?? '-' }}%</strong></span>
                                                 </div>
                                             @else
-                                                <div class="text-xs text-amber-700 font-semibold py-1">
-                                                    {{ __('fleet.show.unclosed_trip') }}
+                                                <div class="text-xs text-amber-700 font-semibold py-2 flex items-center gap-1.5">
+                                                    <i class="bi bi-hourglass-split text-amber-500"></i>
+                                                    <span>{{ __('fleet.show.unclosed_trip') }}</span>
                                                 </div>
                                             @endif
                                         </div>
