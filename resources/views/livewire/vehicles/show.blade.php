@@ -1,19 +1,11 @@
 <div class="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5">
-    {{-- Breadcrumb Navigation & Top Info Bar --}}
-    <div class="flex flex-wrap items-center justify-between gap-2 min-w-0">
-        <a href="{{ route('vehicles.index') }}" wire:navigate
+    {{-- Breadcrumb Navigation --}}
+    <div class="flex items-center justify-between gap-2 min-w-0">
+        <a href="{{ $this->backRoute['url'] }}" wire:navigate
             class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition shrink-0">
             <i class="bi bi-chevron-left text-[11px]"></i>
-            <span>{{ __('fleet.show.back_to_index') }}</span>
+            <span>{{ $this->backRoute['label'] }}</span>
         </a>
-
-        <div class="flex items-center gap-2">
-            @if ($vehicle->vin)
-                <span class="font-mono text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/60 truncate max-w-full">
-                    VIN: {{ $vehicle->vin }}
-                </span>
-            @endif
-        </div>
     </div>
 
     @php

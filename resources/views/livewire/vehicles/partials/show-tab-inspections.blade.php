@@ -3,46 +3,6 @@
 {{-- ========================================================================= --}}
 <div class="space-y-4 min-w-0">
 
-    {{-- ACTIVE TRIP BANNER (If currently out on trip) --}}
-    @if ($activeTrip)
-        <div class="rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50/90 via-amber-50/50 to-white p-4 sm:p-5 shadow-2xs space-y-3 min-w-0">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
-                <div class="flex items-start gap-3 min-w-0">
-                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-2xs">
-                        <i class="bi bi-geo-alt-fill text-base animate-pulse"></i>
-                    </span>
-                    <div class="min-w-0">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <h3 class="text-xs sm:text-sm font-bold text-amber-950">
-                                {{ __('fleet.show.active_journey_title') }}
-                            </h3>
-                            <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
-                                <span class="h-1.5 w-1.5 rounded-full bg-amber-500 animate-ping"></span>
-                                {{ $activeTrip->elapsed_text }}
-                            </span>
-                        </div>
-                        <p class="text-xs text-amber-800/90 mt-0.5 break-words">
-                            {{ __('fleet.show.active_journey_desc', ['time' => ($activeTrip->checked_at ?? $activeTrip->created_at)->isoFormat('HH:mm') . ' WIB']) }}
-                            • Driver: <strong>{{ $activeTrip->driver_name }}</strong>
-                            • Odo Awal: <strong>{{ number_format($activeTrip->odometer) }} km</strong>
-                            @if ($activeTrip->trip_purpose)
-                                • <span class="italic">"{{ $activeTrip->trip_purpose }}"</span>
-                            @endif
-                        </p>
-                    </div>
-                </div>
-
-                @if ($canInspect && !$vehicle->is_sold)
-                    <a href="{{ route('vehicles.inspect', ['vehicle' => $vehicle, 'type' => 'check_in']) }}"
-                        class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition active:scale-95 shrink-0">
-                        <i class="bi bi-box-arrow-in-down text-sm"></i>
-                        <span>{{ __('fleet.show.btn_checkin') }} →</span>
-                    </a>
-                @endif
-            </div>
-        </div>
-    @endif
-
     {{-- MAIN CARD: TITLE, FILTERS, & JOURNEYS TABLE --}}
     <div class="rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs space-y-4 min-w-0">
         {{-- Minimal Filter Toolbar --}}
@@ -87,13 +47,26 @@
         </div>
 
         @if ($inspections->isEmpty())
-            <div class="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-xs text-slate-400">
+            <div class="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-xs text-slate-400 space-y-2">
                 <i class="bi bi-clipboard-x text-2xl text-slate-300 block mb-1"></i>
-                {{ __('fleet.show.empty_inspections') }}
+                <p class="font-medium text-slate-700">
+                    @if ($p2hSearch !== '' || $p2hDefect !== 'all')
+                        {{ __('fleet.show.no_filter_inspections') }}
+                    @else
+                        {{ __('fleet.show.empty_inspections') }}
+                    @endif
+                </p>
+                @if ($p2hSearch !== '' || $p2hDefect !== 'all')
+                    <button type="button" wire:click="resetP2hFilters"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition cursor-pointer active:scale-95">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                        <span>{{ __('fleet.show.reset_filter') }}</span>
+                    </button>
+                @endif
             </div>
         @else
-            <div class="rounded-2xl border border-slate-200/80 bg-white shadow-2xs overflow-hidden min-w-0">
-                <table class="w-full text-left border-collapse text-xs">
+            <div class="rounded-2xl border border-slate-200/80 bg-white shadow-2xs overflow-x-auto min-w-0">
+                <table class="w-full text-left border-collapse text-xs min-w-[600px] sm:min-w-full">
                     <thead>
                         <tr class="border-b border-slate-200/80 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                             <th class="py-2.5 px-3">{{ __('fleet.show.th_date_time') }}</th>

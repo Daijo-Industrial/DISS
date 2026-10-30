@@ -40,7 +40,7 @@
             {{-- Plate Chassis & Status Badges --}}
             <div class="space-y-1.5 min-w-0 flex-1">
                 <div class="inline-flex items-center rounded-xl bg-slate-950 px-3 py-1 text-white shadow-xs">
-                    <span class="font-mono text-base sm:text-lg font-black tracking-wider text-slate-50">
+                    <span class="font-mono text-base sm:text-lg font-black tracking-wider text-slate-50 whitespace-nowrap">
                         {{ $vehicle->plate_number }}
                     </span>
                 </div>
@@ -71,6 +71,12 @@
                 <span class="text-slate-400 shrink-0">{{ __('fleet.common.brand') }} / {{ __('fleet.common.model') }}:</span>
                 <span class="font-bold text-slate-900 text-right min-w-0 break-words">{{ trim($vehicle->brand . ' ' . $vehicle->model) }} {{ $vehicle->year ? "({$vehicle->year})" : '' }}</span>
             </div>
+            @if ($vehicle->vin)
+                <div class="flex items-center justify-between text-slate-600 gap-2 min-w-0">
+                    <span class="text-slate-400 shrink-0">VIN:</span>
+                    <span class="font-mono text-[11px] font-semibold text-slate-800 text-right min-w-0 truncate select-all" title="{{ $vehicle->vin }}">{{ $vehicle->vin }}</span>
+                </div>
+            @endif
             <div class="flex items-center justify-between text-slate-600 gap-2 min-w-0">
                 <span class="text-slate-400 shrink-0">{{ __('fleet.common.fuel_type') }}:</span>
                 <span class="font-semibold text-slate-800 text-right min-w-0 break-words">{{ $vehicle->fuel_type_label }}</span>
@@ -87,12 +93,19 @@
 
         {{-- Apple Live Activity Banner (When On-Trip) --}}
         @if ($isOut && $vehicle->activeCheckOut)
-            <div class="rounded-2xl bg-amber-50/80 border border-amber-200/60 p-3 text-xs text-amber-950 space-y-1 min-w-0">
-                <div class="flex items-center gap-2">
-                    <span class="h-2 w-2 rounded-full bg-amber-500 shrink-0"></span>
-                    <span class="font-bold text-amber-900">{{ __('fleet.show.active_trip_alert') }}</span>
+            <div class="rounded-2xl bg-amber-50/80 border border-amber-200/60 p-3 text-xs text-amber-950 space-y-1.5 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-1.5">
+                        <span class="h-2 w-2 rounded-full bg-amber-500 shrink-0"></span>
+                        <span class="font-bold text-amber-900">{{ __('fleet.show.active_trip_alert') }}</span>
+                    </div>
+                    @if ($activeTrip?->elapsed_text)
+                        <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 shrink-0">
+                            {{ $activeTrip->elapsed_text }}
+                        </span>
+                    @endif
                 </div>
-                <div class="text-[11px] text-amber-800 pl-4 space-y-0.5 min-w-0">
+                <div class="text-[11px] text-amber-800 pl-3.5 space-y-0.5 min-w-0 border-l border-amber-200/80">
                     <div>{{ __('fleet.common.driver') }}: <strong>{{ $vehicle->activeCheckOut->driver_name }}</strong></div>
                     <div>{{ __('fleet.show.departed_at') }} <strong>{{ ($vehicle->activeCheckOut->checked_at ?? $vehicle->activeCheckOut->created_at)->isoFormat('HH:mm') }} WIB</strong> ({{ number_format($vehicle->activeCheckOut->odometer) }} km)</div>
                     @if ($vehicle->activeCheckOut->trip_purpose)

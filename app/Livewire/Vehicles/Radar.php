@@ -17,14 +17,20 @@ class Radar extends Component
 
     public bool $canManage = false;
 
+    public bool $canInspect = false;
+
+    public string $lastUpdatedAt = '';
+
     public function mount(): void
     {
         $user = auth()->user();
-        if (! $user?->can('fleet.view') && ! $user?->can('fleet.manage')) {
+        if (! ($user?->can('fleet.view') || $user?->can('fleet.manage') || $user?->can('fleet.inspect'))) {
             abort(403);
         }
 
         $this->canManage = $user->can('fleet.manage') ?? false;
+        $this->canInspect = $user->can('fleet.inspect') ?? false;
+        $this->lastUpdatedAt = now()->format('H:i:s');
     }
 
     public function getMetricsProperty(): array
@@ -100,6 +106,10 @@ class Radar extends Component
 
     public function getOrphanCheckoutsProperty()
     {
+        if (! $this->canInspect) {
+            return collect();
+        }
+
         $activeCheckoutIds = Vehicle::query()
             ->whereNull('deleted_at')
             ->whereNotIn('status', ['sold', 'retired'])
@@ -121,11 +131,15 @@ class Radar extends Component
 
     public function render()
     {
+        $this->lastUpdatedAt = now()->format('H:i:s');
+
         return view('livewire.vehicles.radar', [
             'metrics' => $this->metrics,
             'liveActiveTrips' => $this->liveActiveTrips,
             'orphanCheckouts' => $this->orphanCheckouts,
             'canManage' => $this->canManage,
+            'canInspect' => $this->canInspect,
+            'lastUpdatedAt' => $this->lastUpdatedAt,
         ]);
     }
 }

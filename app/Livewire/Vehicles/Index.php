@@ -98,6 +98,10 @@ class Index extends Component
                 $this->selectedStatuses = ['in_pool', 'on_trip', 'maintenance'];
             }
         }
+
+        if ($this->viewMode === 'grid' && $this->perPage === 10) {
+            $this->perPage = 12;
+        }
     }
 
     public function sortBy(string $field): void
@@ -312,6 +316,11 @@ class Index extends Component
     {
         if (in_array($mode, ['grid', 'table'], true)) {
             $this->viewMode = $mode;
+            if ($mode === 'grid' && $this->perPage === 10) {
+                $this->perPage = 12;
+            } elseif ($mode === 'table' && $this->perPage === 12) {
+                $this->perPage = 10;
+            }
         }
     }
 
@@ -479,8 +488,10 @@ class Index extends Component
             'alerts' => $complianceAlerts->count(),
         ];
 
+        $effectivePerPage = ($this->viewMode === 'grid' && $this->perPage === 10) ? 12 : $this->perPage;
+
         return view('livewire.vehicles.index', [
-            'vehicles' => $query->paginate($this->perPage),
+            'vehicles' => $query->paginate($effectivePerPage),
             'canManage' => $this->canManage,
             'fullFeature' => $this->canManage,
             'complianceAlerts' => $complianceAlerts,

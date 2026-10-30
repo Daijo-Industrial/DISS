@@ -80,24 +80,34 @@ Managed by `App\Livewire\Vehicles\InspectionForm`:
 
 - **Dedicated Live Radar (`/vehicles/radar` - `vehicles/radar.blade.php`)**:
   - Gated by `fleet.view` or `fleet.manage`.
-  - **Live Operational Telemetry**: Strictly 1 card per vehicle on trip via `Vehicle::whereHas('activeCheckOut')`, eliminating duplicate cards and aligning card count with header metric.
+  - **Ultra-Lean Live Cards**: Strictly 1 calm neutral card (`bg-white border-slate-200`) per vehicle on trip via `Vehicle::whereHas('activeCheckOut')`. Displays plate, model, elapsed duration pill, driver, purpose, and subtle footer (departure time, PIC inspector, and link). Odometer, fuel gauges, and loud amber borders are removed to eliminate visual noise on first landing.
   - **Inspector Fallback Invariant**: When displaying the inspector name in cards and logs, resolve in priority order: `{{ $trip->created_by ?: ($trip->inspector?->name ?? '—') }}`.
-  - **Historical Orphan Checkouts Alert**: Collapsible alert for older unclosed checkouts not belonging to current `activeCheckOut`, with direct links to vehicle inspection history.
+  - **Historical Orphan Checkouts Alert**: Calm collapsible alert for older unclosed checkouts not belonging to current `activeCheckOut`, with direct links to vehicle inspection history. Strictly restricted to users authorized to inspect vehicles (`fleet.inspect`); viewers without inspect capability do not see this banner.
   - Auto-refresh polling (`wire:poll.30s`) and manual refresh trigger.
 - **Dedicated Daily Operations Cockpit (`/vehicles/operations` - `vehicles/operations.blade.php`)**:
   - Gated by `fleet.manage`.
   - **Weekly Day-Strip Navigation**: 7-day Monday–Sunday strip with week steppers (`previousWeek()` / `nextWeek()`), future days disabled, calendar picker, and dynamic `[Hari Ini]` button.
   - **Unified Timeline Rail**: Continuous vertical spine (`border-l-2`) with color-coded nodes (🟢 normal, 🔴 defect, 🟣 service, 🔵 direct check-in). Merges `TYPE_CHECK_IN` and `ServiceRecord` into `$timelineEvents` sorted by timestamp descending, terminated by start-of-day anchor.
-  - **Progressive Disclosure**: Header shows time badge (`H:i WIB`), span, and health pill. Body shows plate, driver, purpose, defect note, and metrics (`+km`, `% BBM`). Expand toggle (`x-show="expanded"`) reveals 4-metric grid, defect photos with lightbox, and vehicle profile link.
+  - **Unified Single-Layer Timeline Cards**: Eliminates redundant accordion toggles and collapsible drawers to remove click friction. Each completed trip is a single clean card:
+    - Header: Time badge (`H:i WIB`), span (`08:00 → 10:30 (2j 30m)`) or `[Check-in Langsung]`, and health badge (`P2H Normal` or `Defek Dilaporkan`).
+    - Body: Vehicle avatar, plate (with `whitespace-nowrap`), model, driver, purpose, and defect note (`⚠️ Catatan kerusakan: ...`). Defect photo thumbnails are removed from the timeline feed to keep it lean, accessible via vehicle profile cockpit.
+    - Unified Footer Ledger Bar: Trip metrics and inspector in one clean footer row:
+      - Paired trip: `+50 km (50,000 → 50,050 km) • BBM 70% (-10%) • Petugas: Gate Security • [Lihat Unit →]`.
+      - Direct check-in: `15,000 km • BBM 80% • Petugas: PIC • [Lihat Unit →]`.
   - **Zero Duplication**: Ongoing trips are strictly exclusive to `/vehicles/radar`.
 - **Vehicle Index (`vehicles/index.blade.php`)**:
   - Category filter defaults to `passenger`.
   - Filter drawer (`x-collapse`) houses operational status and gallery sorting.
   - Table view features column header sorting and interactive multi-select popovers for Category and Status.
 - **Vehicle Detail Cockpit (`vehicles/show.blade.php`)**:
-  - Initial load presents focused `max-w-xl` cockpit. Expanding tabs transitions to `max-w-7xl` 2-column layout (`lg:col-span-4` sticky cockpit, `lg:col-span-8` tab details).
-  - Tab quick access card shows real-time badge counts for P2H, Documents, and Services.
+  - Permanent 2-column split cockpit (`max-w-7xl` with `lg:col-span-4` sticky cockpit and `lg:col-span-8` tab details).
+  - **Contextual Back Link**: Dynamically returns user to their origin view (`from=operations` returns to Daily Operations, `from=radar` returns to Live Radar, default to Catalog).
+  - **Single Source of Truth for Active Trip**: When on trip, live activity status (elapsed time, driver, departed time, odo, purpose) and the primary `[Check-in]` action are centralized in the Left Sticky Cockpit, eliminating duplicate banners from Tab 1.
+  - **Mobile Table Ergonomics**: Tables in Tab 1 (P2H) and Tab 3 (Services) are wrapped with `overflow-x-auto` to allow smooth horizontal scrolling on mobile viewports without squishing columns.
+  - **Specs Card**: Houses Brand/Model, VIN (if present), Fuel Type, Assigned Driver, and Odometer.
+  - **P2H Logbook Filter Reset**: Empty search states display a contextual message and quick reset button (`resetP2hFilters()`).
 - **Universal Lightbox**: Modal image preview (`$dispatch('open-lightbox', { src, title, subtitle })`).
+- **Live Operational Radar (`/vehicles/radar`)**: Dedicated telemetry screen featuring a unified Live capsule with an animated green beacon (`animate-ping`), uppercase `LIVE` badge, live timestamp (`Diperbarui: HH:mm:ss WIB`), automatic 30s background poll, and loading-spin manual refresh.
 - **Bilingual Parity**: All P2H UI strings must have matching keys in `lang/id/fleet.php` and `lang/en/fleet.php`.
 - **Permissions (`PermissionRegistry.php`)**:
   - `fleet.view`: View fleet lists and cockpit overview.

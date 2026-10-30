@@ -67,6 +67,15 @@ return [
         'sold' => 'Terjual / Dihapus',
     ],
 
+    'statuses' => [
+        'active' => 'Aktif',
+        'in_pool' => 'Standby di Pool',
+        'on_trip' => 'Sedang di Jalan',
+        'maintenance' => 'Dalam Perawatan',
+        'retired' => 'Nonaktif / Dihapus',
+        'sold' => 'Terjual',
+    ],
+
     'tabs' => [
         'overview' => 'Ringkasan',
         'inspections' => 'Riwayat P2H',
@@ -216,7 +225,9 @@ return [
 
     'show' => [
         'cockpit_title' => 'Cockpit Armada',
-        'back_to_index' => 'Daftar Armada',
+        'back_to_index' => 'Katalog Armada',
+        'back_to_operations' => 'Operasional Harian',
+        'back_to_radar' => 'Live Radar',
         'btn_checkout' => 'P2H Check-out (Berangkat)',
         'btn_checkin' => 'Check-in (Pulang ke Pool)',
         'btn_print_qr' => 'Cetak Stiker QR',
@@ -271,6 +282,8 @@ return [
         'filter_severity_defects' => 'Hanya Temuan Rusak',
         'filter_severity_critical' => 'Hanya Kritis',
         'empty_inspections' => 'Belum ada riwayat inspeksi P2H untuk armada ini.',
+        'no_filter_inspections' => 'Tidak ada riwayat inspeksi P2H yang sesuai dengan filter pencarian.',
+        'reset_filter' => 'Reset Filter',
         'finding_label' => 'Temuan:',
         'escalate_service_btn' => 'Buat Servis',
         'view_checklist_details' => 'Lihat Rincian Checklist & Foto',
