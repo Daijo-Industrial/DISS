@@ -17,6 +17,11 @@
             // Default: 'grid' for tablets & mobile (< 1280px), 'table' for laptop screens (>= 1280px)
             return window.innerWidth < 1280 ? 'grid' : 'table';
         })(),
+        init() {
+            if (this.viewMode === 'grid' && $wire.viewMode !== 'grid') {
+                $wire.setViewMode('grid');
+            }
+        },
         setView(mode) {
             this.userSelected = true;
             this.viewMode = mode;
@@ -26,6 +31,7 @@
                 url.searchParams.set('view', mode);
                 window.history.replaceState({}, '', url);
             } catch (e) {}
+            $wire.setViewMode(mode);
         },
         handleResize() {
             if (!this.userSelected) {
@@ -169,9 +175,15 @@
             <div class="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                 <select wire:model.live="perPage"
                     class="rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 sm:py-1.5 px-2.5 text-xs font-semibold text-slate-700 hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition cursor-pointer">
-                    <option value="10">10 / hal</option>
-                    <option value="20">20 / hal</option>
-                    <option value="50">50 / hal</option>
+                    @if ($viewMode === 'grid')
+                        <option value="12">12 / hal</option>
+                        <option value="24">24 / hal</option>
+                        <option value="48">48 / hal</option>
+                    @else
+                        <option value="10">10 / hal</option>
+                        <option value="20">20 / hal</option>
+                        <option value="50">50 / hal</option>
+                    @endif
                 </select>
 
                 <div class="inline-flex rounded-xl bg-slate-100/90 p-0.5 border border-slate-200/60">
@@ -339,7 +351,7 @@
                                     </span>
                                 @endif
                                 <div>
-                                    <div class="font-mono text-sm font-bold tracking-tight text-slate-900 group-hover:text-indigo-600 transition-colors">
+                                    <div class="font-mono text-sm font-bold tracking-tight text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">
                                         {{ $v->plate_number }}
                                     </div>
                                     <div class="text-xs text-slate-500 font-medium">

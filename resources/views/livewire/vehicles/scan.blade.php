@@ -344,7 +344,7 @@
                                         @endif
                                     </div>
                                     <div class="min-w-0 flex-1">
-                                        <span class="font-mono text-xs font-bold text-slate-900 group-hover:text-indigo-600 truncate">{{ $v->plate_number }}</span>
+                                        <span class="font-mono text-xs font-bold text-slate-900 group-hover:text-indigo-600 whitespace-nowrap block">{{ $v->plate_number }}</span>
                                         <span class="text-[10px] text-slate-500 truncate">{{ $v->brand }} {{ $v->model }}</span>
                                         @if ($v->driver_name)
                                             <span class="text-[9px] text-slate-400 truncate flex items-center gap-1 mt-0.5">

@@ -715,7 +715,11 @@ class VehicleInspectionAndComplianceTest extends TestCase
         Livewire::actingAs($this->user)
             ->test(VehiclesRadar::class)
             ->assertSee('Live Operational Radar')
-            ->assertSee('Auto-refresh');
+            ->assertSee('Diperbarui');
+
+        $this->assertEquals('Dalam Perawatan', __('fleet.statuses.maintenance'));
+        $this->assertEquals('Terjual', __('fleet.statuses.sold'));
+        $this->assertStringContainsString('Catatan Keberangkatan Lama Belum Terselesaikan', __('fleet.operations.orphan_alert_title', ['count' => 3]));
 
         // English (Switched)
         app()->setLocale('en');
@@ -726,6 +730,9 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $this->assertEquals('Periodic KIR Inspection', $doc->type_label);
         $this->assertStringContainsString('Renewal Due', $doc->status_label);
         $this->assertEquals('Safe (Fit to Drive)', $inspection->severity_label);
+        $this->assertEquals('In Maintenance', __('fleet.statuses.maintenance'));
+        $this->assertEquals('Sold', __('fleet.statuses.sold'));
+        $this->assertStringContainsString('Unresolved Historical Checkouts', __('fleet.operations.orphan_alert_title', ['count' => 3]));
 
         // Verify P2H form renders English
         Livewire::actingAs($this->user)
@@ -746,7 +753,7 @@ class VehicleInspectionAndComplianceTest extends TestCase
         Livewire::actingAs($this->user)
             ->test(VehiclesRadar::class)
             ->assertSee('Live Operational Radar')
-            ->assertSee('Auto-refresh');
+            ->assertSee('Updated');
 
         // Reset back to id
         app()->setLocale('id');
@@ -1400,16 +1407,27 @@ class VehicleInspectionAndComplianceTest extends TestCase
 
     public function test_vehicle_show_permanent_two_column_cockpit_and_paired_p2h_journeys(): void
     {
-        // 1. Initial mount has permanent two-column layout without collapsing wrapper
+        // 1. Initial mount has permanent two-column layout and default catalog back link
         $component = Livewire::actingAs($this->user)
             ->test(VehicleShow::class, ['vehicle' => $this->vehicle]);
 
-        $component->assertSet('showRightLayout', true)
-            ->assertSeeHtml('max-w-7xl')
+        $component->assertSeeHtml('max-w-7xl')
             ->assertDontSeeHtml('max-w-xl')
             ->assertDontSee('Buka Detail')
             ->assertSee(__('fleet.show.inspections_title'))
-            ->assertSee(__('fleet.show.empty_inspections'));
+            ->assertSee(__('fleet.show.empty_inspections'))
+            ->assertSee(__('fleet.show.back_to_index'));
+
+        // 1b. Contextual back links when coming from operations or radar
+        Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'from' => 'operations'])
+            ->assertSee(__('fleet.show.back_to_operations'))
+            ->assertSeeHtml(route('vehicles.operations'));
+
+        Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $this->vehicle, 'from' => 'radar'])
+            ->assertSee(__('fleet.show.back_to_radar'))
+            ->assertSeeHtml(route('vehicles.radar'));
 
         // 2. Tab switching updates tab property
         $component->call('setTab', 'documents')
@@ -1468,9 +1486,13 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->assertSee(__('fleet.inspection.severity_minor'))
             ->assertSee('Baret halus pintu kiri belakang');
 
-        // 5. Live search filters by driver name
+        // 5. Live search filters by driver name and displays reset filter button when empty
         $inspectionComponent->set('p2hSearch', 'NonExistentDriver')
             ->assertDontSee('Bambang Sudirno')
+            ->assertSee(__('fleet.show.no_filter_inspections'))
+            ->assertSee(__('fleet.show.reset_filter'))
+            ->call('resetP2hFilters')
+            ->assertSee('Bambang Sudirno')
             ->set('p2hSearch', 'Bambang')
             ->assertSee('Bambang Sudirno');
 
@@ -1966,16 +1988,22 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $component = Livewire::actingAs($this->user)
             ->test(VehiclesOperations::class);
 
-        // 1. Initial dayLog is Today
+        // 1. Initial dayLog is Today: Unified single-layer card with integrated footer ledger (no accordion toggle)
         $todayLog = $component->get('dayLog');
         $this->assertTrue($todayLog->is_today);
         $this->assertEquals(1, $todayLog->total_trips);
         $this->assertEquals(50, $todayLog->total_distance);
         $this->assertEquals(0, $todayLog->total_defects);
         $component->assertSee('+50 km')
-            ->assertSee('Kirim Sample Hari Ini');
+            ->assertSee('50,000 → 50,050 km')
+            ->assertSee('BBM 70%')
+            ->assertSee('Gate Security')
+            ->assertSee(__('fleet.operations.view_vehicle'))
+            ->assertSee('Kirim Sample Hari Ini')
+            ->assertDontSee(__('fleet.operations.view_telemetry'))
+            ->assertDontSee(__('fleet.operations.hide_telemetry'));
 
-        // 2. Switch to Yesterday
+        // 2. Switch to Yesterday: Unified card displays defect text note cleanly without accordion
         $component->call('setDatePreset', 'yesterday');
         $yesterdayLog = $component->get('dayLog');
         $this->assertTrue($yesterdayLog->is_yesterday);
@@ -1984,7 +2012,10 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $this->assertEquals(1, $yesterdayLog->total_defects);
         $component->assertSee('Lampu sein kanan mati')
             ->assertSee('+120 km')
-            ->assertSee('Kunjungan Luar Kota Kemarin');
+            ->assertSee('49,800 → 49,920 km')
+            ->assertSee('BBM 75%')
+            ->assertSee('Kunjungan Luar Kota Kemarin')
+            ->assertDontSee(__('fleet.operations.defect_findings'));
     }
 
     public function test_daily_operations_date_filtering_and_navigation(): void
@@ -2129,6 +2160,10 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $radarComponent = Livewire::actingAs($this->user)
             ->test(VehiclesRadar::class);
 
+        $this->assertNotEmpty($radarComponent->get('lastUpdatedAt'));
+        $radarComponent->assertSee(__('fleet.operations.last_updated'))
+            ->assertSee('WIB');
+
         $this->assertCount(1, $radarComponent->get('liveActiveTrips'));
         $radarComponent->assertSee('Active Driver')
             ->assertSee('Antar Logistik Urgent')
@@ -2143,9 +2178,15 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->assertSee('B 9999 ORP')
             ->assertSee('Old Driver');
 
-        // 5. Test Live Radar authorization for fleet.view users
+        // 5. Test Live Radar authorization for fleet.view users (viewer without fleet.inspect cannot see orphan alert)
         $viewerUser = User::factory()->create();
         $viewerUser->givePermissionTo('fleet.view');
+
+        $viewerRadar = Livewire::actingAs($viewerUser)
+            ->test(VehiclesRadar::class);
+
+        $this->assertCount(0, $viewerRadar->get('orphanCheckouts'));
+        $viewerRadar->assertDontSeeHtml('Catatan Keberangkatan Lama Belum Terselesaikan');
 
         $this->actingAs($viewerUser)
             ->get(route('vehicles.radar'))
@@ -2171,10 +2212,13 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->assertSee('Live Radar')
             ->assertSee('Operasional Harian');
 
-        // 2. Manager on Live Radar (/vehicles/radar) has auto-refresh and refresh button, without redundant header navigation buttons
+        // 2. Manager on Live Radar (/vehicles/radar) has LIVE indicator, last updated timestamp, and refresh button, without redundant auto-refresh label or header navigation buttons
         Livewire::actingAs($this->user)
             ->test(VehiclesRadar::class)
-            ->assertSee(__('fleet.operations.auto_refresh'))
+            ->assertSee('LIVE')
+            ->assertDontSee(__('fleet.operations.auto_refresh'))
+            ->assertSee(__('fleet.operations.last_updated'))
+            ->assertSee('WIB')
             ->assertSeeHtml('wire:click="$refresh"');
 
         // 3. Manager on Daily Operations (/vehicles/operations) has breadcrumb, without redundant header navigation buttons
@@ -2325,5 +2369,40 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->assertSeeHtml('14:45')
             ->assertDontSeeHtml('16:15')
             ->assertDontSeeHtml('21:45');
+    }
+
+    public function test_vehicles_index_grid_view_mode_defaults_to_twelve_per_page(): void
+    {
+        Permission::firstOrCreate(['name' => 'fleet.view', 'guard_name' => 'web']);
+        $this->user->givePermissionTo('fleet.view');
+
+        // 1. Initial table view mode defaults to 10 per page
+        $component = Livewire::actingAs($this->user)
+            ->test(VehiclesIndex::class);
+
+        $this->assertEquals('table', $component->get('viewMode'));
+        $this->assertEquals(10, $component->get('perPage'));
+        $component->assertSeeHtml('10 / hal');
+
+        // 2. Switching to grid view mode updates perPage to 12
+        $component->call('setViewMode', 'grid');
+        $this->assertEquals('grid', $component->get('viewMode'));
+        $this->assertEquals(12, $component->get('perPage'));
+        $component->assertSeeHtml('12 / hal');
+
+        // 3. Switching back to table view mode updates perPage to 10
+        $component->call('setViewMode', 'table');
+        $this->assertEquals('table', $component->get('viewMode'));
+        $this->assertEquals(10, $component->get('perPage'));
+        $component->assertSeeHtml('10 / hal');
+
+        // 4. Initializing with grid view in query parameter loads 12 per page directly
+        $gridComponent = Livewire::actingAs($this->user)
+            ->withQueryParams(['view' => 'grid'])
+            ->test(VehiclesIndex::class);
+
+        $this->assertEquals('grid', $gridComponent->get('viewMode'));
+        $this->assertEquals(12, $gridComponent->get('perPage'));
+        $gridComponent->assertSeeHtml('12 / hal');
     }
 }

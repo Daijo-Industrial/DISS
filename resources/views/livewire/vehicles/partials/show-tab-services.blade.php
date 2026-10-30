@@ -60,8 +60,8 @@
             {{ __('fleet.show.empty_services') }}
         </div>
     @else
-        <div class="rounded-2xl border border-slate-200/80 overflow-hidden min-w-0">
-            <table class="w-full divide-y divide-slate-200 text-left text-xs">
+        <div class="rounded-2xl border border-slate-200/80 bg-white shadow-2xs overflow-x-auto min-w-0">
+            <table class="w-full divide-y divide-slate-200 text-left text-xs min-w-[560px] sm:min-w-full">
                 <thead class="bg-slate-50 font-semibold text-slate-600 uppercase tracking-wider text-[11px]">
                     <tr>
                         <th class="px-3 py-2.5">{{ __('fleet.show.col_service_date') }}</th>

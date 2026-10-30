@@ -67,6 +67,15 @@ return [
         'sold' => 'Sold / Decommissioned',
     ],
 
+    'statuses' => [
+        'active' => 'Active',
+        'in_pool' => 'Standby in Pool',
+        'on_trip' => 'On-Trip',
+        'maintenance' => 'In Maintenance',
+        'retired' => 'Retired',
+        'sold' => 'Sold',
+    ],
+
     'tabs' => [
         'overview' => 'Overview',
         'inspections' => 'Inspection History',
@@ -216,7 +225,9 @@ return [
 
     'show' => [
         'cockpit_title' => 'Vehicle Cockpit',
-        'back_to_index' => 'Fleet List',
+        'back_to_index' => 'Fleet Catalog',
+        'back_to_operations' => 'Daily Operations',
+        'back_to_radar' => 'Live Radar',
         'btn_checkout' => 'P2H Check-out (Departure)',
         'btn_checkin' => 'Check-in (Return to Pool)',
         'btn_print_qr' => 'Print QR Sticker',
@@ -271,6 +282,8 @@ return [
         'filter_severity_defects' => 'Defects Only',
         'filter_severity_critical' => 'Critical Only',
         'empty_inspections' => 'No daily inspection records found for this vehicle.',
+        'no_filter_inspections' => 'No inspection records match the current search filter.',
+        'reset_filter' => 'Reset Filters',
         'finding_label' => 'Defect Finding:',
         'escalate_service_btn' => 'Create Service',
         'view_checklist_details' => 'View Checklist Details & Photos',

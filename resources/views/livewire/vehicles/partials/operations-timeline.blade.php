@@ -105,9 +105,7 @@
                         $trip = $event;
                         $v = $trip->vehicle;
                     @endphp
-                    <div wire:key="timeline-trip-{{ $trip->id }}"
-                        x-data="{ expanded: {{ $trip->has_defect ? 'true' : 'false' }} }"
-                        class="relative pl-5 sm:pl-7">
+                    <div wire:key="timeline-trip-{{ $trip->id }}" class="relative pl-5 sm:pl-7">
 
                         {{-- Timeline Node on the Left Spine --}}
                         <div class="absolute -left-[15px] sm:-left-[17px] top-3.5 flex items-center justify-center">
@@ -129,7 +127,7 @@
                         {{-- Event Card --}}
                         <div class="rounded-2xl border transition-all duration-200 shadow-xs hover:shadow-sm {{ $trip->has_defect ? 'border-rose-300/80 bg-rose-50/15' : 'border-slate-200/90 bg-white' }} p-3.5 sm:p-4 space-y-3">
                             
-                            {{-- Top Header Row: Time, Type, Status & Toggle --}}
+                            {{-- Top Header Row: Time, Type, Status --}}
                             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
                                 <div class="flex flex-wrap items-center gap-2">
                                     {{-- Primary Event Time Badge --}}
@@ -154,8 +152,8 @@
                                     @endif
                                 </div>
 
-                                {{-- Right: Health Badge & Expand Toggle --}}
-                                <div class="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                                {{-- Right: Health Badge --}}
+                                <div class="flex items-center gap-2 self-start sm:self-auto shrink-0">
                                     @if ($trip->has_defect)
                                         <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold ring-1 ring-inset ring-rose-200">
                                             <i class="bi bi-exclamation-triangle-fill text-[9px]"></i>
@@ -167,205 +165,89 @@
                                             <span>{{ __('fleet.operations.passed_p2h') }}</span>
                                         </span>
                                     @endif
-
-                                    {{-- Toggle Button --}}
-                                    <button type="button" @click="expanded = !expanded"
-                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold transition active:scale-95 cursor-pointer shadow-2xs">
-                                        <span x-text="expanded ? '{{ __('fleet.operations.hide_telemetry') }}' : '{{ __('fleet.operations.view_telemetry') }}'"></span>
-                                        <i class="bi bi-chevron-down text-[9px] transition-transform duration-200" :class="expanded ? 'rotate-180' : ''"></i>
-                                    </button>
                                 </div>
                             </div>
 
-                            {{-- Main Body: Vehicle, Driver, Purpose & Summary Pills --}}
-                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                                {{-- Left: Vehicle & Driver Identity --}}
-                                <div class="flex items-start gap-3 min-w-0">
-                                    @if ($v?->image_path)
-                                        <button type="button" @click.stop="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $v->image_path) }}', title: '{{ __('fleet.show.lightbox_vehicle_photo', ['plate' => $v->plate_number]) }}', subtitle: '{{ trim($v->brand . ' ' . $v->model) }}' })"
-                                            class="shrink-0 cursor-pointer">
-                                            <img src="{{ asset('storage/' . $v->image_path) }}" alt="{{ $v->plate_number }}"
-                                                class="h-10 w-10 rounded-xl object-cover border border-slate-200/80 shadow-2xs">
-                                        </button>
-                                    @else
-                                        <span class="h-10 w-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center text-sm shrink-0">
-                                            <i class="bi bi-car-front-fill"></i>
+                            {{-- Main Body: Vehicle, Driver, Purpose & Defect Notes --}}
+                            <div class="flex items-start gap-3 min-w-0">
+                                @if ($v?->image_path)
+                                    <button type="button" @click.stop="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $v->image_path) }}', title: '{{ __('fleet.show.lightbox_vehicle_photo', ['plate' => $v->plate_number]) }}', subtitle: '{{ trim($v->brand . ' ' . $v->model) }}' })"
+                                        class="shrink-0 cursor-pointer">
+                                        <img src="{{ asset('storage/' . $v->image_path) }}" alt="{{ $v->plate_number }}"
+                                            class="h-10 w-10 rounded-xl object-cover border border-slate-200/80 shadow-2xs">
+                                    </button>
+                                @else
+                                    <span class="h-10 w-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center text-sm shrink-0">
+                                        <i class="bi bi-car-front-fill"></i>
+                                    </span>
+                                @endif
+
+                                <div class="min-w-0 space-y-0.5 flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <a href="{{ $v ? route('vehicles.show', ['vehicle' => $v, 'from' => 'operations']) : '#' }}" wire:navigate
+                                            class="font-mono text-sm font-bold text-slate-900 hover:text-indigo-600 transition whitespace-nowrap">
+                                            {{ $v?->plate_number ?: '—' }}
+                                        </a>
+                                        <span class="text-slate-300">•</span>
+                                        <span class="text-slate-600 text-xs truncate">{{ trim(($v?->brand ?? '') . ' ' . ($v?->model ?? '')) }}</span>
+                                    </div>
+
+                                    <div class="text-xs text-slate-600 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                        <span class="font-medium text-slate-800 flex items-center gap-1">
+                                            <i class="bi bi-person text-slate-400"></i>
+                                            {{ $trip->driver_name }}
                                         </span>
-                                    @endif
-
-                                    <div class="min-w-0 space-y-0.5">
-                                        <div class="flex items-center gap-2">
-                                            <a href="{{ $v ? route('vehicles.show', $v) : '#' }}" wire:navigate
-                                                class="font-mono text-sm font-bold text-slate-900 hover:text-indigo-600 transition truncate">
-                                                {{ $v?->plate_number ?: '—' }}
-                                            </a>
+                                        @if ($trip->trip_purpose)
                                             <span class="text-slate-300">•</span>
-                                            <span class="text-slate-600 text-xs truncate">{{ trim(($v?->brand ?? '') . ' ' . ($v?->model ?? '')) }}</span>
-                                        </div>
-
-                                        <div class="text-xs text-slate-600 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                                            <span class="font-medium text-slate-800 flex items-center gap-1">
-                                                <i class="bi bi-person text-slate-400"></i>
-                                                {{ $trip->driver_name }}
-                                            </span>
-                                            @if ($trip->trip_purpose)
-                                                <span class="text-slate-300">•</span>
-                                                <span class="italic text-slate-500 truncate max-w-sm">"{{ $trip->trip_purpose }}"</span>
-                                            @endif
-                                        </div>
-
-                                        @if ($trip->has_defect && $trip->defect_notes)
-                                            <div class="text-[11px] font-medium text-rose-700 flex items-center gap-1.5 pt-0.5">
-                                                <i class="bi bi-exclamation-triangle-fill text-rose-500 text-[10px] shrink-0"></i>
-                                                <span class="truncate">{{ $trip->defect_notes }}</span>
-                                            </div>
+                                            <span class="italic text-slate-500 truncate max-w-sm">"{{ $trip->trip_purpose }}"</span>
                                         @endif
                                     </div>
-                                </div>
 
-                                {{-- Right: Glanceable Metric Pills --}}
-                                <div class="flex items-center gap-2 self-start md:self-center shrink-0">
+                                    @if ($trip->has_defect && $trip->defect_notes)
+                                        <div class="text-[11px] font-medium text-rose-700 flex items-center gap-1.5 pt-0.5">
+                                            <i class="bi bi-exclamation-triangle-fill text-rose-500 text-[10px] shrink-0"></i>
+                                            <span>{{ $trip->defect_notes }}</span>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+
+                            {{-- Unified Footer Ledger Bar --}}
+                            <div class="pt-2.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 text-xs text-slate-500">
+                                <div class="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px]">
                                     @if ($trip->is_direct_check_in)
-                                        <span class="px-2.5 py-1 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700 text-xs font-mono font-bold">
-                                            {{ number_format($trip->ret_odometer) }} km
-                                        </span>
-                                        <span class="px-2 py-1 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-600 text-xs font-mono">
-                                            {{ $trip->ret_fuel ?? '-' }}% BBM
-                                        </span>
+                                        <span class="font-bold text-slate-900">{{ number_format($trip->ret_odometer) }} km</span>
+                                        <span class="text-slate-300">•</span>
+                                        <span class="text-slate-600">BBM {{ $trip->ret_fuel ?? '-' }}%</span>
                                     @else
-                                        <span class="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-900 text-xs font-mono font-bold">
-                                            +{{ number_format($trip->distance) }} km
-                                        </span>
+                                        <span class="font-bold text-slate-900">+{{ number_format($trip->distance) }} km</span>
+                                        <span class="text-slate-400">({{ number_format($trip->dep_odometer) }} → {{ number_format($trip->ret_odometer) }} km)</span>
                                         @if ($trip->ret_fuel !== null)
+                                            <span class="text-slate-300">•</span>
                                             @php
                                                 $fuelDelta = ($trip->dep_fuel !== null) ? ((int) $trip->ret_fuel - (int) $trip->dep_fuel) : 0;
                                             @endphp
-                                            <span class="px-2 py-1 rounded-xl bg-slate-50 border border-slate-200/70 text-xs font-mono font-semibold {{ $fuelDelta < 0 ? 'text-slate-600' : 'text-emerald-600' }}">
-                                                {{ $trip->ret_fuel }}% BBM
+                                            <span class="text-slate-600">
+                                                BBM {{ $trip->ret_fuel }}%
                                                 @if ($trip->dep_fuel !== null && $fuelDelta !== 0)
-                                                    <span class="text-[10px]">({{ $fuelDelta > 0 ? '+' . $fuelDelta : $fuelDelta }}%)</span>
+                                                    <span class="{{ $fuelDelta < 0 ? 'text-slate-500' : 'text-emerald-600 font-semibold' }}">({{ $fuelDelta > 0 ? '+' . $fuelDelta : $fuelDelta }}%)</span>
                                                 @endif
                                             </span>
                                         @endif
                                     @endif
-                                </div>
-                            </div>
-
-                            {{-- Collapsible Drill-Down Drawer --}}
-                            <div x-show="expanded" x-transition class="pt-3 border-t border-slate-100 space-y-3 text-xs">
-                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-slate-50/80 rounded-xl p-3 border border-slate-200/60">
-                                    {{-- Duration --}}
-                                    <div>
-                                        <span class="text-slate-400 block text-[10px] uppercase font-bold">{{ __('fleet.operations.duration') }}</span>
-                                        @if ($trip->is_direct_check_in)
-                                            <div class="font-medium text-slate-700 font-mono text-[11px] mt-0.5">
-                                                {{ $trip->ret_time ? $trip->ret_time->format('H:i') . ' WIB' : '—' }}
-                                            </div>
-                                            <div class="text-[10px] text-slate-400 italic">
-                                                {{ __('fleet.show.no_departure_data') }}
-                                            </div>
-                                        @else
-                                            <div class="font-medium text-slate-900 font-mono">
-                                                {{ $trip->dep_time ? $trip->dep_time->format('H:i') : '—' }} → {{ $trip->ret_time ? $trip->ret_time->format('H:i') : '—' }}
-                                            </div>
-                                            <div class="text-[10px] text-slate-500 font-medium">
-                                                {{ $trip->duration_text ?: '—' }}
-                                            </div>
-                                        @endif
-                                    </div>
-
-                                    {{-- Distance & Odometers --}}
-                                    <div>
-                                        <span class="text-slate-400 block text-[10px] uppercase font-bold">{{ __('fleet.operations.distance') }}</span>
-                                        @if ($trip->is_direct_check_in)
-                                            <div class="font-bold text-slate-900 font-mono">
-                                                {{ number_format($trip->ret_odometer) }} km
-                                            </div>
-                                            <div class="text-[10px] text-slate-400 italic">
-                                                {{ __('fleet.show.no_departure_data') }}
-                                            </div>
-                                        @else
-                                            <div class="font-bold text-slate-900 font-mono">
-                                                +{{ number_format($trip->distance) }} km
-                                            </div>
-                                            <div class="text-[10px] text-slate-500 font-mono">
-                                                {{ number_format($trip->dep_odometer) }} → {{ number_format($trip->ret_odometer) }} km
-                                            </div>
-                                        @endif
-                                    </div>
-
-                                    {{-- Fuel Delta --}}
-                                    <div>
-                                        <span class="text-slate-400 block text-[10px] uppercase font-bold">{{ __('fleet.operations.fuel') }}</span>
-                                        @if ($trip->is_direct_check_in)
-                                            <div class="font-medium text-slate-900 font-mono">
-                                                {{ $trip->ret_fuel ?? '-' }}%
-                                            </div>
-                                            <div class="text-[10px] text-slate-400 italic">
-                                                {{ __('fleet.show.no_departure_data') }}
-                                            </div>
-                                        @else
-                                            <div class="font-medium text-slate-900 font-mono">
-                                                {{ $trip->dep_fuel }}% → {{ $trip->ret_fuel }}%
-                                            </div>
-                                            @php
-                                                $fuelDiff = (int) $trip->ret_fuel - (int) $trip->dep_fuel;
-                                            @endphp
-                                            <div class="text-[10px] font-medium {{ $fuelDiff < 0 ? 'text-slate-500' : 'text-emerald-600' }}">
-                                                {{ $fuelDiff > 0 ? '+' . $fuelDiff : $fuelDiff }}%
-                                            </div>
-                                        @endif
-                                    </div>
-
-                                    {{-- Inspector & Verification --}}
-                                    <div>
-                                        <span class="text-slate-400 block text-[10px] uppercase font-bold">{{ __('fleet.operations.inspector') }}</span>
-                                        <div class="font-medium text-slate-900 truncate">
-                                            {{ $trip->inspector_name }}
-                                        </div>
-                                        @if ($v)
-                                            <a href="{{ route('vehicles.show', ['vehicle' => $v->id, 'tab' => 'inspections']) }}" wire:navigate
-                                                class="text-indigo-600 hover:text-indigo-800 text-[10px] font-semibold transition inline-flex items-center gap-1 mt-0.5">
-                                                <span>{{ __('fleet.operations.view_details') }}</span>
-                                                <i class="bi bi-arrow-right text-[9px]"></i>
-                                            </a>
-                                        @endif
-                                    </div>
+                                    <span class="text-slate-300">•</span>
+                                    <span class="font-sans text-slate-600">
+                                        <span class="text-slate-400">{{ __('fleet.operations.inspector') }}:</span>
+                                        <span class="font-medium text-slate-700">{{ $trip->inspector_name }}</span>
+                                    </span>
                                 </div>
 
-                                {{-- Defect Finding Callout --}}
-                                @if ($trip->has_defect)
-                                    <div class="rounded-xl bg-rose-50/80 border border-rose-200/80 p-3 space-y-1.5 text-rose-950">
-                                        <div class="flex items-center justify-between">
-                                            <div class="flex items-center gap-1.5 font-bold text-rose-900">
-                                                <i class="bi bi-exclamation-triangle-fill text-rose-600"></i>
-                                                <span>{{ __('fleet.operations.defect_findings') }}</span>
-                                            </div>
-                                            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full {{ $trip->defect_severity === 'critical_grounded' ? 'bg-rose-200 text-rose-900' : 'bg-amber-100 text-amber-900' }}">
-                                                {{ $trip->defect_severity === 'critical_grounded' ? __('fleet.inspection.severity_critical') : __('fleet.inspection.severity_minor') }}
-                                            </span>
-                                        </div>
-
-                                        @if ($trip->defect_notes)
-                                            <p class="text-rose-900/90 text-xs pl-5 font-normal">
-                                                {{ $trip->defect_notes }}
-                                            </p>
-                                        @endif
-
-                                        @if (!empty($trip->defect_photos) && is_array($trip->defect_photos))
-                                            <div class="flex items-center gap-2 pl-5 pt-1">
-                                                @foreach ($trip->defect_photos as $photo)
-                                                    <button type="button" @click.stop="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $photo) }}', title: '{{ __('fleet.operations.defect_photo_title', ['plate' => $v?->plate_number]) }}', subtitle: '{{ $trip->defect_notes }}' })"
-                                                        class="group/photo relative rounded-lg overflow-hidden border border-rose-200 shadow-2xs hover:scale-105 transition cursor-pointer">
-                                                        <img src="{{ asset('storage/' . $photo) }}" alt="{{ __('fleet.operations.defects') }}" class="h-10 w-10 object-cover">
-                                                        <div class="absolute inset-0 bg-black/20 opacity-0 group-hover/photo:opacity-100 flex items-center justify-center transition">
-                                                            <i class="bi bi-zoom-in text-white text-xs"></i>
-                                                        </div>
-                                                    </button>
-                                                @endforeach
-                                            </div>
-                                        @endif
-                                    </div>
+                                @if ($v)
+                                    <a href="{{ route('vehicles.show', ['vehicle' => $v->id, 'tab' => 'inspections', 'from' => 'operations']) }}" wire:navigate
+                                        class="text-indigo-600 hover:text-indigo-800 text-[11px] font-semibold transition inline-flex items-center gap-1 shrink-0">
+                                        <span>{{ __('fleet.operations.view_vehicle') }}</span>
+                                        <i class="bi bi-arrow-right text-[10px]"></i>
+                                    </a>
                                 @endif
                             </div>
                         </div>
@@ -409,8 +291,8 @@
                                     </span>
                                     <div class="min-w-0 space-y-0.5">
                                         <div class="flex items-center gap-2">
-                                            <a href="{{ $sv ? route('vehicles.show', ['vehicle' => $sv->id, 'tab' => 'services']) : '#' }}" wire:navigate
-                                                class="font-mono font-bold text-slate-900 hover:text-purple-700 transition">
+                                            <a href="{{ $sv ? route('vehicles.show', ['vehicle' => $sv->id, 'tab' => 'services', 'from' => 'operations']) : '#' }}" wire:navigate
+                                                class="font-mono font-bold text-slate-900 hover:text-purple-700 transition whitespace-nowrap">
                                                 {{ $sv?->plate_number ?: '—' }}
                                             </a>
                                             <span class="text-slate-300">•</span>

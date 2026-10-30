@@ -27,16 +27,11 @@
             </div>
         </div>
 
-        {{-- Right Controls: Auto-Refresh Status & Refresh Button --}}
+        {{-- Right Controls: Refresh Button --}}
         <div class="flex items-center gap-2 self-start sm:self-auto text-xs text-slate-500">
-            <span class="inline-flex items-center gap-1.5 text-xs text-slate-400 mr-1">
-                <span class="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse shrink-0"></span>
-                <span>{{ __('fleet.operations.auto_refresh') }} (30s)</span>
-            </span>
-
             <button type="button" wire:click="$refresh"
                 class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition active:scale-95 cursor-pointer shadow-2xs">
-                <i class="bi bi-arrow-clockwise text-xs"></i>
+                <i class="bi bi-arrow-clockwise text-xs" wire:loading.class="animate-spin" wire:target="$refresh"></i>
                 <span class="hidden sm:inline">{{ __('fleet.operations.refresh') }}</span>
             </button>
         </div>
