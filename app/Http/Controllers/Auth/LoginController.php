@@ -55,5 +55,17 @@ class LoginController extends Controller
                     $this->username() => 'Your account is currently suspended. Please contact the administrator.',
                 ]);
         }
+
+        // Enforce email verification check
+        if (! $user->hasVerifiedEmail()) {
+            auth()->logout();
+
+            return redirect('/login')
+                ->withInput($request->only($this->username(), 'remember'))
+                ->withErrors([
+                    $this->username() => 'Your email address is not verified. Please verify your email before logging in.',
+                ])
+                ->with('unverified_email', $user->email);
+        }
     }
 }
