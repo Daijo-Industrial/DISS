@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginAssistanceController;
+use App\Http\Controllers\Auth\VerificationController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\JobProgressController;
@@ -28,7 +29,14 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', fn () => Auth::check() ? redirect()->intended('/home') : redirect()->intended(route('login')))->name('/');
 
 // Laravel Authentication Routes
-Auth::routes();
+Auth::routes(['verify' => true]);
+
+// Public Email Verification Resend
+Route::get('/email/resend-verification', [VerificationController::class, 'showResendForm'])
+    ->name('verification.resend.form');
+Route::post('/email/resend-verification', [VerificationController::class, 'resendGuest'])
+    ->middleware(['throttle:6,1'])
+    ->name('verification.resend.guest');
 
 // Public Support & Login Assistance
 Route::post('/support/login-assistance', [LoginAssistanceController::class, 'store'])

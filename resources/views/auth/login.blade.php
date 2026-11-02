@@ -73,6 +73,19 @@
                     </ul>
                 </div>
             </div>
+
+            @if (session('unverified_email'))
+                <div class="mt-3 pt-3 border-t border-rose-200/60 flex items-center justify-between">
+                    <span class="text-xs font-semibold text-rose-700">Need a new verification link?</span>
+                    <a href="{{ route('verification.resend.form', ['email' => session('unverified_email')]) }}"
+                        class="inline-flex items-center gap-1 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-rose-700 transition-colors">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        Resend Link
+                    </a>
+                </div>
+            @endif
         </div>
     @endif
 
@@ -168,6 +181,17 @@
                 </svg>
                 <span>{{ __('ticketing.login_help.trigger') }}</span>
             </button>
+        </div>
+
+        {{-- Public Resend Verification Link --}}
+        <div class="pt-1.5 text-center">
+            <a href="{{ route('verification.resend.form') }}"
+                class="text-xs font-medium text-slate-400 hover:text-blue-600 transition-colors inline-flex items-center gap-1">
+                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span>Resend verification email</span>
+            </a>
         </div>
 
     </form>
