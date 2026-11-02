@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Infrastructure\Persistence\Eloquent\Models\Vehicle;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class VehicleInspection extends Model
 {
@@ -90,22 +92,22 @@ class VehicleInspection extends Model
         ];
     }
 
-    public function vehicle()
+    public function vehicle(): BelongsTo
     {
         return $this->belongsTo(Vehicle::class);
     }
 
-    public function inspector()
+    public function inspector(): BelongsTo
     {
         return $this->belongsTo(User::class, 'inspector_id');
     }
 
-    public function parentCheckOut()
+    public function parentCheckOut(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_inspection_id');
     }
 
-    public function checkInRecord()
+    public function checkInRecord(): HasOne
     {
         return $this->hasOne(self::class, 'parent_inspection_id');
     }

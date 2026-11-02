@@ -2936,4 +2936,139 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->assertSee('Driver Oktober')
             ->assertSee('Driver September');
     }
+
+    public function test_unclosed_trip_with_subsequent_completed_trips_is_not_treated_as_active_trip(): void
+    {
+        $vehicle = Vehicle::create([
+            'plate_number' => 'B 7777 UNC',
+            'driver_name' => 'Driver Uji',
+            'brand' => 'Toyota',
+            'model' => 'Avanza',
+            'category' => 'passenger',
+            'fuel_type' => 'petrol',
+            'requires_kir' => false,
+            'odometer' => 10000,
+            'status' => VehicleStatus::ACTIVE,
+        ]);
+
+        // Trip 1: Historical unclosed checkout (never checked in)
+        $unclosedTrip = VehicleInspection::create([
+            'vehicle_id' => $vehicle->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_OUT,
+            'driver_name' => 'Driver Unclosed',
+            'trip_purpose' => 'Pengiriman Sampel Historis',
+            'odometer' => 10000,
+            'fuel_percentage' => 85,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+            'inspector_id' => $this->user->id,
+            'checked_at' => Carbon::parse('2026-10-01 08:00:00'),
+        ]);
+
+        // Trip 2: Subsequent completed trip (happened AFTER Trip 1)
+        $completedCheckOut = VehicleInspection::create([
+            'vehicle_id' => $vehicle->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_OUT,
+            'driver_name' => 'Driver Lengkap',
+            'trip_purpose' => 'Kunjungan Dinas Sukses',
+            'odometer' => 10050,
+            'fuel_percentage' => 80,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+            'inspector_id' => $this->user->id,
+            'checked_at' => Carbon::parse('2026-10-02 09:00:00'),
+        ]);
+
+        $completedCheckIn = VehicleInspection::create([
+            'vehicle_id' => $vehicle->id,
+            'parent_inspection_id' => $completedCheckOut->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_IN,
+            'driver_name' => 'Driver Lengkap',
+            'trip_purpose' => 'Kunjungan Dinas Sukses',
+            'odometer' => 10150,
+            'fuel_percentage' => 65,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+            'inspector_id' => $this->user->id,
+            'checked_at' => Carbon::parse('2026-10-02 17:00:00'),
+        ]);
+
+        // 1. Vehicle model state verification:
+        // Even though Trip 1 has no check-in, Trip 2 happened after it and completed.
+        // Therefore, the vehicle is NOT out on a trip, and activeCheckOut is null.
+        $vehicle->refresh();
+        $this->assertFalse($vehicle->is_out_on_trip);
+        $this->assertNull($vehicle->activeCheckOut);
+
+        // 2. Timeline view verification:
+        // Trip 1 must be flagged as unclosed trip, NOT active trip in progress.
+        $component = Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $vehicle, 'tab' => 'inspections']);
+
+        $component->assertSee(__('fleet.show.unclosed_trip'))
+            ->assertSee(__('fleet.show.unclosed_no_checkin'))
+            ->assertSee(__('fleet.show.unclosed_trip_notice_title'))
+            ->assertSee(__('fleet.show.unclosed_trip_notice_desc'))
+            ->assertDontSee(__('fleet.show.active_trip_in_progress'));
+
+        // 3. Now trigger a real active checkout (Trip 3, with no subsequent trips)
+        $activeCheckOut = VehicleInspection::create([
+            'vehicle_id' => $vehicle->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_OUT,
+            'driver_name' => 'Driver Terkini',
+            'trip_purpose' => 'Perjalanan Yang Sedang Aktif',
+            'odometer' => 10160,
+            'fuel_percentage' => 60,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+            'inspector_id' => $this->user->id,
+            'checked_at' => Carbon::parse('2026-10-03 08:30:00'),
+        ]);
+
+        $vehicle->refresh();
+        $this->assertTrue($vehicle->is_out_on_trip);
+        $this->assertNotNull($vehicle->activeCheckOut);
+        $this->assertEquals($activeCheckOut->id, $vehicle->activeCheckOut->id);
+
+        // 4. In timeline, Trip 3 is active, while Trip 1 remains unclosed
+        $componentActive = Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $vehicle, 'tab' => 'inspections']);
+
+        $componentActive->assertSee(__('fleet.show.active_trip_in_progress'))
+            ->assertSee(__('fleet.show.unclosed_trip'))
+            ->assertSee(__('fleet.show.unclosed_trip_notice_title'));
+
+        // 5. Critical Edge Case: Backdated/retroactive inspection entered later (higher ID, earlier checked_at)
+        // Must NOT dislodge or corrupt Trip 3 as the active checkout.
+        $backdatedRecord = VehicleInspection::create([
+            'vehicle_id' => $vehicle->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_IN,
+            'driver_name' => 'Driver Terlambat Catat',
+            'trip_purpose' => 'Kunjungan Masa Lalu',
+            'odometer' => 10020,
+            'fuel_percentage' => 82,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+            'inspector_id' => $this->user->id,
+            'checked_at' => Carbon::parse('2026-10-01 12:00:00'), // Older than Trip 3
+        ]);
+
+        $vehicle->refresh();
+        $this->assertTrue($vehicle->is_out_on_trip);
+        $this->assertNotNull($vehicle->activeCheckOut);
+        $this->assertEquals($activeCheckOut->id, $vehicle->activeCheckOut->id);
+
+        // 6. Highlight dismissal directly from the card
+        $highlightComponent = Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, [
+                'vehicle' => $vehicle,
+                'tab' => 'inspections',
+                'highlight' => (string) $activeCheckOut->id,
+            ]);
+
+        $highlightComponent->assertSee(__('fleet.show.target_selected'))
+            ->assertSeeHtml('wire:click="$set(\'highlight\', null)"')
+            ->call('$set', 'highlight', null)
+            ->assertDontSee(__('fleet.show.target_selected'));
+    }
 }

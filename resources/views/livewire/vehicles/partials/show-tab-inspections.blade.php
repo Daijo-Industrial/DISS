@@ -281,6 +281,8 @@
                         $isPaired = $isCheckIn && $parent;
                         $isDirectCheckIn = $isCheckIn && !$parent;
                         $isUnclosedCheckOut = !$isCheckIn;
+                        $isActiveTrip = $isUnclosedCheckOut && ($vehicle->is_out_on_trip && $vehicle->activeCheckOut && (string) $vehicle->activeCheckOut->id === (string) $ins->id);
+                        $isHistoricalUnclosedTrip = $isUnclosedCheckOut && ! $isActiveTrip;
 
                         $depTime = ($isPaired || $isUnclosedCheckOut) ? ($parent ? ($parent->checked_at ?? $parent->created_at) : ($ins->checked_at ?? $ins->created_at)) : null;
                         $retTime = $isCheckIn ? ($ins->checked_at ?? $ins->created_at) : null;
@@ -389,16 +391,18 @@
                         class="relative transition-all duration-300">
 
                         {{-- Spine Node Icon --}}
-                        <div class="absolute -left-[31px] sm:-left-[39px] top-3.5 flex h-6 w-6 items-center justify-center rounded-full bg-white ring-4 {{ $isCritical ? 'ring-rose-100 text-rose-600' : ($hasDefect ? 'ring-amber-100 text-amber-600' : ($isUnclosedCheckOut ? 'ring-amber-100 text-amber-600' : 'ring-emerald-100 text-emerald-600')) }} shadow-xs z-10 text-xs">
+                        <div class="absolute -left-[31px] sm:-left-[39px] top-3.5 flex h-6 w-6 items-center justify-center rounded-full bg-white ring-4 {{ $isCritical ? 'ring-rose-100 text-rose-600' : ($hasDefect ? 'ring-amber-100 text-amber-600' : ($isActiveTrip ? 'ring-amber-100 text-amber-600' : ($isHistoricalUnclosedTrip ? 'ring-slate-100 text-slate-500' : 'ring-emerald-100 text-emerald-600'))) }} shadow-xs z-10 text-xs">
                             @if ($isCritical)
                                 <i class="bi bi-exclamation-octagon-fill text-rose-600"></i>
                             @elseif ($hasDefect)
                                 <i class="bi bi-exclamation-triangle-fill text-amber-600"></i>
-                            @elseif ($isUnclosedCheckOut)
+                            @elseif ($isActiveTrip)
                                 <span class="relative flex h-2 w-2">
                                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                                     <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
                                 </span>
+                            @elseif ($isHistoricalUnclosedTrip)
+                                <i class="bi bi-clock-history text-slate-500"></i>
                             @else
                                 <i class="bi bi-check-circle-fill text-emerald-600"></i>
                             @endif
@@ -427,19 +431,28 @@
                                             <span class="rounded-md bg-indigo-50 border border-indigo-200/70 px-1.5 py-0.2 text-[10px] font-sans font-bold text-indigo-700" title="{{ __('fleet.show.direct_checkin') }}">
                                                 {{ __('fleet.show.direct_checkin') }}
                                             </span>
-                                        @else
+                                        @elseif ($isActiveTrip)
                                             <span class="font-bold text-slate-700">{{ $depTime->format('H:i') }}</span>
                                             <span class="rounded-md bg-amber-50 border border-amber-200/70 px-1.5 py-0.2 text-[10px] font-sans font-bold text-amber-700 animate-pulse">
                                                 {{ __('fleet.show.active_trip_in_progress') }}
+                                            </span>
+                                        @else
+                                            <span class="font-bold text-slate-700">{{ $depTime->format('H:i') }}</span>
+                                            <span class="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-slate-200/80 px-1.5 py-0.2 text-[10px] font-sans font-semibold text-slate-600">
+                                                <i class="bi bi-clock-history text-[10px]"></i>
+                                                {{ __('fleet.show.unclosed_trip') }}
                                             </span>
                                         @endif
                                     </div>
 
                                     @if ($isHighlighted)
-                                        <span class="inline-flex items-center gap-1 rounded-md bg-indigo-600 text-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider animate-pulse shadow-2xs">
-                                            <i class="bi bi-geo-alt-fill text-[9px]"></i>
+                                        <button type="button" wire:click="$set('highlight', null)"
+                                            class="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider shadow-2xs transition active:scale-95 cursor-pointer group"
+                                            title="{{ __('fleet.show.clear_highlight') }}">
+                                            <i class="bi bi-geo-alt-fill text-[9px] animate-pulse"></i>
                                             <span>{{ __('fleet.show.target_selected') }}</span>
-                                        </span>
+                                            <i class="bi bi-x-lg text-[9px] text-indigo-200 group-hover:text-white ml-0.5"></i>
+                                        </button>
                                     @endif
                                 </div>
 
@@ -455,6 +468,11 @@
                                         <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 text-[11px] font-bold text-amber-700">
                                             <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
                                             <span>{{ __('fleet.inspection.severity_minor') }}</span>
+                                        </span>
+                                    @elseif ($isHistoricalUnclosedTrip)
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">
+                                            <i class="bi bi-clock-history text-[10px]"></i>
+                                            <span>{{ __('fleet.show.unclosed_no_checkin') }}</span>
                                         </span>
                                     @else
                                         <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700">
@@ -558,6 +576,19 @@
                                                 <span>{{ __('fleet.show.escalate_service_btn') }} →</span>
                                             </a>
                                         @endif
+                                    </div>
+                                @endif
+
+                                {{-- Unclosed Trip Informational Banner --}}
+                                @if ($isHistoricalUnclosedTrip)
+                                    <div class="rounded-xl border border-amber-200/90 bg-amber-50/60 p-3 flex items-start gap-2.5 text-amber-900">
+                                        <i class="bi bi-clock-history text-sm text-amber-600 shrink-0 mt-0.5"></i>
+                                        <div class="text-xs min-w-0">
+                                            <span class="font-bold block">{{ __('fleet.show.unclosed_trip_notice_title') }}</span>
+                                            <p class="text-xs text-amber-800/90 mt-0.5">
+                                                {{ __('fleet.show.unclosed_trip_notice_desc') }}
+                                            </p>
+                                        </div>
                                     </div>
                                 @endif
                             </div>
@@ -798,7 +829,7 @@
                                         {{-- Header --}}
                                         <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
                                             <div class="flex items-center gap-2">
-                                                <span class="flex h-6 w-6 items-center justify-center rounded-lg {{ $isCheckIn ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600' }} text-xs shrink-0">
+                                                <span class="flex h-6 w-6 items-center justify-center rounded-lg {{ $isCheckIn ? 'bg-emerald-50 text-emerald-600' : ($isActiveTrip ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-600') }} text-xs shrink-0">
                                                     <i class="bi {{ $isCheckIn ? 'bi-box-arrow-in-down' : 'bi-box-arrow-up-right' }}"></i>
                                                 </span>
                                                 <div>
@@ -815,8 +846,12 @@
                                                 <span class="text-xs text-slate-400 italic">
                                                     {{ __('fleet.show.no_departure_data') }}
                                                 </span>
-                                            @elseif ($isUnclosedCheckOut)
-                                                <span class="text-xs text-amber-700 font-semibold">
+                                            @elseif ($isActiveTrip)
+                                                <span class="text-xs text-amber-700 font-semibold animate-pulse">
+                                                    {{ __('fleet.show.active_trip_in_progress') }}
+                                                </span>
+                                            @elseif ($isHistoricalUnclosedTrip)
+                                                <span class="text-xs text-slate-500 font-semibold">
                                                     {{ __('fleet.show.unclosed_trip') }}
                                                 </span>
                                             @endif
@@ -833,6 +868,15 @@
                                                 <span class="w-full text-slate-500 italic mt-0.5 truncate">{{ __('fleet.show.purpose_label') }}: "{{ $journeyPurpose }}"</span>
                                             @endif
                                         </div>
+
+                                        @if ($isHistoricalUnclosedTrip)
+                                            <div class="rounded-xl border border-amber-200/90 bg-amber-50/60 p-2.5 text-xs text-amber-900 flex items-start gap-2">
+                                                <i class="bi bi-clock-history text-xs text-amber-600 shrink-0 mt-0.5"></i>
+                                                <p class="text-[11px] text-amber-800 leading-snug">
+                                                    {{ __('fleet.show.unclosed_trip_notice_desc') }}
+                                                </p>
+                                            </div>
+                                        @endif
 
                                         {{-- Defect Finding (if any) --}}
                                         @if (!empty($ins->defect_notes))

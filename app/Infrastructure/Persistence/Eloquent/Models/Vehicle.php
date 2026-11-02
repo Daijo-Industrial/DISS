@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Infrastructure\Persistence\Eloquent\Models;
 
 use App\Enums\VehicleStatus;
@@ -9,6 +11,7 @@ use App\Models\VehicleInspection;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Vehicle extends Model
 {
@@ -90,12 +93,23 @@ class Vehicle extends Model
         return $this->hasMany(VehicleInspection::class)->orderByDesc('checked_at')->orderByDesc('id');
     }
 
-    public function activeCheckOut()
+    public function activeCheckOut(): HasOne
     {
         return $this->hasOne(VehicleInspection::class)
             ->where('inspection_type', VehicleInspection::TYPE_CHECK_OUT)
             ->whereDoesntHave('checkInRecord')
-            ->latestOfMany();
+            ->whereNotExists(function ($query) {
+                $query->selectRaw(1)
+                    ->from('vehicle_inspections as newer_ins')
+                    ->whereColumn('newer_ins.vehicle_id', 'vehicle_inspections.vehicle_id')
+                    ->where(function ($nq) {
+                        $nq->whereColumn('newer_ins.checked_at', '>', 'vehicle_inspections.checked_at')
+                            ->orWhere(function ($sub) {
+                                $sub->whereColumn('newer_ins.checked_at', '=', 'vehicle_inspections.checked_at')
+                                    ->whereColumn('newer_ins.id', '>', 'vehicle_inspections.id');
+                            });
+                    });
+            });
     }
 
     public function getIsOutOnTripAttribute(): bool
