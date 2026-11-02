@@ -2628,6 +2628,10 @@ class VehicleInspectionAndComplianceTest extends TestCase
             ->assertSet('highlight', (string) $checkIn->id)
             ->assertSeeHtml('id="inspection-' . $checkIn->id . '"')
             ->assertSeeHtml('data-checkout-id="inspection-' . $checkOut->id . '"')
+            ->assertSeeHtml('data-inspection-id="' . $checkIn->id . '"')
+            ->assertSeeHtml('data-parent-id="' . $checkOut->id . '"')
+            ->assertSeeHtml('scrollInspectionTargetIntoView')
+            ->assertSeeHtml('@click="toggleAll()"')
             ->assertSeeHtml('ring-2 ring-indigo-500')
             ->assertSee(__('fleet.show.target_selected'))
             ->assertSee(__('fleet.show.highlight_active_banner', ['id' => $checkIn->id]))
@@ -2825,5 +2829,111 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $soldVehicle->save();
 
         $this->assertFalse($soldVehicle->fresh()->is_newly_added);
+    }
+
+    public function test_vehicle_show_inspection_history_timeline_feed_and_kpi_summary(): void
+    {
+        $vehicle = Vehicle::create([
+            'plate_number' => 'B 5555 TLN',
+            'brand' => 'Toyota',
+            'model' => 'Innova Zenix',
+            'category' => 'passenger',
+            'fuel_type' => 'petrol',
+            'odometer' => 10120,
+            'status' => VehicleStatus::ACTIVE,
+        ]);
+
+        // Trip 1: October 2026 - Clean trip (+120 km)
+        $octCheckOut = VehicleInspection::create([
+            'vehicle_id' => $vehicle->id,
+            'inspection_type' => 'check_out',
+            'driver_name' => 'Driver Oktober',
+            'trip_purpose' => 'Antar Tamu Pabrik Cikarang',
+            'odometer' => 10000,
+            'fuel_percentage' => 85,
+            'checklist_results' => [],
+            'severity' => 'none',
+            'inspector_id' => $this->user->id,
+            'checked_at' => Carbon::parse('2026-10-15 08:00:00'),
+        ]);
+
+        $octCheckIn = VehicleInspection::create([
+            'vehicle_id' => $vehicle->id,
+            'parent_inspection_id' => $octCheckOut->id,
+            'inspection_type' => 'check_in',
+            'driver_name' => 'Driver Oktober',
+            'trip_purpose' => 'Antar Tamu Pabrik Cikarang',
+            'odometer' => 10120,
+            'fuel_percentage' => 70,
+            'checklist_results' => [],
+            'severity' => 'none',
+            'inspector_id' => $this->user->id,
+            'checked_at' => Carbon::parse('2026-10-15 11:30:00'),
+        ]);
+
+        // Trip 2: September 2026 - Defect trip (+100 km)
+        $sepCheckOut = VehicleInspection::create([
+            'vehicle_id' => $vehicle->id,
+            'inspection_type' => 'check_out',
+            'driver_name' => 'Driver September',
+            'trip_purpose' => 'Kunjungan Vendor Karawang',
+            'odometer' => 9800,
+            'fuel_percentage' => 90,
+            'checklist_results' => [],
+            'severity' => 'none',
+            'inspector_id' => $this->user->id,
+            'checked_at' => Carbon::parse('2026-09-10 09:00:00'),
+        ]);
+
+        $sepCheckIn = VehicleInspection::create([
+            'vehicle_id' => $vehicle->id,
+            'parent_inspection_id' => $sepCheckOut->id,
+            'inspection_type' => 'check_in',
+            'driver_name' => 'Driver September',
+            'trip_purpose' => 'Kunjungan Vendor Karawang',
+            'odometer' => 9900,
+            'fuel_percentage' => 75,
+            'checklist_results' => [],
+            'severity' => 'minor',
+            'defect_notes' => 'Lampu sein kiri depan berkedip cepat',
+            'inspector_id' => $this->user->id,
+            'checked_at' => Carbon::parse('2026-09-10 14:00:00'),
+        ]);
+
+        $component = Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $vehicle, 'tab' => 'inspections']);
+
+        // 1. KPI Summary checks
+        $component->assertSee(__('fleet.show.kpi_total_trips'))
+            ->assertSee(__('fleet.show.kpi_pass_rate'))
+            ->assertSee(__('fleet.show.kpi_p2h_distance'))
+            ->assertSee(__('fleet.show.kpi_last_inspected'))
+            ->assertSeeHtml('2') // Total trips
+            ->assertSeeHtml('50%') // 1 clean out of 2 trips
+            ->assertSeeHtml('+220'); // 120 + 100 km
+
+        // 2. Timeline cards render both trips
+        $component->assertSee('Driver Oktober')
+            ->assertSee('Antar Tamu Pabrik Cikarang')
+            ->assertSee('+120 km')
+            ->assertSee('Driver September')
+            ->assertSee('Kunjungan Vendor Karawang')
+            ->assertSee('+100 km')
+            ->assertSee('Lampu sein kiri depan berkedip cepat');
+
+        // 3. Month filtering: isolate October 2026
+        $component->set('p2hMonth', '2026-10')
+            ->assertSee('Driver Oktober')
+            ->assertDontSee('Driver September');
+
+        // 4. Month filtering: isolate September 2026
+        $component->set('p2hMonth', '2026-09')
+            ->assertDontSee('Driver Oktober')
+            ->assertSee('Driver September');
+
+        // 5. Reset filter restores both
+        $component->call('resetP2hFilters')
+            ->assertSee('Driver Oktober')
+            ->assertSee('Driver September');
     }
 }

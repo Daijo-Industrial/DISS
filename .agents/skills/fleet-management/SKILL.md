@@ -116,8 +116,14 @@ Managed by `App\Livewire\Vehicles\InspectionForm`:
   - Permanent 2-column split cockpit (`max-w-7xl` with `lg:col-span-4` sticky cockpit and `lg:col-span-8` tab details).
   - **Contextual Back Link**: Dynamically returns user to their origin view (`from=operations` returns to Daily Operations, `from=radar` returns to Live Radar, default to Catalog).
   - **Single Source of Truth for Active Trip**: When on trip, live activity status (elapsed time, driver, departed time, odo, purpose) and the primary `[Check-in]` action are centralized in the Left Sticky Cockpit, eliminating duplicate banners from Tab 1.
+  - **Inspection History Activity Timeline (Tab 1)**: Replaces rigid tables with a vertical activity timeline feed and top KPI summary strip:
+    - **KPI Summary Strip**: 4 top cards displaying Total Trips, Clean Pass Rate %, P2H Total Distance (`+km`), and Last Inspected date/status.
+    - **Timeline Spine & Nodes**: Continuous vertical rail with status nodes (🟢 clean, 🔴 defect, 🟡 ongoing trip, 🔵 direct check-in).
+    - **Journey Purpose Priority Invariant**: In paired trips, the primary journey destination/purpose is defined at Check-out (`$parent->trip_purpose ?: $ins->trip_purpose`). Check-in notes are rendered as secondary return remarks (`Catatan Kepulangan`).
+    - **Dual Inspection Drawer Comparison**: In paired trips, the collapsible drawer provides a side-by-side review of both the Departure (check-out) condition, checklist, and defect notes alongside the Arrival (check-in) condition, checklist, and defect notes.
+    - **Dedicated Feed Control Bar**: Live search, Month filter (`p2hMonth`), and Defect toggle in toolbar; 'Buka Semua / Tutup Semua' (Expand/Collapse All) toggle and total record count live in a dedicated sub-bar directly above the timeline feed.
   - **Inspection Deep-Linking & Auto-Scroll (`highlight={id}`)**: Query param `?tab=inspections&highlight={id}` on `vehicles/show`. Automatically resolves target page via `$this->setPage($targetPage)`, auto-expands drawer (`open = true`), and centers target row in view (`scrollIntoView({ behavior: 'smooth', block: 'center' })`) with indigo ring and dismissible highlight banner.
-  - **Mobile Table Ergonomics**: Tables in Tab 1 (P2H) and Tab 3 (Services) are wrapped with `overflow-x-auto` to allow smooth horizontal scrolling on mobile viewports without squishing columns.
+  - **Mobile Table Ergonomics**: Tables in Tab 3 (Services) are wrapped with `overflow-x-auto` to allow smooth horizontal scrolling on mobile viewports without squishing columns.
   - **Specs Card**: Houses Brand/Model, VIN (if present), Fuel Type, Assigned Driver, and Odometer.
   - **P2H Logbook Filter Reset**: Empty search states display a contextual message and quick reset button (`resetP2hFilters()`).
 - **Universal Lightbox**: Modal image preview (`$dispatch('open-lightbox', { src, title, subtitle })`).

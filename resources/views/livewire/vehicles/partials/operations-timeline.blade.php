@@ -298,11 +298,11 @@
             {{-- Filter resulted in empty set --}}
             <div class="rounded-2xl border border-dashed border-slate-200/90 bg-white p-8 text-center text-xs text-slate-400 space-y-2 shadow-2xs">
                 <i class="bi bi-funnel text-2xl text-slate-300 block mb-1"></i>
-                <h3 class="font-bold text-slate-700 text-sm">Tidak ada catatan untuk filter ini pada periode ini.</h3>
-                <p class="text-slate-400 text-[11px]">Coba ubah filter kategori atau klik tombol di bawah untuk menampilkan semua aktivitas.</p>
+                <h3 class="font-bold text-slate-700 text-sm">{{ __('fleet.operations.filter_empty_title') }}</h3>
+                <p class="text-slate-400 text-[11px]">{{ __('fleet.operations.filter_empty_desc') }}</p>
                 <button type="button" wire:click="setActivityFilter('all')" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition cursor-pointer">
                     <i class="bi bi-arrow-counterclockwise"></i>
-                    <span>Tampilkan Semua ({{ $periodLog->total_trips + $periodLog->total_services }})</span>
+                    <span>{{ __('fleet.operations.show_all_with_count', ['count' => $periodLog->total_trips + $periodLog->total_services]) }}</span>
                 </button>
             </div>
         @else

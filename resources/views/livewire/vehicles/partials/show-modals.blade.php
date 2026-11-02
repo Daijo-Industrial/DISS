@@ -14,8 +14,8 @@
                         <i class="bi bi-qr-code text-sm"></i>
                     </span>
                     <div>
-                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">Stiker Fisik Armada</h3>
-                        <p class="text-[10px] text-slate-400">Verifikasi unit &amp; inspeksi P2H</p>
+                        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">{{ __('fleet.show.qr_modal_title') }}</h3>
+                        <p class="text-[10px] text-slate-400">{{ __('fleet.show.qr_modal_subtitle') }}</p>
                     </div>
                 </div>
                 <button type="button" wire:click="closeQrModal" class="h-7 w-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer">
@@ -58,7 +58,7 @@
                         </div>
                     @else
                         <div class="w-44 h-44 sm:w-48 sm:h-48 flex items-center justify-center text-xs text-rose-500 border border-rose-200 rounded-lg">
-                            Gagal menghasilkan QR Code
+                            {{ __('fleet.show.qr_generation_failed') }}
                         </div>
                     @endif
                 </div>
@@ -67,7 +67,7 @@
                 <div class="rounded-lg bg-slate-50 border border-slate-100 py-1.5 px-2">
                     <div class="text-[11px] font-bold text-slate-900 flex items-center justify-center gap-1.5">
                         <i class="bi bi-phone text-slate-600"></i>
-                        <span>Pindai untuk P2H Check-out &amp; Check-in</span>
+                        <span>{{ __('fleet.show.qr_scan_prompt') }}</span>
                     </div>
                 </div>
 
@@ -84,7 +84,7 @@
                     @click="printVehicleQrSticker('{{ $qrCodeBase64 }}', '{{ addslashes($vehicle->plate_number) }}', '{{ addslashes(trim($vehicle->brand . ' ' . $vehicle->model)) }}', '{{ $vehicle->year }}', '{{ addslashes($vehicle->id) }}')"
                     class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow-2xs hover:bg-slate-800 transition active:scale-[0.98] cursor-pointer">
                     <i class="bi bi-printer text-sm"></i>
-                    <span>Cetak Stiker Fisik</span>
+                    <span>{{ __('fleet.show.qr_print_btn') }}</span>
                 </button>
 
                 {{-- Secondary Action Buttons --}}
@@ -93,7 +93,7 @@
                         <a href="data:image/png;base64,{{ $qrCodeBase64 }}" download="QR-Armada-{{ str_replace(' ', '-', $vehicle->plate_number) }}.png"
                             class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs cursor-pointer">
                             <i class="bi bi-download text-slate-500"></i>
-                            <span>Unduh PNG</span>
+                            <span>{{ __('fleet.show.qr_download_png') }}</span>
                         </a>
                     @endif
 
@@ -101,7 +101,7 @@
                         @click="navigator.clipboard.writeText('{{ $vehicle->id }}'); copied = true; setTimeout(() => copied = false, 2000)"
                         class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs cursor-pointer">
                         <i class="bi" :class="copied ? 'bi-check2 text-emerald-600' : 'bi-clipboard text-slate-500'"></i>
-                        <span x-text="copied ? 'Tersalin!' : 'Salin UUID'"></span>
+                        <span x-text="copied ? '{{ __('fleet.show.copied') }}' : '{{ __('fleet.show.copy_uuid') }}'">{{ __('fleet.show.copy_uuid') }}</span>
                     </button>
                 </div>
             </div>
@@ -320,7 +320,7 @@
                 <div class="flex flex-col items-center justify-center text-center p-3 rounded-2xl bg-slate-50 border border-slate-200">
                     @if ($new_photo)
                         <img src="{{ $new_photo->temporaryUrl() }}" class="h-32 w-32 aspect-square object-cover rounded-2xl border border-slate-200 shadow-2xs mb-2">
-                        <span class="text-xs font-semibold text-slate-800">Preview Baru</span>
+                        <span class="text-xs font-semibold text-slate-800">{{ __('fleet.show.new_preview') }}</span>
                     @elseif ($vehicle->image_path)
                         <img src="{{ asset('storage/' . $vehicle->image_path) }}" class="h-32 w-32 aspect-square object-cover rounded-2xl border border-slate-200 shadow-2xs mb-2">
                         <span class="text-xs text-slate-500 font-medium">{{ __('fleet.show.photo_modal_title') }}</span>
