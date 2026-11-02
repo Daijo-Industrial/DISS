@@ -76,3 +76,6 @@
   - **User-Centric UI Terminology**: Never leak implementation or component jargon (e.g. "Accordion", "Modal", "Drawer", "Card", "Tab") into user-facing action labels, headers, or buttons. Use intent-based action verbs (e.g. "Open All" / "Collapse All", "View Details", "Filter") rather than component-derived labels ("Open All Accordions", "Open Modal").
   - **Plain Language Invariant**: User-facing operational and field views (fleet, gate security, inventory) strictly use plain, direct vocabulary over engineering jargon (e.g. "Data Perjalanan" / "Trip Info" over "Telemetry"; "Lihat Rincian" / "View Details").
   - Soft geometry (`rounded-2xl`), subtle rings (`ring-1 ring-slate-900/5`), `Plus Jakarta Sans` typography hierarchy over high-contrast fills.
+- **Stable Primary Page Identity**: Primary page titles (`<h1>`) and breadcrumbs remain constant across view/scope/filter changes. Dynamic state (active timeframe, filters, modes) belongs strictly in segmented controls or summary badges, never mutating the page header.
+- **Card Telemetry Decoupling**: In responsive card grids (~260–300px), primary identifiers (avatar, title/plate) must not share a flex row with variable-length duration/status badges. Place variable timers in a dedicated full-width capsule row below the header row.
+

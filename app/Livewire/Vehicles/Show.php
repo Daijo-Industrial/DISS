@@ -29,10 +29,16 @@ class Show extends Component
     #[Url]
     public ?string $from = null; // 'operations', 'radar', or null
 
+    #[Url]
+    public ?string $highlight = null; // Inspection ID to highlight and scroll into view
+
     // P2H Journey filters
     public string $p2hSearch = '';
 
     public string $p2hDefect = 'all'; // 'all', 'defects_only'
+
+    #[Url]
+    public string $p2hMonth = ''; // 'YYYY-MM' (e.g. '2026-10') or empty for all
 
     public function updatedP2hSearch(): void
     {
@@ -42,6 +48,22 @@ class Show extends Component
     public function updatedP2hDefect(): void
     {
         $this->resetPage();
+    }
+
+    public function updatedP2hMonth(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedHighlight(): void
+    {
+        if ($this->highlight) {
+            $this->tab = 'inspections';
+            $this->p2hSearch = '';
+            $this->p2hDefect = 'all';
+            $this->p2hMonth = '';
+            $this->resetPage();
+        }
     }
 
     // Service filters
@@ -119,7 +141,7 @@ class Show extends Component
 
     public $new_photo = null;
 
-    public function mount(Vehicle $vehicle, ?string $tab = null, ?string $from = null): void
+    public function mount(Vehicle $vehicle, ?string $tab = null, ?string $from = null, ?string $highlight = null): void
     {
         $user = auth()->user();
         if (! ($user?->can('fleet.view') || $user?->can('fleet.manage') || $user?->can('fleet.inspect'))) {
@@ -142,7 +164,19 @@ class Show extends Component
             $this->from = request('from');
         }
 
-        if ($tab !== null && in_array($tab, ['services', 'inspections', 'documents'], true)) {
+        if ($highlight !== null) {
+            $this->highlight = $highlight;
+        } elseif (request()->has('highlight')) {
+            $this->highlight = (string) request('highlight');
+        }
+
+        if ($this->highlight) {
+            // When specific inspection is targeted, default to inspections tab and clear filters
+            $this->tab = 'inspections';
+            $this->p2hSearch = '';
+            $this->p2hDefect = 'all';
+            $this->p2hMonth = '';
+        } elseif ($tab !== null && in_array($tab, ['services', 'inspections', 'documents'], true)) {
             $this->tab = ($tab === 'documents' && ! $this->canViewDocuments) ? 'inspections' : $tab;
         } elseif (request()->has('tab') && in_array(request('tab'), ['services', 'inspections', 'documents'], true)) {
             $requestedTab = request('tab');
@@ -182,6 +216,8 @@ class Show extends Component
     {
         $this->p2hSearch = '';
         $this->p2hDefect = 'all';
+        $this->p2hMonth = '';
+        $this->highlight = null;
         $this->resetPage();
     }
 
@@ -224,6 +260,9 @@ class Show extends Component
 
         if (in_array($tab, ['services', 'inspections', 'documents'], true)) {
             $this->tab = $tab;
+            if ($tab !== 'inspections') {
+                $this->highlight = null;
+            }
             $this->resetPage();
         }
     }
@@ -721,10 +760,107 @@ class Show extends Component
             });
         }
 
+        // Filter: Specific Month (e.g. '2026-10')
+        if ($this->p2hMonth !== '') {
+            $parts = explode('-', $this->p2hMonth);
+            if (count($parts) === 2) {
+                $year = (int) $parts[0];
+                $month = (int) $parts[1];
+                $journeysQuery->where(function ($q) use ($year, $month) {
+                    $q->whereYear('checked_at', $year)
+                        ->whereMonth('checked_at', $month)
+                        ->orWhere(function ($oq) use ($year, $month) {
+                            $oq->whereNull('checked_at')
+                                ->whereYear('created_at', $year)
+                                ->whereMonth('created_at', $month);
+                        });
+                });
+            }
+        }
+
+        // Auto-navigate to correct pagination page if highlight is requested
+        if ($this->highlight && ! request()->has('page')) {
+            $targetId = (int) $this->highlight;
+            $checkInId = VehicleInspection::where('parent_inspection_id', $targetId)->value('id');
+            $effectiveId = $checkInId ?: $targetId;
+
+            $targetRecord = VehicleInspection::where('vehicle_id', $this->vehicle->id)->find($effectiveId);
+            if ($targetRecord) {
+                $targetDate = $targetRecord->checked_at ?? $targetRecord->created_at;
+                $beforeCount = (clone $journeysQuery)
+                    ->where(function ($q) use ($targetDate, $targetRecord) {
+                        $q->where('checked_at', '>', $targetDate)
+                            ->orWhere(function ($sub) use ($targetDate, $targetRecord) {
+                                $sub->where('checked_at', '=', $targetDate)
+                                    ->where('id', '>', $targetRecord->id);
+                            });
+                    })
+                    ->count();
+
+                $targetPage = (int) floor($beforeCount / 15) + 1;
+                if ($targetPage > 1) {
+                    $this->setPage($targetPage);
+                }
+            }
+        }
+
         $inspections = $journeysQuery
             ->orderByDesc('checked_at')
             ->orderByDesc('id')
             ->paginate(15);
+
+        // KPI Summary Aggregates for vehicle's P2H history
+        $allVehicleJourneysQuery = VehicleInspection::query()
+            ->where('vehicle_id', $this->vehicle->id)
+            ->where(function ($q) {
+                $q->where('inspection_type', VehicleInspection::TYPE_CHECK_IN)
+                    ->orWhere(function ($oq) {
+                        $oq->where('inspection_type', VehicleInspection::TYPE_CHECK_OUT)
+                            ->whereDoesntHave('checkInRecord');
+                    });
+            });
+
+        $totalTrips = (clone $allVehicleJourneysQuery)->count();
+
+        $defectTrips = (clone $allVehicleJourneysQuery)->where(function ($q) {
+            $q->whereIn('severity', [VehicleInspection::SEVERITY_MINOR, VehicleInspection::SEVERITY_CRITICAL])
+                ->orWhereNotNull('defect_notes')
+                ->orWhereHas('parentCheckOut', function ($pq) {
+                    $pq->whereIn('severity', [VehicleInspection::SEVERITY_MINOR, VehicleInspection::SEVERITY_CRITICAL])
+                        ->orWhereNotNull('defect_notes');
+                });
+        })->count();
+
+        $cleanPassRate = $totalTrips > 0 ? (int) round((($totalTrips - $defectTrips) / $totalTrips) * 100) : 100;
+
+        $totalP2hDistance = (int) VehicleInspection::from('vehicle_inspections as ins')
+            ->join('vehicle_inspections as parent', 'ins.parent_inspection_id', '=', 'parent.id')
+            ->where('ins.vehicle_id', $this->vehicle->id)
+            ->where('ins.inspection_type', VehicleInspection::TYPE_CHECK_IN)
+            ->whereRaw('ins.odometer >= parent.odometer')
+            ->selectRaw('SUM(ins.odometer - parent.odometer) as total_dist')
+            ->value('total_dist');
+
+        $lastInspection = VehicleInspection::where('vehicle_id', $this->vehicle->id)
+            ->orderByDesc('checked_at')
+            ->orderByDesc('id')
+            ->first();
+
+        $kpiSummary = [
+            'total_trips' => $totalTrips,
+            'clean_pass_rate' => $cleanPassRate,
+            'defect_trips' => $defectTrips,
+            'total_distance' => $totalP2hDistance,
+            'last_inspected' => $lastInspection,
+        ];
+
+        $availableP2hMonths = VehicleInspection::where('vehicle_id', $this->vehicle->id)
+            ->whereNotNull('checked_at')
+            ->selectRaw("DATE_FORMAT(checked_at, '%Y-%m') as ym")
+            ->distinct()
+            ->orderByDesc('ym')
+            ->pluck('ym')
+            ->toArray();
 
         // 4. Documents
         $documents = VehicleDocument::query()
@@ -733,6 +869,6 @@ class Show extends Component
             ->orderBy('expired_date')
             ->get();
 
-        return view('livewire.vehicles.show', compact('records', 'lifetimeCost', 'ytdCost', 'inspections', 'documents', 'availableYears', 'activeTrip'));
+        return view('livewire.vehicles.show', compact('records', 'lifetimeCost', 'ytdCost', 'inspections', 'documents', 'availableYears', 'activeTrip', 'kpiSummary', 'availableP2hMonths'));
     }
 }

@@ -227,14 +227,14 @@
                         <select id="fleet-status-filter" wire:model.live="operationalTab"
                             class="w-full appearance-none rounded-xl border border-slate-200/80 bg-slate-50/60 py-2 pl-3 pr-8 text-xs font-semibold text-slate-800 hover:border-slate-300 focus:bg-white focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 transition cursor-pointer">
                             @if ($operationalTab === 'custom')
-                                <option value="custom" disabled selected>Multi-Pilihan ({{ count($selectedStatuses) }} status)</option>
+                                <option value="custom" disabled selected>{{ __('fleet.index.multi_status_selected', ['count' => count($selectedStatuses)]) }}</option>
                             @endif
-                            <option value="all">Semua Status ({{ $metrics['total'] }})</option>
-                            <option value="in_pool">Di Pool ({{ $metrics['in_pool'] }})</option>
-                            <option value="on_trip">On-Trip ({{ $metrics['on_trip'] }})</option>
-                            <option value="maintenance">Perawatan ({{ $metrics['maintenance'] ?? 0 }})</option>
+                            <option value="all">{{ __('fleet.index.all_statuses_option', ['count' => $metrics['total']]) }}</option>
+                            <option value="in_pool">{{ __('fleet.index.in_pool_option', ['count' => $metrics['in_pool']]) }}</option>
+                            <option value="on_trip">{{ __('fleet.index.on_trip_option', ['count' => $metrics['on_trip']]) }}</option>
+                            <option value="maintenance">{{ __('fleet.index.maintenance_option', ['count' => $metrics['maintenance'] ?? 0]) }}</option>
                             @if ($canManage)
-                                <option value="sold">Terjual ({{ $metrics['sold'] ?? 0 }})</option>
+                                <option value="sold">{{ __('fleet.index.sold_option', ['count' => $metrics['sold'] ?? 0]) }}</option>
                             @endif
                         </select>
                         <i class="bi bi-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none"></i>
@@ -351,8 +351,17 @@
                                     </span>
                                 @endif
                                 <div>
-                                    <div class="font-mono text-sm font-bold tracking-tight text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">
-                                        {{ $v->plate_number }}
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <span class="font-mono text-sm font-bold tracking-tight text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">
+                                            {{ $v->plate_number }}
+                                        </span>
+                                        @if ($v->is_newly_added)
+                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-sky-50 text-sky-700 border border-sky-200/80 text-[10px] font-bold tracking-wide shadow-2xs"
+                                                title="{{ __('fleet.index.badge_new_title') }}">
+                                                <i class="bi bi-stars text-[9px] text-sky-500"></i>
+                                                <span>{{ __('fleet.index.badge_new') }}</span>
+                                            </span>
+                                        @endif
                                     </div>
                                     <div class="text-xs text-slate-500 font-medium">
                                         {{ trim($v->brand . ' ' . $v->model) ?: 'Kendaraan' }} {{ $v->year ? "({$v->year})" : '' }}
@@ -553,10 +562,10 @@
                         </div>
 
                         <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                            <span>{{ ! $hasCustomCategory ? 'Penumpang (Default)' : (count($selectedCategories) === 4 ? 'Semua kategori' : count($selectedCategories) . ' terpilih') }}</span>
+                            <span>{{ ! $hasCustomCategory ? __('fleet.index.default_category_label') : (count($selectedCategories) === 4 ? __('fleet.index.all_categories_label') : __('fleet.index.categories_selected', ['count' => count($selectedCategories)])) }}</span>
                             <button type="button" @click="catFilterOpen = false"
                                 class="px-2.5 py-1 rounded-lg bg-slate-900 text-white font-semibold hover:bg-slate-800 transition cursor-pointer">
-                                Tutup
+                                {{ __('fleet.index.close') }}
                             </button>
                         </div>
                     </div>
@@ -758,7 +767,16 @@
                                         </span>
                                     @endif
                                     <div>
-                                        <div class="font-mono font-bold text-slate-900 group-hover:text-indigo-600">{{ $v->plate_number }}</div>
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <span class="font-mono font-bold text-slate-900 group-hover:text-indigo-600">{{ $v->plate_number }}</span>
+                                            @if ($v->is_newly_added)
+                                                <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-sky-50 text-sky-700 border border-sky-200/80 text-[9px] font-bold tracking-wide"
+                                                    title="{{ __('fleet.index.badge_new_title') }}">
+                                                    <i class="bi bi-stars text-[8px] text-sky-500"></i>
+                                                    <span>{{ __('fleet.index.badge_new') }}</span>
+                                                </span>
+                                            @endif
+                                        </div>
                                         <div class="text-[11px] text-slate-500">{{ trim($v->brand . ' ' . $v->model) }}</div>
                                     </div>
                                 </div>

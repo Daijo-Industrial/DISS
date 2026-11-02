@@ -103,6 +103,32 @@ class Vehicle extends Model
         return $this->activeCheckOut !== null;
     }
 
+    public function getIsNewlyAddedAttribute(): bool
+    {
+        // 1. Must be registered within the last 7 days
+        if (! $this->created_at || $this->created_at->lt(now()->subDays(7))) {
+            return false;
+        }
+
+        // 2. Exclude sold or retired vehicles
+        if ($this->is_sold || in_array($this->status, [VehicleStatus::RETIRED, 'retired'], true)) {
+            return false;
+        }
+
+        // 3. If withExists was loaded via query
+        if (isset($this->attributes['has_completed_p2h'])) {
+            return ! (bool) $this->attributes['has_completed_p2h'];
+        }
+
+        // 4. If inspections relation was already loaded
+        if ($this->relationLoaded('inspections')) {
+            return ! $this->inspections->contains(fn ($i) => $i->inspection_type === VehicleInspection::TYPE_CHECK_IN);
+        }
+
+        // 5. Fallback query: check if any completed check-in inspection exists
+        return ! $this->inspections()->where('inspection_type', VehicleInspection::TYPE_CHECK_IN)->exists();
+    }
+
     public function getCategoryLabelAttribute(): string
     {
         return match ($this->category) {

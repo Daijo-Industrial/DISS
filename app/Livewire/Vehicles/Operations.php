@@ -12,8 +12,20 @@ use Livewire\Component;
 
 class Operations extends Component
 {
+    #[Url(as: 'scope')]
+    public string $scope = 'day'; // 'day', 'week', 'month', 'custom'
+
     #[Url(as: 'date')]
     public string $selectedDate = ''; // Y-m-d
+
+    #[Url(as: 'month')]
+    public string $selectedMonth = ''; // Y-m
+
+    #[Url(as: 'start')]
+    public string $startDate = ''; // Y-m-d
+
+    #[Url(as: 'end')]
+    public string $endDate = ''; // Y-m-d
 
     #[Url(as: 'q')]
     public string $q = '';
@@ -47,6 +59,57 @@ class Operations extends Component
                 $this->selectedDate = now()->toDateString();
             }
         }
+
+        if (empty($this->selectedMonth)) {
+            $this->selectedMonth = now()->format('Y-m');
+        } else {
+            try {
+                $this->selectedMonth = Carbon::parse($this->selectedMonth . '-01')->format('Y-m');
+            } catch (\Throwable $e) {
+                $this->selectedMonth = now()->format('Y-m');
+            }
+        }
+
+        if (empty($this->startDate)) {
+            $this->startDate = now()->subDays(6)->toDateString();
+        } else {
+            try {
+                $this->startDate = Carbon::parse($this->startDate)->toDateString();
+            } catch (\Throwable $e) {
+                $this->startDate = now()->subDays(6)->toDateString();
+            }
+        }
+
+        if (empty($this->endDate)) {
+            $this->endDate = now()->toDateString();
+        } else {
+            try {
+                $this->endDate = Carbon::parse($this->endDate)->toDateString();
+            } catch (\Throwable $e) {
+                $this->endDate = now()->toDateString();
+            }
+        }
+
+        if (! in_array($this->scope, ['day', 'week', 'month', 'custom'], true)) {
+            $this->scope = 'day';
+        }
+    }
+
+    public function setScope(string $scope): void
+    {
+        if (in_array($scope, ['day', 'week', 'month', 'custom'], true)) {
+            $this->scope = $scope;
+        }
+    }
+
+    public function getHeaderTitleProperty(): string
+    {
+        return __('fleet.operations.title_day');
+    }
+
+    public function getHeaderSubtitleProperty(): string
+    {
+        return __('fleet.operations.subtitle_day');
     }
 
     public function setDatePreset(string $preset): void
@@ -65,7 +128,11 @@ class Operations extends Component
 
     public function setActivityFilter(string $filter): void
     {
-        $this->activityFilter = $filter;
+        if ($this->activityFilter === $filter) {
+            $this->activityFilter = 'all';
+        } else {
+            $this->activityFilter = $filter;
+        }
     }
 
     public function resetFilters(): void
@@ -139,7 +206,74 @@ class Operations extends Component
         }
 
         $startOfWeek = $selected->copy()->startOfWeek(CarbonInterface::MONDAY);
+        $endOfWeek = $startOfWeek->copy()->addDays(6)->endOfDay();
         $todayStr = now()->toDateString();
+
+        // Query all days in this 7-day strip that have defect findings
+        $defectQuery = VehicleInspection::query()
+            ->where('inspection_type', VehicleInspection::TYPE_CHECK_IN)
+            ->where(function ($q) use ($startOfWeek, $endOfWeek) {
+                $startStr = $startOfWeek->copy()->startOfDay()->toDateTimeString();
+                $endStr = $endOfWeek->toDateTimeString();
+                $q->whereBetween('checked_at', [$startStr, $endStr])
+                    ->orWhere(function ($sub) use ($startStr, $endStr) {
+                        $sub->whereNull('checked_at')
+                            ->whereBetween('created_at', [$startStr, $endStr]);
+                    });
+            })
+            ->where(function ($q) {
+                $q->whereIn('severity', [VehicleInspection::SEVERITY_MINOR, VehicleInspection::SEVERITY_CRITICAL])
+                    ->orWhere(function ($sub) {
+                        $sub->whereNotNull('defect_notes')
+                            ->where('defect_notes', '!=', '');
+                    })
+                    ->orWhereHas('parentCheckOut', function ($pq) {
+                        $pq->whereIn('severity', [VehicleInspection::SEVERITY_MINOR, VehicleInspection::SEVERITY_CRITICAL])
+                            ->orWhere(function ($sub) {
+                                $sub->whereNotNull('defect_notes')
+                                    ->where('defect_notes', '!=', '');
+                            });
+                    });
+            });
+
+        $this->filterVehicleQuery($defectQuery, 'vehicle');
+
+        $defectDates = $defectQuery
+            ->selectRaw('DISTINCT DATE(COALESCE(checked_at, created_at)) as defect_date')
+            ->pluck('defect_date')
+            ->map(fn ($d) => (string) $d)
+            ->all();
+
+        // Also check unclosed checkouts in this week with defects
+        $unclosedDefectQuery = VehicleInspection::query()
+            ->where('inspection_type', VehicleInspection::TYPE_CHECK_OUT)
+            ->whereDoesntHave('checkInRecord')
+            ->where(function ($q) use ($startOfWeek, $endOfWeek) {
+                $startStr = $startOfWeek->copy()->startOfDay()->toDateTimeString();
+                $endStr = $endOfWeek->toDateTimeString();
+                $q->whereBetween('checked_at', [$startStr, $endStr])
+                    ->orWhere(function ($sub) use ($startStr, $endStr) {
+                        $sub->whereNull('checked_at')
+                            ->whereBetween('created_at', [$startStr, $endStr]);
+                    });
+            })
+            ->where(function ($q) {
+                $q->whereIn('severity', [VehicleInspection::SEVERITY_MINOR, VehicleInspection::SEVERITY_CRITICAL])
+                    ->orWhere(function ($sub) {
+                        $sub->whereNotNull('defect_notes')
+                            ->where('defect_notes', '!=', '');
+                    });
+            });
+
+        $this->filterVehicleQuery($unclosedDefectQuery, 'vehicle');
+
+        $unclosedDefectDates = $unclosedDefectQuery
+            ->selectRaw('DISTINCT DATE(COALESCE(checked_at, created_at)) as defect_date')
+            ->pluck('defect_date')
+            ->map(fn ($d) => (string) $d)
+            ->all();
+
+        $allDefectDates = array_unique(array_merge($defectDates, $unclosedDefectDates));
 
         $days = [];
         for ($i = 0; $i < 7; $i++) {
@@ -156,6 +290,7 @@ class Operations extends Component
                 'is_selected' => $isSelected,
                 'is_today' => $isToday,
                 'is_future' => $isFuture,
+                'has_defect' => in_array($dateStr, $allDefectDates, true),
             ];
         }
 
@@ -203,6 +338,160 @@ class Operations extends Component
         }
     }
 
+    public function goToThisWeek(): void
+    {
+        $this->selectedDate = now()->toDateString();
+    }
+
+    public function previousMonth(): void
+    {
+        try {
+            $carbon = Carbon::parse($this->selectedMonth . '-01')->subMonth();
+            $this->selectedMonth = $carbon->format('Y-m');
+        } catch (\Throwable $e) {
+            $this->selectedMonth = now()->subMonth()->format('Y-m');
+        }
+    }
+
+    public function nextMonth(): void
+    {
+        if ($this->canGoNextMonth) {
+            try {
+                $carbon = Carbon::parse($this->selectedMonth . '-01')->addMonth();
+                if ($carbon->isFuture()) {
+                    $this->selectedMonth = now()->format('Y-m');
+                } else {
+                    $this->selectedMonth = $carbon->format('Y-m');
+                }
+            } catch (\Throwable $e) {
+                $this->selectedMonth = now()->format('Y-m');
+            }
+        }
+    }
+
+    public function goToThisMonth(): void
+    {
+        $this->selectedMonth = now()->format('Y-m');
+    }
+
+    public function getCanGoNextMonthProperty(): bool
+    {
+        try {
+            $selected = Carbon::parse($this->selectedMonth . '-01')->startOfMonth();
+            $current = now()->startOfMonth();
+
+            return $selected->lt($current);
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    public function setCustomPreset(string $preset): void
+    {
+        $today = now();
+        switch ($preset) {
+            case 'last_7_days':
+                $this->startDate = $today->copy()->subDays(6)->toDateString();
+                $this->endDate = $today->toDateString();
+                break;
+            case 'last_30_days':
+                $this->startDate = $today->copy()->subDays(29)->toDateString();
+                $this->endDate = $today->toDateString();
+                break;
+            case 'this_month':
+                $this->startDate = $today->copy()->startOfMonth()->toDateString();
+                $this->endDate = $today->toDateString();
+                break;
+            case 'previous_month':
+                $prev = $today->copy()->subMonth();
+                $this->startDate = $prev->startOfMonth()->toDateString();
+                $this->endDate = $prev->endOfMonth()->toDateString();
+                break;
+        }
+    }
+
+    public function resolvePeriodRange(): array
+    {
+        $now = now();
+
+        if ($this->scope === 'week') {
+            try {
+                $dateCarbon = Carbon::parse($this->selectedDate);
+            } catch (\Throwable $e) {
+                $dateCarbon = $now;
+            }
+
+            $start = $dateCarbon->copy()->startOfWeek(CarbonInterface::MONDAY)->startOfDay();
+            $end = $dateCarbon->copy()->endOfWeek(CarbonInterface::SUNDAY)->endOfDay();
+            $label = $start->translatedFormat('d M') . ' – ' . $end->translatedFormat('d M Y');
+
+            return [$start, $end, $label];
+        }
+
+        if ($this->scope === 'month') {
+            try {
+                $monthCarbon = Carbon::parse($this->selectedMonth . '-01');
+            } catch (\Throwable $e) {
+                $monthCarbon = $now;
+            }
+
+            $start = $monthCarbon->copy()->startOfMonth()->startOfDay();
+            $end = $monthCarbon->copy()->endOfMonth()->endOfDay();
+            $label = $monthCarbon->translatedFormat('F Y');
+
+            return [$start, $end, $label];
+        }
+
+        if ($this->scope === 'custom') {
+            try {
+                $start = Carbon::parse($this->startDate)->startOfDay();
+            } catch (\Throwable $e) {
+                $start = $now->copy()->subDays(6)->startOfDay();
+            }
+
+            try {
+                $end = Carbon::parse($this->endDate)->endOfDay();
+            } catch (\Throwable $e) {
+                $end = $now->copy()->endOfDay();
+            }
+
+            if ($end->lt($start)) {
+                $temp = $start;
+                $start = $end->copy()->startOfDay();
+                $end = $temp->copy()->endOfDay();
+            }
+
+            // Cap at 90 days to prevent excessive payload
+            if ($start->diffInDays($end) > 90) {
+                $start = $end->copy()->subDays(90)->startOfDay();
+            }
+
+            $label = $start->translatedFormat('d M Y') . ' – ' . $end->translatedFormat('d M Y');
+
+            return [$start, $end, $label];
+        }
+
+        // Default: 'day'
+        try {
+            $dateCarbon = Carbon::parse($this->selectedDate);
+        } catch (\Throwable $e) {
+            $dateCarbon = $now;
+        }
+
+        $start = $dateCarbon->copy()->startOfDay();
+        $end = $dateCarbon->copy()->endOfDay();
+
+        if ($this->selectedDate === $now->toDateString()) {
+            $label = __('fleet.operations.filter_today') . ' — ' . $dateCarbon->translatedFormat('l, d F Y');
+        } elseif ($this->selectedDate === $now->copy()->subDay()->toDateString()) {
+            $label = __('fleet.operations.filter_yesterday') . ' — ' . $dateCarbon->translatedFormat('l, d F Y');
+        } else {
+            $label = $dateCarbon->translatedFormat('l, d F Y');
+        }
+
+        return [$start, $end, $label];
+    }
+
     protected function filterVehicleQuery($query, string $vehicleRelation = 'vehicle')
     {
         $query->whereHas($vehicleRelation, function ($vq) {
@@ -230,20 +519,11 @@ class Operations extends Component
         return $query;
     }
 
-    public function getDayLogProperty(): object
+    public function getPeriodLogProperty(): object
     {
-        $dateStr = $this->selectedDate;
-        try {
-            $dateCarbon = Carbon::parse($dateStr);
-        } catch (\Throwable $e) {
-            $dateCarbon = now();
-            $dateStr = $dateCarbon->toDateString();
-        }
+        [$startDate, $endDate, $label] = $this->resolvePeriodRange();
 
-        $startDate = $dateCarbon->copy()->startOfDay();
-        $endDate = $dateCarbon->copy()->endOfDay();
-
-        // 1. Completed trips on this specific day (check_in occurred today)
+        // 1. Completed trips in this period
         $inspectionsQuery = VehicleInspection::query()
             ->where('inspection_type', VehicleInspection::TYPE_CHECK_IN)
             ->whereBetween('checked_at', [$startDate, $endDate]);
@@ -272,10 +552,12 @@ class Operations extends Component
 
                 $defectNotes = $checkIn->defect_notes ?: $departure?->defect_notes;
                 $defectPhotos = ! empty($checkIn->defect_photos) ? $checkIn->defect_photos : ($departure?->defect_photos ?? []);
+                $dateKey = $retTime ? $retTime->toDateString() : ($checkIn->created_at ? $checkIn->created_at->toDateString() : 'unknown');
 
                 return (object) [
                     'id' => $checkIn->id,
                     'type' => 'trip_completed',
+                    'date_key' => $dateKey,
                     'is_direct_check_in' => $isDirectCheckIn,
                     'vehicle' => $checkIn->vehicle,
                     'driver_name' => $checkIn->driver_name ?: ($departure?->driver_name ?? '—'),
@@ -298,9 +580,9 @@ class Operations extends Component
                 ];
             });
 
-        // 2. Workshop services on this specific day
+        // 2. Workshop services in this period
         $servicesQuery = ServiceRecord::query()
-            ->whereDate('service_date', $dateStr);
+            ->whereBetween('service_date', [$startDate->toDateString(), $endDate->toDateString()]);
 
         $this->filterVehicleQuery($servicesQuery, 'vehicle');
 
@@ -308,9 +590,12 @@ class Operations extends Component
             ->orderByDesc('service_date')
             ->get()
             ->map(function ($service) {
+                $dateKey = $service->service_date ? Carbon::parse($service->service_date)->toDateString() : 'unknown';
+
                 return (object) [
                     'id' => $service->id,
                     'type' => 'service',
+                    'date_key' => $dateKey,
                     'vehicle' => $service->vehicle,
                     'workshop' => $service->workshop ?: __('fleet.operations.partner_workshop'),
                     'odometer' => $service->odometer,
@@ -326,6 +611,7 @@ class Operations extends Component
         $totalDistance = $completedTrips->sum('distance');
         $totalDefects = $completedTrips->where('has_defect', true)->count();
         $totalTrips = $completedTrips->count();
+        $totalServiceCost = $services->sum('total_cost');
 
         // Filter displayed items according to selected activity filter
         $displayedTrips = match ($this->activityFilter) {
@@ -348,17 +634,47 @@ class Operations extends Component
             return $item->service_date ? Carbon::parse($item->service_date)->timestamp : 0;
         })->values();
 
-        if ($this->isToday) {
-            $label = __('fleet.operations.filter_today') . ' — ' . $dateCarbon->translatedFormat('l, d F Y');
-        } elseif ($this->isYesterday) {
-            $label = __('fleet.operations.filter_yesterday') . ' — ' . $dateCarbon->translatedFormat('l, d F Y');
-        } else {
-            $label = $dateCarbon->translatedFormat('l, d F Y');
-        }
+        // Group by date for multi-day views
+        $groupedTimeline = $timelineEvents->groupBy('date_key')->map(function ($items, $dateStr) {
+            try {
+                $dateCarbon = Carbon::parse($dateStr);
+            } catch (\Throwable $e) {
+                $dateCarbon = now();
+            }
+
+            $dayDistance = $items->where('type', 'trip_completed')->sum('distance');
+            $dayDefects = $items->where('type', 'trip_completed')->where('has_defect', true)->count();
+            $dayServices = $items->where('type', 'service')->count();
+            $dayTrips = $items->where('type', 'trip_completed')->count();
+
+            if ($dateStr === now()->toDateString()) {
+                $dateLabel = __('fleet.operations.filter_today') . ' — ' . $dateCarbon->translatedFormat('l, d F Y');
+            } elseif ($dateStr === now()->subDay()->toDateString()) {
+                $dateLabel = __('fleet.operations.filter_yesterday') . ' — ' . $dateCarbon->translatedFormat('l, d F Y');
+            } else {
+                $dateLabel = $dateCarbon->translatedFormat('l, d F Y');
+            }
+
+            return (object) [
+                'date_string' => $dateStr,
+                'date_carbon' => $dateCarbon,
+                'date_label' => $dateLabel,
+                'is_today' => $dateStr === now()->toDateString(),
+                'is_yesterday' => $dateStr === now()->subDay()->toDateString(),
+                'total_trips' => $dayTrips,
+                'total_distance' => $dayDistance,
+                'total_defects' => $dayDefects,
+                'total_services' => $dayServices,
+                'events' => $items->values(),
+            ];
+        });
 
         return (object) [
-            'date_string' => $dateStr,
-            'date_carbon' => $dateCarbon,
+            'scope' => $this->scope,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'date_string' => $this->selectedDate,
+            'date_carbon' => $startDate,
             'label' => $label,
             'is_today' => $this->isToday,
             'is_yesterday' => $this->isYesterday,
@@ -366,12 +682,19 @@ class Operations extends Component
             'total_distance' => $totalDistance,
             'total_defects' => $totalDefects,
             'total_services' => $services->count(),
+            'total_service_cost' => $totalServiceCost,
             'completed_trips' => $displayedTrips->values(),
             'services' => $displayedServices->values(),
             'timeline_events' => $timelineEvents,
+            'grouped_timeline' => $groupedTimeline,
             'has_activity' => $timelineEvents->count() > 0,
             'has_any_day_activity' => ($totalTrips + $services->count()) > 0,
         ];
+    }
+
+    public function getDayLogProperty(): object
+    {
+        return $this->periodLog;
     }
 
     public function getMetricsProperty(): array
@@ -454,6 +777,7 @@ class Operations extends Component
             'metrics' => $this->metrics,
             'liveActiveTrips' => $this->isToday ? $this->liveActiveTrips : collect(),
             'dayLog' => $this->dayLog,
+            'periodLog' => $this->periodLog,
         ]);
     }
 }
