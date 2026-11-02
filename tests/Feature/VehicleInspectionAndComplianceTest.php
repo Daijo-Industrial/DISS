@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Models\VehicleDocument;
 use App\Models\VehicleInspection;
 use App\Notifications\VehicleDocumentExpiryNotification;
+use Carbon\CarbonInterface;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -2404,5 +2405,425 @@ class VehicleInspectionAndComplianceTest extends TestCase
         $this->assertEquals('grid', $gridComponent->get('viewMode'));
         $this->assertEquals(12, $gridComponent->get('perPage'));
         $gridComponent->assertSeeHtml('12 / hal');
+    }
+
+    public function test_daily_operations_multi_scope_period_navigation_and_aggregates(): void
+    {
+        Role::firstOrCreate(['name' => 'super-admin']);
+        $this->user->assignRole('super-admin');
+
+        // Create completed trip on Day 1 (Today)
+        $outToday = VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'inspector_id' => $this->user->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_OUT,
+            'checked_at' => now()->startOfDay()->addHours(8),
+            'driver_name' => 'Driver Hari Ini',
+            'trip_purpose' => 'Dinas Hari Ini',
+            'created_by' => 'Gate Security',
+            'odometer' => 50000,
+            'fuel_percentage' => 80,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+        ]);
+
+        VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'inspector_id' => $this->user->id,
+            'parent_inspection_id' => $outToday->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_IN,
+            'checked_at' => now()->startOfDay()->addHours(12),
+            'driver_name' => 'Driver Hari Ini',
+            'trip_purpose' => 'Dinas Hari Ini',
+            'created_by' => 'Gate Security',
+            'odometer' => 50050,
+            'trip_distance' => 50,
+            'fuel_percentage' => 75,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+        ]);
+
+        // Create completed trip on Day 2 (3 days ago - within current week/month)
+        $out3DaysAgo = VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'inspector_id' => $this->user->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_OUT,
+            'checked_at' => now()->subDays(3)->startOfDay()->addHours(9),
+            'driver_name' => 'Driver 3 Hari Lalu',
+            'trip_purpose' => 'Kunjungan Lapangan',
+            'created_by' => 'Gate Security',
+            'odometer' => 49900,
+            'fuel_percentage' => 90,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_NONE,
+        ]);
+
+        VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'inspector_id' => $this->user->id,
+            'parent_inspection_id' => $out3DaysAgo->id,
+            'inspection_type' => VehicleInspection::TYPE_CHECK_IN,
+            'checked_at' => now()->subDays(3)->startOfDay()->addHours(15),
+            'driver_name' => 'Driver 3 Hari Lalu',
+            'trip_purpose' => 'Kunjungan Lapangan',
+            'created_by' => 'Gate Security',
+            'odometer' => 50000,
+            'trip_distance' => 100,
+            'fuel_percentage' => 80,
+            'checklist_results' => [],
+            'severity' => VehicleInspection::SEVERITY_MINOR,
+            'defect_notes' => 'Ban cadangan kempes',
+        ]);
+
+        // Create workshop service 2 days ago
+        ServiceRecord::create([
+            'vehicle_id' => $this->vehicle->id,
+            'service_date' => now()->subDays(2)->toDateString(),
+            'workshop' => 'Bengkel Resmi Toyota',
+            'odometer' => 49950,
+            'total_cost' => 1500000,
+            'notes' => 'Ganti Oli dan Filter',
+            'created_by' => $this->user->id,
+        ]);
+
+        // 1. Initial scope is 'day' (Today) -> header is 'Operasional Harian'
+        $component = Livewire::actingAs($this->user)
+            ->test(VehiclesOperations::class);
+
+        $this->assertEquals('day', $component->get('scope'));
+        $this->assertEquals('Operasional Harian', $component->get('headerTitle'));
+        $component->assertSee(__('fleet.operations.scope_day'))
+            ->assertSee(__('fleet.operations.scope_week'))
+            ->assertSee(__('fleet.operations.scope_month'))
+            ->assertSee(__('fleet.operations.scope_custom'))
+            ->assertSee(__('fleet.operations.fetching_period_data'))
+            ->assertSee('Operasional Harian')
+            ->assertSee('Driver Hari Ini')
+            ->assertDontSee('Driver 3 Hari Lalu'); // Day 3 is outside single-day Today view
+
+        // 2. Switch scope to 'week' -> header remains stable 'Operasional Harian'
+        $component->call('setScope', 'week');
+        $this->assertEquals('Operasional Harian', $component->get('headerTitle'));
+        $component->assertSee('Operasional Harian');
+
+        // 3. Switch scope to 'month' -> header remains stable 'Operasional Harian'
+        $component->call('setScope', 'month');
+        $this->assertEquals('Operasional Harian', $component->get('headerTitle'));
+        $component->assertSee('Operasional Harian');
+
+        // 4. Switch scope to 'custom' spanning the last 5 days -> header remains stable 'Operasional Harian'
+        $component->call('setScope', 'custom')
+            ->set('startDate', now()->subDays(5)->toDateString())
+            ->set('endDate', now()->toDateString());
+
+        $this->assertEquals('custom', $component->get('scope'));
+        $this->assertEquals('Operasional Harian', $component->get('headerTitle'));
+        $component->assertSee('Operasional Harian');
+        $periodLog = $component->get('periodLog');
+        $this->assertEquals(2, $periodLog->total_trips);
+        $this->assertEquals(150, $periodLog->total_distance); // 50 + 100 km
+        $this->assertEquals(1, $periodLog->total_defects); // 1 defect
+        $this->assertEquals(1, $periodLog->total_services); // 1 service
+
+        // Multi-day grouped timeline contains both trips
+        $component->assertSee('Driver Hari Ini')
+            ->assertSee('Driver 3 Hari Lalu')
+            ->assertSee('Ban cadangan kempes')
+            ->assertSee('Bengkel Resmi Toyota')
+            ->assertSee('Rp 1.500.000');
+
+        // 3. Test custom presets
+        $component->call('setCustomPreset', 'last_7_days');
+        $this->assertEquals(now()->subDays(6)->toDateString(), $component->get('startDate'));
+        $this->assertEquals(now()->toDateString(), $component->get('endDate'));
+
+        // 4. Test month scope navigation
+        $component->call('setScope', 'month');
+        $this->assertEquals('month', $component->get('scope'));
+        $this->assertEquals(now()->format('Y-m'), $component->get('selectedMonth'));
+        $component->call('previousMonth');
+        $this->assertEquals(now()->subMonth()->format('Y-m'), $component->get('selectedMonth'));
+        $component->call('goToThisMonth');
+        $this->assertEquals(now()->format('Y-m'), $component->get('selectedMonth'));
+
+        // 5. Test activity filters in multi-day scope & clear filter mechanisms
+        $component->call('setScope', 'custom')
+            ->set('startDate', now()->subDays(5)->toDateString())
+            ->set('endDate', now()->toDateString())
+            ->call('setActivityFilter', 'defects');
+
+        $this->assertEquals('defects', $component->get('activityFilter'));
+        $component->assertSee('Driver 3 Hari Lalu')
+            ->assertDontSee('Driver Hari Ini')
+            ->assertDontSee('Bengkel Resmi Toyota')
+            ->assertSee(__('fleet.operations.filter_active_defects'))
+            ->assertSee(__('fleet.operations.clear_filter'));
+
+        // Toggle defect filter off by clicking it again
+        $component->call('setActivityFilter', 'defects');
+        $this->assertEquals('all', $component->get('activityFilter'));
+        $component->assertSee('Driver Hari Ini')
+            ->assertSee('Driver 3 Hari Lalu');
+
+        // Filter services
+        $component->call('setActivityFilter', 'services');
+        $this->assertEquals('services', $component->get('activityFilter'));
+        $component->assertSee('Bengkel Resmi Toyota')
+            ->assertDontSee('Driver 3 Hari Lalu')
+            ->assertDontSee('Driver Hari Ini')
+            ->assertSee(__('fleet.operations.filter_active_services'));
+
+        // Clear filter using setActivityFilter('all')
+        $component->call('setActivityFilter', 'all');
+        $this->assertEquals('all', $component->get('activityFilter'));
+        $component->assertSee('Driver Hari Ini')
+            ->assertSee('Driver 3 Hari Lalu')
+            ->assertSee('Bengkel Resmi Toyota');
+
+        // Test resetFilters clears activityFilter back to all
+        $component->call('setActivityFilter', 'defects');
+        $this->assertEquals('defects', $component->get('activityFilter'));
+        $component->call('resetFilters');
+        $this->assertEquals('all', $component->get('activityFilter'));
+    }
+
+    public function test_vehicle_show_inspection_highlight_deep_link_and_pagination_jump(): void
+    {
+        // 1. Create a paired inspection journey
+        $checkOut = VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'inspection_type' => 'check_out',
+            'driver_name' => 'Target Driver Highlight',
+            'trip_purpose' => 'Pengantaran Klien VVIP',
+            'odometer' => 12000,
+            'fuel_percentage' => 85,
+            'checklist_results' => [],
+            'severity' => 'none',
+            'inspector_id' => $this->user->id,
+            'checked_at' => now()->subHours(5),
+        ]);
+
+        $checkIn = VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'parent_inspection_id' => $checkOut->id,
+            'inspection_type' => 'check_in',
+            'driver_name' => 'Target Driver Highlight',
+            'trip_purpose' => 'Pengantaran Klien VVIP',
+            'odometer' => 12050,
+            'fuel_percentage' => 80,
+            'checklist_results' => [],
+            'severity' => 'none',
+            'inspector_id' => $this->user->id,
+            'checked_at' => now()->subHours(2),
+        ]);
+
+        // 2. Access VehicleShow passing highlight={checkIn->id}
+        $component = Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, [
+                'vehicle' => $this->vehicle,
+                'highlight' => (string) $checkIn->id,
+            ]);
+
+        $component->assertSet('tab', 'inspections')
+            ->assertSet('highlight', (string) $checkIn->id)
+            ->assertSeeHtml('id="inspection-' . $checkIn->id . '"')
+            ->assertSeeHtml('data-checkout-id="inspection-' . $checkOut->id . '"')
+            ->assertSeeHtml('ring-2 ring-indigo-500')
+            ->assertSee(__('fleet.show.target_selected'))
+            ->assertSee(__('fleet.show.highlight_active_banner', ['id' => $checkIn->id]))
+            ->assertSeeHtml('x-data="{ open: true }"');
+
+        // Dismissing highlight clears the banner and indicator
+        $component->call('$set', 'highlight', null)
+            ->assertDontSee(__('fleet.show.highlight_active_banner', ['id' => $checkIn->id]))
+            ->assertDontSee(__('fleet.show.target_selected'));
+
+        // 3. Highlighting using parent checkout id also highlights the journey
+        $checkoutHighlightComponent = Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, [
+                'vehicle' => $this->vehicle,
+                'highlight' => (string) $checkOut->id,
+            ]);
+
+        $checkoutHighlightComponent->assertSet('tab', 'inspections')
+            ->assertSeeHtml('id="inspection-' . $checkIn->id . '"')
+            ->assertSeeHtml('ring-2 ring-indigo-500')
+            ->assertSee(__('fleet.show.target_selected'));
+
+        // 4. Test auto-pagination jumping when target record is on page 2
+        // Create 16 newer inspections so the target inspection is pushed to Page 2 (since perPage is 15)
+        for ($i = 1; $i <= 16; $i++) {
+            VehicleInspection::create([
+                'vehicle_id' => $this->vehicle->id,
+                'inspection_type' => 'check_in',
+                'driver_name' => 'Newer Driver ' . $i,
+                'trip_purpose' => 'Trip ' . $i,
+                'odometer' => 13000 + $i,
+                'fuel_percentage' => 70,
+                'checklist_results' => [],
+                'severity' => 'none',
+                'inspector_id' => $this->user->id,
+                'checked_at' => now()->subMinutes(16 - $i),
+            ]);
+        }
+
+        $pageJumpComponent = Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, [
+                'vehicle' => $this->vehicle,
+                'highlight' => (string) $checkIn->id,
+            ]);
+
+        // Livewire should have auto-navigated to page 2 and rendered the target inspection
+        $this->assertEquals(2, $pageJumpComponent->get('paginators')['page']);
+        $pageJumpComponent->assertSeeHtml('id="inspection-' . $checkIn->id . '"')
+            ->assertSee('Target Driver Highlight');
+
+        // 5. Verify Operations timeline generates links with highlight param
+        $operationsComponent = Livewire::actingAs($this->user)
+            ->test(VehiclesOperations::class);
+
+        $operationsComponent->assertSeeHtml('highlight=' . $checkIn->id);
+    }
+
+    public function test_daily_operations_seven_days_selector_defect_dot_indicator(): void
+    {
+        Role::firstOrCreate(['name' => 'super-admin']);
+        $this->user->assignRole('super-admin');
+
+        $startOfWeek = now()->startOfWeek(CarbonInterface::MONDAY);
+        $tuesday = $startOfWeek->copy()->addDay(); // Tuesday of this week
+
+        // 1. Initial weekDays array has no defects
+        $component = Livewire::actingAs($this->user)
+            ->test(VehiclesOperations::class);
+
+        $weekDays = $component->get('weekDays');
+        $this->assertCount(7, $weekDays);
+        foreach ($weekDays as $day) {
+            $this->assertFalse($day['has_defect']);
+        }
+
+        // 2. Create an inspection with defect on Tuesday of this week
+        VehicleInspection::create([
+            'vehicle_id' => $this->vehicle->id,
+            'inspection_type' => 'check_in',
+            'driver_name' => 'Driver Ada Defek',
+            'trip_purpose' => 'Kunjungan Luar Kota',
+            'odometer' => 15000,
+            'fuel_percentage' => 80,
+            'checklist_results' => [],
+            'severity' => 'minor',
+            'defect_notes' => 'Lampu depan kanan redup',
+            'inspector_id' => $this->user->id,
+            'checked_at' => $tuesday->copy()->setTime(14, 0),
+        ]);
+
+        // 3. Re-evaluate weekDays: Tuesday (index 1) must have has_defect => true, others false
+        $component = Livewire::actingAs($this->user)
+            ->test(VehiclesOperations::class);
+
+        $updatedDays = $component->get('weekDays');
+        $this->assertTrue($updatedDays[1]['has_defect']);
+        $this->assertFalse($updatedDays[0]['has_defect']); // Monday has no defect
+        $this->assertEquals($tuesday->toDateString(), $updatedDays[1]['date']);
+
+        // Check that HTML renders the small red dot (bg-rose-500)
+        $component->assertSeeHtml('bg-rose-500');
+
+        // 4. Filtering by category 'pickup' hides this passenger vehicle's defect
+        $component->call('setCategory', 'pickup');
+        $pickupDays = $component->get('weekDays');
+        $this->assertFalse($pickupDays[1]['has_defect']);
+
+        // Reset category to 'all' brings back the defect dot
+        $component->call('setCategory', 'all');
+        $allDays = $component->get('weekDays');
+        $this->assertTrue($allDays[1]['has_defect']);
+    }
+
+    public function test_newly_added_vehicle_badge_lifecycle_seven_days_or_first_trip(): void
+    {
+        Role::firstOrCreate(['name' => 'super-admin']);
+        $this->user->assignRole('super-admin');
+
+        // 1. Newly created vehicle (2 days ago, no P2H trips yet) -> is_newly_added is true
+        $newVehicle = Vehicle::create([
+            'plate_number' => 'B 9999 NEW',
+            'brand' => 'Honda',
+            'model' => 'HR-V',
+            'category' => 'passenger',
+            'fuel_type' => 'petrol',
+            'odometer' => 50,
+            'status' => VehicleStatus::ACTIVE,
+        ]);
+        $newVehicle->created_at = now()->subDays(2);
+        $newVehicle->save();
+
+        $this->assertTrue($newVehicle->is_newly_added);
+
+        // 2. Index view (grid and table) shows the "Baru" badge
+        Livewire::actingAs($this->user)
+            ->test(VehiclesIndex::class)
+            ->assertSeeHtml(__('fleet.index.badge_new'))
+            ->assertSeeHtml('bg-sky-50 text-sky-700')
+            ->assertSee('B 9999 NEW');
+
+        // 3. Cockpit show view displays the "Baru" badge
+        Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $newVehicle])
+            ->assertSeeHtml(__('fleet.index.badge_new'))
+            ->assertSeeHtml('bg-sky-50');
+
+        // 4. Once the vehicle completes its 1st P2H trip (check_in), is_newly_added becomes false
+        VehicleInspection::create([
+            'vehicle_id' => $newVehicle->id,
+            'inspection_type' => 'check_in',
+            'driver_name' => 'Driver Maiden Trip',
+            'trip_purpose' => 'Uji Coba Armada Baru',
+            'odometer' => 120,
+            'fuel_percentage' => 90,
+            'checklist_results' => [],
+            'severity' => 'none',
+            'inspector_id' => $this->user->id,
+            'checked_at' => now(),
+        ]);
+
+        $this->assertFalse($newVehicle->fresh()->is_newly_added);
+
+        // Cockpit show view no longer displays the "Baru" badge
+        Livewire::actingAs($this->user)
+            ->test(VehicleShow::class, ['vehicle' => $newVehicle->fresh()])
+            ->assertDontSeeHtml('title="' . __('fleet.index.badge_new_title') . '"');
+
+        // 5. Test 7 days MAX cap: created 8 days ago without any trips -> is_newly_added is false
+        $agedVehicle = Vehicle::create([
+            'plate_number' => 'B 8888 AGED',
+            'brand' => 'Toyota',
+            'model' => 'Innova',
+            'category' => 'passenger',
+            'fuel_type' => 'diesel',
+            'odometer' => 100,
+            'status' => VehicleStatus::ACTIVE,
+        ]);
+        $agedVehicle->created_at = now()->subDays(8);
+        $agedVehicle->save();
+
+        $this->assertFalse($agedVehicle->fresh()->is_newly_added);
+
+        // 6. Test sold or retired vehicle does not show "Baru" badge even if created 1 day ago
+        $soldVehicle = Vehicle::create([
+            'plate_number' => 'B 7777 SOLD',
+            'brand' => 'Suzuki',
+            'model' => 'Carry',
+            'category' => 'pickup',
+            'fuel_type' => 'petrol',
+            'odometer' => 200,
+            'status' => VehicleStatus::ACTIVE,
+            'sold_at' => now(),
+        ]);
+        $soldVehicle->created_at = now()->subDay();
+        $soldVehicle->save();
+
+        $this->assertFalse($soldVehicle->fresh()->is_newly_added);
     }
 }

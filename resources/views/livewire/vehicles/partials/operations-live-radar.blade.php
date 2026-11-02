@@ -75,7 +75,7 @@
                                 </span>
                             </div>
                             @if ($orphan->vehicle)
-                                <a href="{{ route('vehicles.show', [$orphan->vehicle, 'tab' => 'inspections']) }}" wire:navigate
+                                <a href="{{ route('vehicles.show', ['vehicle' => $orphan->vehicle, 'tab' => 'inspections', 'from' => 'operations', 'highlight' => $orphan->id]) }}" wire:navigate
                                     class="shrink-0 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition">
                                     {{ __('fleet.operations.orphan_view_logs') }} →
                                 </a>
@@ -101,7 +101,7 @@
                     <div class="space-y-3">
                         {{-- Top: Vehicle Plate & Model & Category --}}
                         <div class="flex items-start justify-between gap-2">
-                            <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="flex items-center gap-2.5 min-w-0 flex-1">
                                 @if ($v?->image_path)
                                     <button type="button" @click.stop="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $v->image_path) }}', title: '{{ __('fleet.show.lightbox_vehicle_photo', ['plate' => $v->plate_number]) }}', subtitle: '{{ trim($v->brand . ' ' . $v->model) }}' })"
                                         class="shrink-0 cursor-pointer">
@@ -113,11 +113,19 @@
                                         <i class="bi bi-car-front-fill"></i>
                                     </span>
                                 @endif
-                                <div class="min-w-0">
-                                    <a href="{{ $v ? route('vehicles.show', $v) : '#' }}" wire:navigate
-                                        class="font-mono text-sm font-bold text-slate-900 hover:text-indigo-600 transition truncate block">
-                                        {{ $v?->plate_number ?: '—' }}
-                                    </a>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <a href="{{ $v ? route('vehicles.show', ['vehicle' => $v, 'tab' => 'inspections', 'from' => 'operations', 'highlight' => $trip->id]) : '#' }}" wire:navigate
+                                            class="font-mono text-sm font-bold text-slate-900 hover:text-indigo-600 transition truncate block">
+                                            {{ $v?->plate_number ?: '—' }}
+                                        </a>
+                                        @if ($v?->is_newly_added)
+                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-sky-50 text-sky-700 border border-sky-200/80 text-[9px] font-bold tracking-wide shadow-2xs">
+                                                <i class="bi bi-stars text-[8px] text-sky-500"></i>
+                                                <span>{{ __('fleet.index.badge_new') }}</span>
+                                            </span>
+                                        @endif
+                                    </div>
                                     <div class="text-[11px] text-slate-500 truncate">
                                         {{ trim(($v?->brand ?? '') . ' ' . ($v?->model ?? '')) ?: __('fleet.common.vehicle') }}
                                     </div>
@@ -175,7 +183,7 @@
                             {{ $trip->created_by ?: ($trip->inspector?->name ?? '—') }}
                         </span>
                         @if ($v)
-                            <a href="{{ route('vehicles.show', $v) }}" wire:navigate
+                            <a href="{{ route('vehicles.show', ['vehicle' => $v, 'tab' => 'inspections', 'from' => 'operations', 'highlight' => $trip->id]) }}" wire:navigate
                                 class="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-amber-900 hover:text-amber-950 transition">
                                 <span>{{ __('fleet.operations.view_vehicle') }}</span>
                                 <i class="bi bi-arrow-right text-[11px]"></i>

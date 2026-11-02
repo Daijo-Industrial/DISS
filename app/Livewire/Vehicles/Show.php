@@ -29,6 +29,9 @@ class Show extends Component
     #[Url]
     public ?string $from = null; // 'operations', 'radar', or null
 
+    #[Url]
+    public ?string $highlight = null; // Inspection ID to highlight and scroll into view
+
     // P2H Journey filters
     public string $p2hSearch = '';
 
@@ -119,7 +122,7 @@ class Show extends Component
 
     public $new_photo = null;
 
-    public function mount(Vehicle $vehicle, ?string $tab = null, ?string $from = null): void
+    public function mount(Vehicle $vehicle, ?string $tab = null, ?string $from = null, ?string $highlight = null): void
     {
         $user = auth()->user();
         if (! ($user?->can('fleet.view') || $user?->can('fleet.manage') || $user?->can('fleet.inspect'))) {
@@ -142,7 +145,18 @@ class Show extends Component
             $this->from = request('from');
         }
 
-        if ($tab !== null && in_array($tab, ['services', 'inspections', 'documents'], true)) {
+        if ($highlight !== null) {
+            $this->highlight = $highlight;
+        } elseif (request()->has('highlight')) {
+            $this->highlight = (string) request('highlight');
+        }
+
+        if ($this->highlight) {
+            // When specific inspection is targeted, default to inspections tab and clear filters
+            $this->tab = 'inspections';
+            $this->p2hSearch = '';
+            $this->p2hDefect = 'all';
+        } elseif ($tab !== null && in_array($tab, ['services', 'inspections', 'documents'], true)) {
             $this->tab = ($tab === 'documents' && ! $this->canViewDocuments) ? 'inspections' : $tab;
         } elseif (request()->has('tab') && in_array(request('tab'), ['services', 'inspections', 'documents'], true)) {
             $requestedTab = request('tab');
@@ -182,6 +196,7 @@ class Show extends Component
     {
         $this->p2hSearch = '';
         $this->p2hDefect = 'all';
+        $this->highlight = null;
         $this->resetPage();
     }
 
@@ -224,6 +239,9 @@ class Show extends Component
 
         if (in_array($tab, ['services', 'inspections', 'documents'], true)) {
             $this->tab = $tab;
+            if ($tab !== 'inspections') {
+                $this->highlight = null;
+            }
             $this->resetPage();
         }
     }
@@ -719,6 +737,32 @@ class Show extends Component
                             ->orWhere('trip_purpose', 'like', '%' . $term . '%');
                     });
             });
+        }
+
+        // Auto-navigate to correct pagination page if highlight is requested
+        if ($this->highlight && ! request()->has('page')) {
+            $targetId = (int) $this->highlight;
+            $checkInId = VehicleInspection::where('parent_inspection_id', $targetId)->value('id');
+            $effectiveId = $checkInId ?: $targetId;
+
+            $targetRecord = VehicleInspection::where('vehicle_id', $this->vehicle->id)->find($effectiveId);
+            if ($targetRecord) {
+                $targetDate = $targetRecord->checked_at ?? $targetRecord->created_at;
+                $beforeCount = (clone $journeysQuery)
+                    ->where(function ($q) use ($targetDate, $targetRecord) {
+                        $q->where('checked_at', '>', $targetDate)
+                            ->orWhere(function ($sub) use ($targetDate, $targetRecord) {
+                                $sub->where('checked_at', '=', $targetDate)
+                                    ->where('id', '>', $targetRecord->id);
+                            });
+                    })
+                    ->count();
+
+                $targetPage = (int) floor($beforeCount / 15) + 1;
+                if ($targetPage > 1) {
+                    $this->setPage($targetPage);
+                }
+            }
         }
 
         $inspections = $journeysQuery

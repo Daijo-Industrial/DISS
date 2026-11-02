@@ -351,8 +351,17 @@
                                     </span>
                                 @endif
                                 <div>
-                                    <div class="font-mono text-sm font-bold tracking-tight text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">
-                                        {{ $v->plate_number }}
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <span class="font-mono text-sm font-bold tracking-tight text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">
+                                            {{ $v->plate_number }}
+                                        </span>
+                                        @if ($v->is_newly_added)
+                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-sky-50 text-sky-700 border border-sky-200/80 text-[10px] font-bold tracking-wide shadow-2xs"
+                                                title="{{ __('fleet.index.badge_new_title') }}">
+                                                <i class="bi bi-stars text-[9px] text-sky-500"></i>
+                                                <span>{{ __('fleet.index.badge_new') }}</span>
+                                            </span>
+                                        @endif
                                     </div>
                                     <div class="text-xs text-slate-500 font-medium">
                                         {{ trim($v->brand . ' ' . $v->model) ?: 'Kendaraan' }} {{ $v->year ? "({$v->year})" : '' }}
@@ -758,7 +767,16 @@
                                         </span>
                                     @endif
                                     <div>
-                                        <div class="font-mono font-bold text-slate-900 group-hover:text-indigo-600">{{ $v->plate_number }}</div>
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <span class="font-mono font-bold text-slate-900 group-hover:text-indigo-600">{{ $v->plate_number }}</span>
+                                            @if ($v->is_newly_added)
+                                                <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-sky-50 text-sky-700 border border-sky-200/80 text-[9px] font-bold tracking-wide"
+                                                    title="{{ __('fleet.index.badge_new_title') }}">
+                                                    <i class="bi bi-stars text-[8px] text-sky-500"></i>
+                                                    <span>{{ __('fleet.index.badge_new') }}</span>
+                                                </span>
+                                            @endif
+                                        </div>
                                         <div class="text-[11px] text-slate-500">{{ trim($v->brand . ' ' . $v->model) }}</div>
                                     </div>
                                 </div>

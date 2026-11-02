@@ -1,7 +1,25 @@
 {{-- ========================================================================= --}}
 {{-- TAB 1: LOGBOOK PEMERIKSAAN HARIAN (P2H) - PAIRED JOURNEY LOGBOOK         --}}
 {{-- ========================================================================= --}}
-<div class="space-y-4 min-w-0">
+<div class="space-y-4 min-w-0"
+    x-data="{
+        highlightId: @js($highlight),
+        scrollToTarget() {
+            if (!this.highlightId) return;
+            const target = document.getElementById('inspection-' + this.highlightId)
+                || document.querySelector('[data-checkout-id=\"inspection-' + this.highlightId + '\"]');
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    }"
+    x-init="
+        if (highlightId) {
+            $nextTick(() => {
+                setTimeout(() => scrollToTarget(), 150);
+            });
+        }
+    ">
 
     {{-- MAIN CARD: TITLE, FILTERS, & JOURNEYS TABLE --}}
     <div class="rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-xs space-y-4 min-w-0">
@@ -45,6 +63,31 @@
                 </div>
             </div>
         </div>
+
+        {{-- Target Highlight Banner --}}
+        @if ($highlight)
+            <div class="rounded-2xl border border-indigo-200/90 bg-indigo-50/70 p-3 sm:p-3.5 flex items-center justify-between gap-3 text-xs text-indigo-950 shadow-2xs">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="flex h-7 w-7 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-2xs shrink-0 text-xs">
+                        <i class="bi bi-geo-alt-fill"></i>
+                    </span>
+                    <div class="min-w-0">
+                        <span class="font-bold block truncate">
+                            {{ __('fleet.show.highlight_active_banner', ['id' => $highlight]) }}
+                        </span>
+                        <span class="text-[11px] text-indigo-700 block">
+                            Pemeriksaan telah disorot dan rincian checklist dibuka secara otomatis di bawah.
+                        </span>
+                    </div>
+                </div>
+
+                <button type="button" wire:click="$set('highlight', null)"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-indigo-200 text-indigo-800 hover:bg-indigo-100/70 font-semibold text-xs shadow-2xs transition cursor-pointer shrink-0 active:scale-95">
+                    <i class="bi bi-x-circle text-xs"></i>
+                    <span>{{ __('fleet.show.clear_highlight') }}</span>
+                </button>
+            </div>
+        @endif
 
         @if ($inspections->isEmpty())
             <div class="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-xs text-slate-400 space-y-2">
@@ -150,16 +193,26 @@
                             }
 
                             $defectNotesText = $ins->defect_notes ?: ($parent?->defect_notes ?: '');
+                            $isHighlighted = ($highlight && ((string) $ins->id === (string) $highlight || ($parent && (string) $parent->id === (string) $highlight)));
                         @endphp
 
-                        <tbody x-data="{ open: false }" class="border-b border-slate-100 last:border-b-0">
+                        <tbody x-data="{ open: {{ $isHighlighted ? 'true' : 'false' }} }"
+                            id="inspection-{{ $ins->id }}"
+                            @if ($parent) data-checkout-id="inspection-{{ $parent->id }}" @endif
+                            class="border-b border-slate-100 last:border-b-0 {{ $isHighlighted ? 'ring-2 ring-indigo-500 rounded-2xl bg-indigo-50/50 shadow-md transition-all duration-500' : '' }}">
                             {{-- Glanceable Single-Line Journey Row --}}
                             <tr @click="open = !open"
-                                class="hover:bg-slate-50/80 transition cursor-pointer select-none {{ $hasDefect ? ($isCritical ? 'bg-rose-50/20' : 'bg-amber-50/20') : '' }}">
+                                class="transition cursor-pointer select-none {{ $isHighlighted ? 'bg-indigo-50/70 font-medium' : ($hasDefect ? ($isCritical ? 'bg-rose-50/20 hover:bg-rose-50/40' : 'bg-amber-50/20 hover:bg-amber-50/40') : 'hover:bg-slate-50/80') }}">
                                 {{-- 1. Date, Time & Duration --}}
                                 <td class="py-2.5 px-3 min-w-[130px]">
-                                    <div class="font-bold text-slate-900 leading-tight">
-                                        {{ ($retTime ?? $depTime)->isoFormat('D MMM YYYY') }}
+                                    <div class="flex items-center gap-1.5 font-bold text-slate-900 leading-tight">
+                                        <span>{{ ($retTime ?? $depTime)->isoFormat('D MMM YYYY') }}</span>
+                                        @if ($isHighlighted)
+                                            <span class="inline-flex items-center gap-1 rounded-md bg-indigo-600 text-white px-1.5 py-0.2 text-[9px] font-bold uppercase tracking-wider animate-pulse shadow-2xs">
+                                                <i class="bi bi-geo-alt-fill text-[8px]"></i>
+                                                <span>{{ __('fleet.show.target_selected') }}</span>
+                                            </span>
+                                        @endif
                                     </div>
                                     <div class="flex items-center gap-1 mt-0.5 text-[11px] text-slate-500 font-mono">
                                         @if ($isPaired)
@@ -277,7 +330,7 @@
                             </tr>
 
                             {{-- Expandable Journey Drawer --}}
-                            <tr x-show="open" x-cloak class="bg-slate-50/60">
+                            <tr x-show="open" x-cloak class="{{ $isHighlighted ? 'bg-indigo-50/40' : 'bg-slate-50/60' }}">
                                 <td colspan="6" class="p-3 sm:p-4 border-t border-slate-100 space-y-3">
                                     {{-- Row 1: Dual Telemetry (Departure & Return Details) --}}
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">

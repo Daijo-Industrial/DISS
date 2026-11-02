@@ -46,6 +46,14 @@
                 </div>
 
                 <div class="flex flex-wrap items-center gap-1.5">
+                    @if ($vehicle->is_newly_added)
+                        <span class="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-bold text-sky-700 border border-sky-200/80 shrink-0"
+                            title="{{ __('fleet.index.badge_new_title') }}">
+                            <i class="bi bi-stars text-[10px] text-sky-500"></i>
+                            <span>{{ __('fleet.index.badge_new') }}</span>
+                        </span>
+                    @endif
+
                     @if ($isOut)
                         <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 border border-amber-200/60 shrink-0">
                             <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>

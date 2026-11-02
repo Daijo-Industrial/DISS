@@ -16,7 +16,7 @@
         <svg class="h-3.5 w-3.5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
         </svg>
-        <span class="text-slate-700 font-semibold truncate" aria-current="page">{{ __('fleet.operations.tab_operations') }}</span>
+        <span class="text-slate-700 font-semibold truncate" aria-current="page">{{ $this->headerTitle }}</span>
     </nav>
 
     {{-- Dedicated Page Header --}}
@@ -28,13 +28,41 @@
             <div>
                 <div class="flex items-center gap-2">
                     <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-                        {{ __('fleet.operations.tab_operations') }}
+                        {{ $this->headerTitle }}
                     </h1>
                 </div>
                 <p class="text-xs text-slate-500 mt-0.5">
-                    {{ __('fleet.operations.operations_subtitle') }}
+                    {{ $this->headerSubtitle }}
                 </p>
             </div>
+        </div>
+
+        {{-- Scope Selector Tabs (Day, Week, Month, Custom) --}}
+        <div class="flex items-center p-1 bg-slate-100 rounded-2xl border border-slate-200/80 self-start sm:self-auto text-xs shadow-2xs">
+            <button type="button" wire:click="setScope('day')"
+                class="px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition cursor-pointer active:scale-95 {{ $scope === 'day' ? 'bg-white text-slate-900 font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900' }}">
+                <i wire:loading.remove wire:target="setScope('day')" class="bi bi-calendar-day mr-1 text-[11px]"></i>
+                <i wire:loading wire:target="setScope('day')" class="bi bi-arrow-repeat animate-spin mr-1 text-[11px]"></i>
+                <span>{{ __('fleet.operations.scope_day') }}</span>
+            </button>
+            <button type="button" wire:click="setScope('week')"
+                class="px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition cursor-pointer active:scale-95 {{ $scope === 'week' ? 'bg-white text-slate-900 font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900' }}">
+                <i wire:loading.remove wire:target="setScope('week')" class="bi bi-calendar-week mr-1 text-[11px]"></i>
+                <i wire:loading wire:target="setScope('week')" class="bi bi-arrow-repeat animate-spin mr-1 text-[11px]"></i>
+                <span>{{ __('fleet.operations.scope_week') }}</span>
+            </button>
+            <button type="button" wire:click="setScope('month')"
+                class="px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition cursor-pointer active:scale-95 {{ $scope === 'month' ? 'bg-white text-slate-900 font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900' }}">
+                <i wire:loading.remove wire:target="setScope('month')" class="bi bi-calendar-month mr-1 text-[11px]"></i>
+                <i wire:loading wire:target="setScope('month')" class="bi bi-arrow-repeat animate-spin mr-1 text-[11px]"></i>
+                <span>{{ __('fleet.operations.scope_month') }}</span>
+            </button>
+            <button type="button" wire:click="setScope('custom')"
+                class="px-2.5 sm:px-3 py-1.5 rounded-xl font-semibold transition cursor-pointer active:scale-95 {{ $scope === 'custom' ? 'bg-white text-slate-900 font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900' }}">
+                <i wire:loading.remove wire:target="setScope('custom')" class="bi bi-calendar-range mr-1 text-[11px]"></i>
+                <i wire:loading wire:target="setScope('custom')" class="bi bi-arrow-repeat animate-spin mr-1 text-[11px]"></i>
+                <span>{{ __('fleet.operations.scope_custom') }}</span>
+            </button>
         </div>
     </div>
 
@@ -72,7 +100,7 @@
                 </button>
             @endforeach
 
-            @if ($q !== '' || $category !== 'all')
+            @if ($q !== '' || $category !== 'all' || $activityFilter !== 'all')
                 <button type="button" wire:click="resetFilters"
                     class="ml-1 text-[11px] font-semibold text-rose-600 hover:text-rose-800 transition cursor-pointer inline-flex items-center gap-1">
                     <i class="bi bi-arrow-counterclockwise"></i>
@@ -82,8 +110,22 @@
         </div>
     </div>
 
-    {{-- Daily Operational Timeline Log Feed --}}
-    @include('livewire.vehicles.partials.operations-timeline')
+    {{-- Operational Timeline Log Feed with Scoped Loading & Lazy-Fetch State --}}
+    <div class="relative min-h-[300px]">
+        {{-- Scoped Data Fetching Dim Overlay --}}
+        <div wire:loading
+            class="absolute inset-0 z-20 bg-white/70 backdrop-blur-[2px] flex flex-col items-center justify-start pt-20 rounded-2xl transition-all duration-200">
+            <div class="flex items-center gap-3 bg-white/95 rounded-2xl px-5 py-3 shadow-xl border border-slate-200/80">
+                <div class="h-4 w-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                <div class="text-xs">
+                    <span class="font-bold text-slate-800">{{ __('fleet.common.loading') }}</span>
+                    <span class="text-slate-500 font-normal ml-1">{{ __('fleet.operations.fetching_period_data') }}</span>
+                </div>
+            </div>
+        </div>
+
+        @include('livewire.vehicles.partials.operations-timeline')
+    </div>
 
     {{-- Universal Photo Lightbox --}}
     <x-universal-lightbox />

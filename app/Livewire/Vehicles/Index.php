@@ -6,6 +6,7 @@ use App\Enums\VehicleStatus;
 use App\Infrastructure\Persistence\Eloquent\Models\Vehicle;
 use App\Models\ServiceRecord;
 use App\Models\VehicleDocument;
+use App\Models\VehicleInspection;
 use Illuminate\Database\QueryException;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -334,6 +335,7 @@ class Index extends Component
 
         $query = Vehicle::query()
             ->select('vehicles.*')
+            ->withExists(['inspections as has_completed_p2h' => fn ($q) => $q->where('inspection_type', VehicleInspection::TYPE_CHECK_IN)])
             ->with(['activeCheckOut']);
 
         if ($this->canManage) {
