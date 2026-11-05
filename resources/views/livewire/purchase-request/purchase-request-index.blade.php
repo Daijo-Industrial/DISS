@@ -9,11 +9,20 @@
     // ── Alpine-managed filter state (instant UI, no server round-trip until value committed) ──
     fStatus: @js($status),
     fDept: @js($department),
+    fFromDept: @js($fromDepartment),
     fBranch: @js($branch),
     fDateRange: @js($dateRange),
 
+    init() {
+        this.$watch('$wire.fromDepartment', v => this.fFromDept = v || '');
+        this.$watch('$wire.department', v => this.fDept = v || '');
+        this.$watch('$wire.status', v => this.fStatus = v || '');
+        this.$watch('$wire.branch', v => this.fBranch = v || '');
+        this.$watch('$wire.dateRange', v => this.fDateRange = v || '');
+    },
+
     get activeFilterCount() {
-        return [this.fStatus, this.fDept, this.fBranch, this.fDateRange].filter(Boolean).length;
+        return [this.fStatus, this.fDept, this.fFromDept, this.fBranch, this.fDateRange].filter(Boolean).length;
     },
 
     applyFilter(prop, livewireProp, value) {
@@ -24,10 +33,11 @@
     resetAllFilters() {
         this.fStatus = '';
         this.fDept = '';
+        this.fFromDept = '';
         this.fBranch = '';
         this.fDateRange = '';
         $wire.clearFilters();
-        $wire.set('page', 1);
+        $wire.resetPage();
         this.selectedIds = [];
     },
 
@@ -187,6 +197,24 @@
                 </div>
             </div>
 
+            {{-- From Department Filter --}}
+            <div class="w-full sm:w-52">
+                <label
+                    class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">From Department</label>
+                <div class="relative">
+                    <select x-model="fFromDept" @change="applyFilter('fFromDept', 'fromDepartment', fFromDept)"
+                        class="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-300 uppercase transition-all cursor-pointer"
+                        :class="fFromDept ? 'border-indigo-300 text-indigo-700 bg-indigo-50' : ''">
+                        <option value="">All From Departments</option>
+                        @foreach ($fromDepartments as $fDeptName)
+                            <option value="{{ $fDeptName }}">{{ $fDeptName }}</option>
+                        @endforeach
+                    </select>
+                    <span x-show="fFromDept" @click="applyFilter('fFromDept', 'fromDepartment', '')"
+                        class="absolute right-7 top-1/2 -translate-y-1/2 cursor-pointer text-indigo-400 hover:text-rose-500 transition-colors text-[10px]">✕</span>
+                </div>
+            </div>
+
             {{-- Active filter pills --}}
             <div class="flex flex-wrap gap-1.5 flex-1">
                 <template x-if="fStatus">
@@ -202,8 +230,17 @@
                     <span
                         class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-tighter">
                         <x-bx-building class="w-3 h-3" />
-                        <span x-text="fDept"></span>
+                        <span x-text="'To: ' + fDept"></span>
                         <button @click="applyFilter('fDept', 'department', '')"
+                            class="ml-0.5 hover:text-rose-600">✕</button>
+                    </span>
+                </template>
+                <template x-if="fFromDept">
+                    <span
+                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-tighter">
+                        <x-bx-building class="w-3 h-3" />
+                        <span x-text="'From: ' + fFromDept"></span>
+                        <button @click="applyFilter('fFromDept', 'fromDepartment', '')"
                             class="ml-0.5 hover:text-rose-600">✕</button>
                     </span>
                 </template>
@@ -216,12 +253,12 @@
                             class="ml-0.5 hover:text-rose-600">✕</button>
                     </span>
                 </template>
-                @if ($page > 1)
+                @if ($this->currentPage > 1)
                     <span
                         class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-tighter">
                         <x-bx-list-ul class="w-3 h-3" />
-                        Page: {{ $page }}
-                        <button @click="$wire.set('page', 1)" class="ml-0.5 hover:text-rose-600">✕</button>
+                        Page: {{ $this->currentPage }}
+                        <button @click="$wire.resetPage()" class="ml-0.5 hover:text-rose-600">✕</button>
                     </span>
                 @endif
             </div>
@@ -400,8 +437,8 @@
                                         visibility scope.
                                     </p>
 
-                                    @if ($search || $status || $department || $dateRange || $branch || $preset !== 'all')
-                                        <button wire:click="resetFilters"
+                                    @if ($search || $status || $department || $fromDepartment || $dateRange || $branch || $preset !== 'all')
+                                        <button @click="resetAllFilters()"
                                             class="mt-6 px-5 py-2 rounded-xl bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all hover:scale-105 active:scale-95 shadow-sm">
                                             Clear all filters
                                         </button>
