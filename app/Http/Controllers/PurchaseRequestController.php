@@ -9,13 +9,10 @@ use App\Application\PurchaseRequest\Queries\GetPurchaseRequestDetail;
 use App\Application\PurchaseRequest\Services\MasterPrItemService;
 use App\Application\PurchaseRequest\Services\PurchaseRequestItemFilter;
 use App\Application\PurchaseRequest\UseCases\ApprovePurchaseRequest as ApprovePR;
-use App\Application\PurchaseRequest\UseCases\BatchApprovePurchaseRequests;
-use App\Application\PurchaseRequest\UseCases\BatchRejectPurchaseRequests;
 use App\Application\PurchaseRequest\UseCases\RejectPurchaseRequest as RejectPR;
 use App\Application\PurchaseRequest\UseCases\ReturnPurchaseRequest;
 use App\Application\Signature\UseCases\GetDefaultActiveUserSignature;
 use App\Domain\PurchaseRequest\Services\PurchaseRequestPdfService;
-use App\Exports\PurchaseRequestWithDetailsExport;
 use App\Http\Requests\ApprovePurchaseRequest;
 use App\Http\Requests\RejectPurchaseRequest;
 use App\Http\Requests\StorePurchaseRequest;
@@ -28,7 +25,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
-use Maatwebsite\Excel\Facades\Excel;
 
 class PurchaseRequestController extends Controller
 {
@@ -38,8 +34,6 @@ class PurchaseRequestController extends Controller
         private MasterPrItemService $masterPrService,
         private ReturnPurchaseRequest $returnUseCase,
         private GetDefaultActiveUserSignature $getDefaultSignature,
-        private BatchApprovePurchaseRequests $batchApproveUseCase,
-        private BatchRejectPurchaseRequests $batchRejectUseCase,
         private \App\Domain\PurchaseRequest\Services\PurchaseRequestApprovalContextBuilder $contextBuilder,
         private \App\Domain\PurchaseRequest\Services\PurchaseRequestSecurityService $securityService,
     ) {}
@@ -370,19 +364,6 @@ class PurchaseRequestController extends Controller
         }
     }
 
-    public function exportExcel()
-    {
-        $authDepartment = ucwords(strtolower(auth()->user()->department->name));
-        $purchaseRequestIds = PurchaseRequest::where('from_department', $authDepartment)->pluck(
-            'id',
-        );
-
-        return Excel::download(
-            new PurchaseRequestWithDetailsExport($purchaseRequestIds),
-            "purchase requests for $authDepartment .xlsx",
-        );
-    }
-
     public function approve(ApprovePurchaseRequest $request, PurchaseRequest $purchaseRequest, ApprovePR $useCase)
     {
         $isAjax = $request->ajax() || $request->wantsJson();
@@ -497,97 +478,5 @@ class PurchaseRequestController extends Controller
                 ->back()
                 ->with(['error' => $e->getMessage()]);
         }
-    }
-
-    /**
-     * Batch approve multiple PRs at once.
-     * Requires 'pr.batch-approve' permission — separate from individual 'pr.approve'.
-     */
-    public function batchApprove(Request $request): \Illuminate\Http\JsonResponse
-    {
-        $this->authorize('batch-approve', PurchaseRequest::class);
-
-        $ids = $request->input('ids', []);
-        $userId = Auth::id();
-
-        if (! $userId) {
-            return response()->json(['success' => false, 'message' => 'Unauthenticated.'], 401);
-        }
-
-        $result = $this->batchApproveUseCase->handle($ids, $userId);
-
-        return response()->json([
-            'success' => $result['success'],
-            'message' => $result['message'],
-            'batch_id' => $result['batch_id'] ?? null,
-            'approved' => $result['approved'],
-            'failed' => $result['failed'],
-            'errors' => $result['errors'],
-        ]);
-    }
-
-    /**
-     * Batch reject multiple PRs at once.
-     * Requires 'pr.batch-approve' permission — separate from individual 'pr.approve'.
-     */
-    public function batchReject(Request $request): \Illuminate\Http\JsonResponse
-    {
-        $this->authorize('batch-approve', PurchaseRequest::class);
-
-        $ids = $request->input('ids', []);
-        $rejectionReason = $request->input('rejection_reason', '');
-        $userId = Auth::id();
-
-        if (! $userId) {
-            return response()->json(['success' => false, 'message' => 'Unauthenticated.'], 401);
-        }
-
-        $result = $this->batchRejectUseCase->handle($ids, $userId, $rejectionReason);
-
-        return response()->json([
-            'success' => $result['success'],
-            'message' => $result['message'],
-            'batch_id' => $result['batch_id'] ?? null,
-            'rejected' => $result['rejected'],
-            'failed' => $result['failed'],
-            'errors' => $result['errors'],
-        ]);
-    }
-
-    /**
-     * Poll the status of specific job batches.
-     * Used by the frontend Alpine component to render progress bars.
-     */
-    public function batchStatus(Request $request): \Illuminate\Http\JsonResponse
-    {
-        $this->authorize('batch-approve', PurchaseRequest::class);
-
-        $ids = $request->input('ids', []);
-        $statuses = [];
-
-        foreach ((array) $ids as $id) {
-            $batch = Bus::findBatch($id);
-            if ($batch) {
-                $statuses[] = [
-                    'id' => $batch->id,
-                    'name' => $batch->name,
-                    'totalJobs' => $batch->totalJobs,
-                    'pendingJobs' => $batch->pendingJobs,
-                    'failedJobs' => $batch->failedJobs,
-                    'progress' => $batch->progress(),
-                    'finished' => $batch->finished(),
-                    'canceled' => $batch->canceled(),
-                ];
-            }
-        }
-
-        return response()->json(['success' => true, 'batches' => $statuses]);
-    }
-
-    public function indexApprovedAll()
-    {
-        $this->authorize('viewAllApproved', PurchaseRequest::class);
-
-        return view('purchase-requests.approved-all');
     }
 }

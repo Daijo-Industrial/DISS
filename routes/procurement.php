@@ -39,15 +39,13 @@ Route::middleware('auth')->group(function () {
     // Purchase Requests
     Route::get('purchase-requests/get-item-names', [PurchaseRequestController::class, 'getItemNames'])->name('purchase-requests.get-item-names');
     Route::get('purchase-requests', PurchaseRequestIndex::class)->name('purchase-requests.index');
-    Route::get('purchase-requests/approved-all', [PurchaseRequestController::class, 'indexApprovedAll'])->name('purchase-requests.approved-all');
+    Route::redirect('purchase-requests/approved-all', '/purchase-requests?status=APPROVED', 301)->name('purchase-requests.approved-all');
     Route::get('purchase-requests/create', [PurchaseRequestController::class, 'create'])->name('purchase-requests.create');
     Route::post('purchase-requests', [PurchaseRequestController::class, 'store'])->name('purchase-requests.store');
     Route::get('purchase-requests/{id}/edit', [PurchaseRequestController::class, 'edit'])->name('purchase-requests.edit');
     Route::put('purchase-requests/{id}', [PurchaseRequestController::class, 'update'])->name('purchase-requests.update');
     Route::put('purchase-requests/{id}/cancel', [PurchaseRequestController::class, 'cancel'])->name('purchase-requests.cancel');
-    Route::post('/purchaseRequestsInsert', [PurchaseRequestController::class, 'store'])->name('purchaserequest.insert');
     Route::delete('purchase-requests/{id}', [PurchaseRequestController::class, 'destroy'])->name('purchase-requests.destroy');
-    Route::get('purchase-requests/export-excel', [PurchaseRequestController::class, 'exportExcel'])->name('purchase-requests.export-excel');
     Route::get('purchase-requests/{id}', [PurchaseRequestController::class, 'show'])->name('purchase-requests.show');
     Route::get('purchase-requests/{id}/export-pdf', [PurchaseRequestController::class, 'exportToPdf'])->name('purchase-requests.export-pdf');
     Route::get('/purchase-requests/{id}/quick-view', [PurchaseRequestController::class, 'quickView'])->name('purchase-requests.quick-view');
@@ -58,11 +56,6 @@ Route::middleware('auth')->group(function () {
 
     Route::post('purchase-requests/items/{item}/approve', [DetailPurchaseRequestController::class, 'approve'])->name('purchase-requests.items.approve');
     Route::post('purchase-requests/items/{item}/reject', [DetailPurchaseRequestController::class, 'reject'])->name('purchase-requests.items.reject');
-
-    // Batch approve / reject — requires 'pr.batch-approve' permission (director-level only)
-    Route::put('purchase-requests/batch-approve', [PurchaseRequestController::class, 'batchApprove'])->name('purchase-requests.batch-approve');
-    Route::put('purchase-requests/batch-reject', [PurchaseRequestController::class, 'batchReject'])->name('purchase-requests.batch-reject');
-    Route::get('purchase-requests/batch-status', [PurchaseRequestController::class, 'batchStatus'])->name('purchase-requests.batch-status');
 
     // Purchase Request Details
     Route::get('/purchaseRequestsDetail/{id}', [DetailPurchaseRequestController::class, 'detailpr'])->name('pr.detail');
