@@ -419,8 +419,8 @@ class PurchaseRequestIndex extends Component
             'Expires' => '0',
         ];
 
-        // WYSIWYG: query matching active filters and sorting
-        $query = $this->queryRows();
+        // WYSIWYG: query matching active filters and sorting, eager loading items
+        $query = $this->queryRows()->with('items');
 
         $sanitizeCsv = static function (?string $value): string {
             if ($value === null || $value === '') {
@@ -444,7 +444,7 @@ class PurchaseRequestIndex extends Component
             // UTF-8 BOM for Excel compatibility
             fwrite($output, "\xEF\xBB\xBF");
 
-            // CSV Header
+            // CSV Header: PR Header columns + Item Detail columns
             fputcsv($output, [
                 'PR Number',
                 'Doc Number',
@@ -456,7 +456,14 @@ class PurchaseRequestIndex extends Component
                 'Items Count',
                 'Supplier',
                 'PO Number',
-                'Status',
+                'PR Status',
+                'Item Name',
+                'Quantity',
+                'UOM',
+                'Purpose',
+                'Currency',
+                'Price',
+                'Subtotal',
             ]);
 
             // Stream chunked records to prevent memory exhaustion
@@ -476,7 +483,7 @@ class PurchaseRequestIndex extends Component
 
                     $status = $row->workflow_status ?: ($row->status ?? '—');
 
-                    fputcsv($output, [
+                    $headerData = [
                         $sanitizeCsv($row->pr_no ?: 'No PR Num'),
                         $sanitizeCsv($row->doc_num ?: '—'),
                         $branch,
@@ -488,7 +495,36 @@ class PurchaseRequestIndex extends Component
                         $sanitizeCsv($row->supplier ?: 'Not Specified'),
                         $sanitizeCsv($row->po_number ?: '—'),
                         $status,
-                    ]);
+                    ];
+
+                    if ($row->items && $row->items->isNotEmpty()) {
+                        foreach ($row->items as $item) {
+                            $qty = $item->quantity !== null ? (float) $item->quantity : null;
+                            $price = $item->price !== null ? (float) $item->price : null;
+                            $subtotal = ($qty !== null && $price !== null) ? ($qty * $price) : null;
+
+                            fputcsv($output, array_merge($headerData, [
+                                $sanitizeCsv($item->item_name ?: '—'),
+                                $qty !== null ? (string) $qty : '',
+                                $sanitizeCsv($item->uom ?: ''),
+                                $sanitizeCsv($item->purpose ?: ''),
+                                $sanitizeCsv($item->currency ?: 'IDR'),
+                                $price !== null ? (string) $price : '',
+                                $subtotal !== null ? (string) $subtotal : '',
+                            ]));
+                        }
+                    } else {
+                        // Include PR even if it has no line items yet
+                        fputcsv($output, array_merge($headerData, [
+                            '—',
+                            '',
+                            '',
+                            '',
+                            '',
+                            '',
+                            '',
+                        ]));
+                    }
                 }
             });
 
