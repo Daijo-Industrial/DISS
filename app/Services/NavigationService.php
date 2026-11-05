@@ -249,14 +249,6 @@ class NavigationService
                         'permission' => ['pr.view-all', 'pr.view'],
                     ],
                     [
-                        'label' => 'Approved PRs (All Depts)',
-                        'route' => 'purchase-requests.index',
-                        'params' => ['status' => 'APPROVED'],
-                        'icon' => 'clipboard-document-check',
-                        'active' => request()->routeIs('purchase-requests.index') && request('status') === 'APPROVED',
-                        'permission' => 'pr.view-all-approved',
-                    ],
-                    [
                         'label' => 'Purchase Orders',
                         'route' => 'po.index',
                         'icon' => 'clipboard-document-check',
