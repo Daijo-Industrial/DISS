@@ -357,7 +357,7 @@
                                         class="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700 ring-1 ring-inset ring-indigo-700/10 w-fit">
                                         {{ $row->items_count }} Items
                                     </span>
-                                    <div class="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                                    <div class="text-[10px] text-slate-400 font-medium whitespace-nowrap inline-flex">
                                         <span class="text-slate-500">{{ $row->from_department }}</span>
                                         <x-bx-right-arrow-alt class="mx-0.5" />
                                         <span
