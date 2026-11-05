@@ -2,7 +2,10 @@
 
 namespace App\Livewire\PurchaseRequest;
 
+use App\Application\PurchaseRequest\DTOs\CancelPurchaseRequestDTO;
+use App\Application\PurchaseRequest\DTOs\UpdatePoNumberDTO;
 use App\Application\PurchaseRequest\Queries\Filters\ApprovedThisMonthFilter;
+use App\Application\PurchaseRequest\Queries\Filters\BranchFilter;
 use App\Application\PurchaseRequest\Queries\Filters\DateRangeFilter;
 use App\Application\PurchaseRequest\Queries\Filters\DepartmentFilter;
 use App\Application\PurchaseRequest\Queries\Filters\DeptActiveRequestsFilter;
@@ -14,6 +17,16 @@ use App\Application\PurchaseRequest\Queries\Filters\MyApprovalFilter;
 use App\Application\PurchaseRequest\Queries\Filters\StatusFilter;
 use App\Application\PurchaseRequest\Queries\GetPurchaseRequestStats;
 use App\Application\PurchaseRequest\Queries\PurchaseRequestQueryBuilder;
+use App\Application\PurchaseRequest\UseCases\BatchApprovePurchaseRequests;
+use App\Application\PurchaseRequest\UseCases\BatchRejectPurchaseRequests;
+use App\Application\PurchaseRequest\UseCases\CancelPurchaseRequest;
+use App\Application\PurchaseRequest\UseCases\DeleteForeverPurchaseRequest;
+use App\Application\PurchaseRequest\UseCases\DeletePurchaseRequest;
+use App\Application\PurchaseRequest\UseCases\UpdatePoNumber;
+use App\Enums\Branch;
+use App\Enums\ToDepartment;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Validator;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -21,6 +34,7 @@ use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Layout('new.layouts.app')]
 class PurchaseRequestIndex extends Component
@@ -166,7 +180,7 @@ class PurchaseRequestIndex extends Component
         }
     }
 
-    protected function queryRows()
+    protected function queryRows(): Builder
     {
         $builder = new PurchaseRequestQueryBuilder;
         $user = auth()->user();
@@ -187,7 +201,7 @@ class PurchaseRequestIndex extends Component
             $filters[] = DateRangeFilter::fromString($this->dateRange);
         }
         if ($this->branch) {
-            $filters[] = new \App\Application\PurchaseRequest\Queries\Filters\BranchFilter($this->branch);
+            $filters[] = new BranchFilter($this->branch);
         }
 
         if ($this->preset && $this->preset !== 'all') {
@@ -215,7 +229,7 @@ class PurchaseRequestIndex extends Component
     #[Computed]
     public function departments(): array
     {
-        return \App\Enums\ToDepartment::values();
+        return ToDepartment::values();
     }
 
     #[Computed]
@@ -227,7 +241,7 @@ class PurchaseRequestIndex extends Component
     #[Computed]
     public function branches(): array
     {
-        return \App\Enums\Branch::values();
+        return Branch::values();
     }
 
     #[Computed]
@@ -268,7 +282,7 @@ class PurchaseRequestIndex extends Component
     }
 
     public function batchApprove(
-        \App\Application\PurchaseRequest\UseCases\BatchApprovePurchaseRequests $useCase,
+        BatchApprovePurchaseRequests $useCase,
         array $selectedIds = []
     ): void {
         if (! empty($selectedIds)) {
@@ -312,7 +326,7 @@ class PurchaseRequestIndex extends Component
     }
 
     public function batchReject(
-        \App\Application\PurchaseRequest\UseCases\BatchRejectPurchaseRequests $useCase,
+        BatchRejectPurchaseRequests $useCase,
         array $selectedIds = []
     ): void {
         if (! empty($selectedIds)) {
@@ -391,6 +405,99 @@ class PurchaseRequestIndex extends Component
         $this->dispatch('$refresh');
     }
 
+    public function exportCsv(): StreamedResponse
+    {
+        abort_unless(auth()->user()?->hasRole('super-admin'), 403, 'Unauthorized. Super-admin access required.');
+
+        $filename = 'purchase-requests-' . now()->timezone('Asia/Jakarta')->format('Y-m-d-His') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ];
+
+        // WYSIWYG: query matching active filters and sorting
+        $query = $this->queryRows();
+
+        $sanitizeCsv = static function (?string $value): string {
+            if ($value === null || $value === '') {
+                return '';
+            }
+
+            // Mitigate CSV formula injection (CWE-1236)
+            if (in_array($value[0], ['=', '+', '-', '@'], true)) {
+                return "'" . $value;
+            }
+
+            return $value;
+        };
+
+        $callback = function () use ($query, $sanitizeCsv) {
+            $output = fopen('php://output', 'w');
+            if ($output === false) {
+                return;
+            }
+
+            // UTF-8 BOM for Excel compatibility
+            fwrite($output, "\xEF\xBB\xBF");
+
+            // CSV Header
+            fputcsv($output, [
+                'PR Number',
+                'Doc Number',
+                'Branch',
+                'Requested Date (GMT+7)',
+                'Requester',
+                'From Department',
+                'To Department',
+                'Items Count',
+                'Supplier',
+                'PO Number',
+                'Status',
+            ]);
+
+            // Stream chunked records to prevent memory exhaustion
+            $query->chunk(500, function ($rows) use ($output, $sanitizeCsv) {
+                foreach ($rows as $row) {
+                    $requestedAt = $row->created_at
+                        ? Carbon::parse($row->created_at)->timezone('Asia/Jakarta')->format('d-m-Y H:i:s')
+                        : ($row->date_pr ? Carbon::parse($row->date_pr)->timezone('Asia/Jakarta')->format('d-m-Y') : '—');
+
+                    $branch = $row->branch instanceof \BackedEnum
+                        ? $row->branch->value
+                        : ($row->branch ?? 'HQ');
+
+                    $toDept = $row->to_department instanceof \BackedEnum
+                        ? $row->to_department->value
+                        : ($row->to_department ?? '—');
+
+                    $status = $row->workflow_status ?: ($row->status ?? '—');
+
+                    fputcsv($output, [
+                        $sanitizeCsv($row->pr_no ?: 'No PR Num'),
+                        $sanitizeCsv($row->doc_num ?: '—'),
+                        $branch,
+                        $requestedAt,
+                        $sanitizeCsv($row->createdBy?->name ?? 'System'),
+                        $sanitizeCsv($row->from_department ?: '—'),
+                        $toDept,
+                        $row->items_count ?? 0,
+                        $sanitizeCsv($row->supplier ?: 'Not Specified'),
+                        $sanitizeCsv($row->po_number ?: '—'),
+                        $status,
+                    ]);
+                }
+            });
+
+            fclose($output);
+        };
+
+        return response()->streamDownload($callback, $filename, $headers);
+    }
+
     public function updatePoNumber(int $id, string $poNumber): void
     {
         Validator::make(
@@ -399,13 +506,13 @@ class PurchaseRequestIndex extends Component
         )->validate();
 
         try {
-            $dto = new \App\Application\PurchaseRequest\DTOs\UpdatePoNumberDTO(
+            $dto = new UpdatePoNumberDTO(
                 purchaseRequestId: (int) $id,
                 poNumber: $poNumber,
                 updatedByUserId: (int) auth()->id()
             );
 
-            $useCase = app(\App\Application\PurchaseRequest\UseCases\UpdatePoNumber::class);
+            $useCase = app(UpdatePoNumber::class);
             $useCase->handle($dto);
 
             $this->dispatch('toast', message: 'PO Number updated successfully!', type: 'success');
@@ -427,13 +534,13 @@ class PurchaseRequestIndex extends Component
         }
 
         try {
-            $dto = new \App\Application\PurchaseRequest\DTOs\CancelPurchaseRequestDTO(
+            $dto = new CancelPurchaseRequestDTO(
                 purchaseRequestId: $id,
                 cancelledByUserId: (int) auth()->id(),
                 reason: $reason
             );
 
-            $useCase = app(\App\Application\PurchaseRequest\UseCases\CancelPurchaseRequest::class);
+            $useCase = app(CancelPurchaseRequest::class);
             $useCase->handle($dto);
 
             $this->dispatch('toast', message: 'Purchase request cancelled successfully.', type: 'success');
@@ -448,7 +555,7 @@ class PurchaseRequestIndex extends Component
     public function deletePurchaseRequest(int $id): void
     {
         try {
-            $useCase = app(\App\Application\PurchaseRequest\UseCases\DeletePurchaseRequest::class);
+            $useCase = app(DeletePurchaseRequest::class);
             $useCase->handle($id, (int) auth()->id());
 
             $this->dispatch('toast', message: 'Purchase request deleted successfully.', type: 'success');
@@ -464,7 +571,7 @@ class PurchaseRequestIndex extends Component
     public function deleteForeverPurchaseRequest(int $id): void
     {
         try {
-            $useCase = app(\App\Application\PurchaseRequest\UseCases\DeleteForeverPurchaseRequest::class);
+            $useCase = app(DeleteForeverPurchaseRequest::class);
             $useCase->handle($id, (int) auth()->id());
 
             $this->dispatch('toast', message: 'Purchase request permanently deleted.', type: 'success');

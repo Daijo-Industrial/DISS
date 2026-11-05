@@ -67,7 +67,7 @@
                             <div class="p-5 bg-slate-50 relative">
                                 <div class="mb-2">
                                     <label for="po_number_input"
-                                        class="form-label text-sm font-bold text-slate-700 mb-1 block">PO Number for <span
+                                        class="text-sm font-bold text-slate-700 mb-1 block">PO Number for <span
                                             class="text-indigo-600" x-text="doc"></span></label>
                                     <p class="text-xs text-slate-500 mb-3">Update the Purchase Order number associated with this
                                         request.</p>
@@ -94,7 +94,7 @@
                                     wire:loading.attr="disabled"
                                     wire:target="updatePoNumber"
                                     class="bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200 text-white border-0 rounded-lg text-sm px-4 py-2 font-medium transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                                    <x-bx-save class="" wire:loading.class="animate-spin" wire:target="updatePoNumber" />
+                                    <x-bx-save class="w-4 h-4" wire:loading.class="animate-spin" wire:target="updatePoNumber" />
                                     <span wire:loading.remove wire:target="updatePoNumber">Save Changes</span>
                                     <span wire:loading wire:target="updatePoNumber">Saving...</span>
                                 </button>
