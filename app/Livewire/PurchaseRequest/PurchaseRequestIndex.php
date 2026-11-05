@@ -10,6 +10,7 @@ use App\Application\PurchaseRequest\Queries\Filters\DateRangeFilter;
 use App\Application\PurchaseRequest\Queries\Filters\DepartmentFilter;
 use App\Application\PurchaseRequest\Queries\Filters\DeptActiveRequestsFilter;
 use App\Application\PurchaseRequest\Queries\Filters\DraftsFilter;
+use App\Application\PurchaseRequest\Queries\Filters\FromDepartmentFilter;
 use App\Application\PurchaseRequest\Queries\Filters\GlobalSearchFilter;
 use App\Application\PurchaseRequest\Queries\Filters\InReviewFilter;
 use App\Application\PurchaseRequest\Queries\Filters\MyActiveRequestsFilter;
@@ -25,8 +26,11 @@ use App\Application\PurchaseRequest\UseCases\DeletePurchaseRequest;
 use App\Application\PurchaseRequest\UseCases\UpdatePoNumber;
 use App\Enums\Branch;
 use App\Enums\ToDepartment;
+use App\Infrastructure\Persistence\Eloquent\Models\Department;
+use App\Models\PurchaseRequest;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -73,6 +77,9 @@ class PurchaseRequestIndex extends Component
     #[Url]
     public string $branch = '';
 
+    #[Url(as: 'from_dept')]
+    public string $fromDepartment = '';
+
     #[Url]
     public string $preset = 'all';
 
@@ -86,9 +93,6 @@ class PurchaseRequestIndex extends Component
     // Pagination
     #[Url(as: 'per_page')]
     public int $perPage = 10;
-
-    #[Url]
-    public int $page = 1;
 
     // Allowed sort columns — centralised so sortBy() and queryRows() stay in sync
     private const ALLOWED_SORTS = ['id', 'pr_no', 'doc_num', 'date_pr', 'created_at', 'supplier', 'from_department', 'po_number'];
@@ -120,7 +124,7 @@ class PurchaseRequestIndex extends Component
 
     public function updated(string $name): void
     {
-        $filterProps = ['search', 'status', 'department', 'dateRange', 'branch', 'preset', 'perPage', 'sortField', 'sortDirection'];
+        $filterProps = ['search', 'status', 'department', 'fromDepartment', 'dateRange', 'branch', 'preset', 'perPage', 'sortField', 'sortDirection'];
 
         if (in_array($name, $filterProps, true)) {
             $this->resetPage();
@@ -133,6 +137,7 @@ class PurchaseRequestIndex extends Component
         $this->search = '';
         $this->status = '';
         $this->department = '';
+        $this->fromDepartment = '';
         $this->dateRange = '';
         $this->branch = '';
         $this->preset = 'all';
@@ -151,6 +156,7 @@ class PurchaseRequestIndex extends Component
             'search' => $this->search = '',
             'status' => $this->status = '',
             'department' => $this->department = '',
+            'from_department', 'fromDepartment', 'from_dept' => $this->fromDepartment = '',
             'dateRange' => $this->dateRange = '',
             'branch' => $this->branch = '',
             'preset' => $this->preset = 'all',
@@ -203,6 +209,9 @@ class PurchaseRequestIndex extends Component
         if ($this->branch) {
             $filters[] = new BranchFilter($this->branch);
         }
+        if ($this->fromDepartment) {
+            $filters[] = new FromDepartmentFilter($this->fromDepartment);
+        }
 
         if ($this->preset && $this->preset !== 'all') {
             $presetFilter = match ($this->preset) {
@@ -239,9 +248,37 @@ class PurchaseRequestIndex extends Component
     }
 
     #[Computed]
+    public function currentPage(): int
+    {
+        return $this->getPage();
+    }
+
+    #[Computed]
     public function branches(): array
     {
         return Branch::values();
+    }
+
+    #[Computed]
+    public function fromDepartments(): array
+    {
+        return Cache::remember('pr_from_departments_list', 300, function () {
+            $masterDepts = Department::orderBy('name')->pluck('name')->toArray();
+            $prDepts = PurchaseRequest::query()
+                ->whereNotNull('from_department')
+                ->where('from_department', '!=', '')
+                ->distinct()
+                ->pluck('from_department')
+                ->toArray();
+
+            return collect(array_merge($masterDepts, $prDepts))
+                ->map(fn ($d) => trim($d))
+                ->filter()
+                ->unique(fn ($d) => strtoupper($d))
+                ->sort()
+                ->values()
+                ->toArray();
+        });
     }
 
     #[Computed]
@@ -268,6 +305,7 @@ class PurchaseRequestIndex extends Component
             'stats' => $this->stats,
             'canBatchApprove' => auth()->user()->can('pr.batch-approve'),
             'departments' => $this->departments,
+            'fromDepartments' => $this->fromDepartments,
             'statuses' => $this->statuses,
             'branches' => $this->branches,
         ]);
@@ -385,8 +423,8 @@ class PurchaseRequestIndex extends Component
             return;
         }
 
-        $count = $this->queryRows()->paginate($this->perPage, ['*'], 'page', $currentPage)->count();
-        if ($count === 0) {
+        $hasRows = $this->queryRows()->forPage($currentPage, $this->perPage)->exists();
+        if (! $hasRows) {
             $this->setPage($currentPage - 1);
         }
     }
@@ -420,15 +458,17 @@ class PurchaseRequestIndex extends Component
         ];
 
         // WYSIWYG: query matching active filters and sorting, eager loading items
-        $query = $this->queryRows()->with('items');
+        // Includes secondary order by purchase_requests.id for deterministic chunking
+        $query = $this->queryRows()->with('items')->orderBy('purchase_requests.id', 'desc');
 
         $sanitizeCsv = static function (?string $value): string {
             if ($value === null || $value === '') {
                 return '';
             }
 
-            // Mitigate CSV formula injection (CWE-1236)
-            if (in_array($value[0], ['=', '+', '-', '@'], true)) {
+            // Mitigate CSV formula injection (CWE-1236) including leading spaces, tabs, carriage returns
+            $trimmed = ltrim($value);
+            if ($trimmed !== '' && in_array($trimmed[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
                 return "'" . $value;
             }
 
@@ -486,15 +526,15 @@ class PurchaseRequestIndex extends Component
                     $headerData = [
                         $sanitizeCsv($row->pr_no ?: 'No PR Num'),
                         $sanitizeCsv($row->doc_num ?: '—'),
-                        $branch,
+                        $sanitizeCsv($branch),
                         $requestedAt,
                         $sanitizeCsv($row->createdBy?->name ?? 'System'),
                         $sanitizeCsv($row->from_department ?: '—'),
-                        $toDept,
+                        $sanitizeCsv($toDept),
                         $row->items_count ?? 0,
                         $sanitizeCsv($row->supplier ?: 'Not Specified'),
                         $sanitizeCsv($row->po_number ?: '—'),
-                        $status,
+                        $sanitizeCsv($status),
                     ];
 
                     if ($row->items && $row->items->isNotEmpty()) {
