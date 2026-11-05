@@ -8,6 +8,7 @@ use App\Application\PurchaseRequest\Queries\Filters\DateRangeFilter;
 use App\Application\PurchaseRequest\Queries\Filters\DepartmentFilter;
 use App\Application\PurchaseRequest\Queries\Filters\DeptActiveRequestsFilter;
 use App\Application\PurchaseRequest\Queries\Filters\DraftsFilter;
+use App\Application\PurchaseRequest\Queries\Filters\FromDepartmentFilter;
 use App\Application\PurchaseRequest\Queries\Filters\InReviewFilter;
 use App\Application\PurchaseRequest\Queries\Filters\MyActiveRequestsFilter;
 use App\Application\PurchaseRequest\Queries\Filters\MyApprovalFilter;
@@ -124,6 +125,10 @@ final class PurchaseRequestQueryBuilder
 
         if ($request->filled('branch')) {
             $filters[] = new BranchFilter($request->input('branch'));
+        }
+
+        if ($request->filled('from_department') || $request->filled('from_dept')) {
+            $filters[] = new FromDepartmentFilter((string) ($request->input('from_department') ?: $request->input('from_dept')));
         }
 
         // ── Top-Card / URL Preset Filters ─────────────────────────────────────
