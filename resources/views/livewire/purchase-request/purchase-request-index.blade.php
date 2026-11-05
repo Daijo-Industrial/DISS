@@ -463,14 +463,15 @@
         </div>
 
         {{-- PAGINATION --}}
-        <div class="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
-            <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                Showing {{ $rows->firstItem() }} to {{ $rows->lastItem() }} of {{ $rows->total() }} total
+        @if ($rows->hasPages())
+            <div class="px-6 py-4 bg-slate-50/50 border-t border-slate-100">
+                {{ $rows->links(data: ['scrollTo' => false]) }}
             </div>
-            <div>
-                {{ $rows->links() }}
+        @elseif ($rows->total() > 0)
+            <div class="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-widest">
+                <span>Showing {{ $rows->firstItem() }} to {{ $rows->lastItem() }} of {{ $rows->total() }} total</span>
             </div>
-        </div>
+        @endif
     </div>
 
     {{-- FLOATING DECISION DOCK (BATCH ACTIONS) --}}

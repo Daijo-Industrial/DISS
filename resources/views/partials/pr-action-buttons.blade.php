@@ -43,7 +43,7 @@
                     <x-bx-info-circle class="w-5 h-5 opacity-80" /> Full Detail View
                 </a>
 
-                <a href="{{ route('purchase-requests.export-pdf', $pr->id) }}"
+                <a href="{{ route('purchase-requests.export-pdf', $pr->id) }}" target="_blank"
                     class="flex items-center gap-2.5 px-3 py-2 text-sm text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
                     <x-bxs-file-pdf class="w-5 h-5 opacity-80" /> Export to PDF
                 </a>
@@ -55,7 +55,7 @@
                         @click="$dispatch('open-edit-po-modal', { 
                             id: {{ $pr->id }}, 
                             doc: 'PR-{{ $pr->doc_num }}',
-                            po: '{{ addslashes($pr->po_number ?? '') }}'
+                            po: '{{ addslashes((string) $pr->po_number) }}'
                         })"
                         class="flex items-center gap-2.5 px-3 py-2 text-sm text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors w-full text-left">
                         <x-bx-edit class="w-5 h-5 opacity-80" /> 

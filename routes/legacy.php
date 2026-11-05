@@ -47,7 +47,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/requirement-uploads', ReviewUploads::class)->name('admin.requirement-uploads');
     Route::get('/departments/overview', DepartmentsOverview::class)->name('departments.overview');
 
-    Route::get('purchase-requests/{id}/export-pdf', [App\Http\Controllers\PurchaseRequestController::class, 'exportToPdf'])->name('purchase-requests.export-pdf');
 
     // Legacy Notification Redirections (Supporting old email links)
     Route::redirect('/purchaserequest/detail/{id}', '/purchase-requests/{id}', 301);

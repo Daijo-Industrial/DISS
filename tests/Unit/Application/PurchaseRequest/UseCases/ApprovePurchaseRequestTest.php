@@ -14,11 +14,10 @@ afterEach(function () {
 
 test('handle approves and syncs pr', function () {
     $approvals = Mockery::mock(Approvals::class);
-    $syncWorkflow = Mockery::mock(SyncPrWorkflow::class);
     $repo = Mockery::mock(PurchaseRequestRepository::class);
     $itemValidator = Mockery::mock(\App\Domain\PurchaseRequest\Services\PurchaseRequestItemValidationService::class);
 
-    $useCase = new ApprovePurchaseRequest($approvals, $syncWorkflow, $repo, $itemValidator);
+    $useCase = new ApprovePurchaseRequest($approvals, $repo, $itemValidator);
 
     $prId = 123;
     $userId = 456;
@@ -54,10 +53,6 @@ test('handle approves and syncs pr', function () {
         ->once()
         ->with($mockPr, $userId, $remarks);
 
-    $syncWorkflow->shouldReceive('sync')
-        ->once()
-        ->with($mockPr);
-
     $useCase->handle($dto);
 
     expect(true)->toBeTrue();
@@ -65,11 +60,10 @@ test('handle approves and syncs pr', function () {
 
 test('handle throws exception if pr not found', function () {
     $approvals = Mockery::mock(Approvals::class);
-    $syncWorkflow = Mockery::mock(SyncPrWorkflow::class);
     $repo = Mockery::mock(PurchaseRequestRepository::class);
     $itemValidator = Mockery::mock(\App\Domain\PurchaseRequest\Services\PurchaseRequestItemValidationService::class);
 
-    $useCase = new ApprovePurchaseRequest($approvals, $syncWorkflow, $repo, $itemValidator);
+    $useCase = new ApprovePurchaseRequest($approvals, $repo, $itemValidator);
 
     $dto = new ApprovalActionDTO(999, 1, 'remarks');
 
