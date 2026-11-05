@@ -1,4 +1,3 @@
-<x-bootstrap-cdn />
 <div x-data="{
     show: false,
     id: null,
@@ -61,13 +60,13 @@
                             <div class="p-5 bg-slate-50 relative">
                                 <div class="mb-2">
                                     <label for="cancel-description"
-                                        class="form-label text-sm font-bold text-slate-700 mb-1 block">Reason for Cancellation
+                                        class="text-sm font-bold text-slate-700 mb-1 block">Reason for Cancellation
                                         <span class="text-rose-500">*</span></label>
                                     <p class="text-xs text-slate-500 mb-3">Please provide a clear reason why this PR (<span
                                             x-text="doc" class="font-bold text-slate-700"></span>) is being canceled.</p>
 
                                     <textarea id="cancel-description" cols="30" rows="4" x-model="reason"
-                                        class="w-full form-control border-slate-200 rounded-xl shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm p-3 bg-white transition-colors placeholder:text-slate-400"
+                                        class="w-full border border-slate-200 rounded-xl shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm p-3 bg-white transition-colors placeholder:text-slate-400"
                                         placeholder="Tell us why you cancel this purchase request..." required></textarea>
                                 </div>
                             </div>

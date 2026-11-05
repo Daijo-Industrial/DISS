@@ -1,5 +1,4 @@
-<x-bootstrap-cdn />
-<div class="sm:px-4 lg:px-0 space-y-6" @reset-selections.window="selectedIds = []" x-data="{
+<div class="max-w-7xl mx-auto sm:px-4 lg:px-0 space-y-6" @reset-selections.window="selectedIds = []" x-data="{
     activeDrawer: 'insights',
     deleteOpen: false,
     filtersOpen: false,
@@ -82,7 +81,7 @@
                     class="h-9 px-3 rounded-xl flex items-center gap-1.5 transition-all text-[10px] font-bold uppercase tracking-tight"
                     :class="activeFilterCount > 0 ? 'bg-indigo-600 text-white shadow-md' :
                         'text-slate-400 hover:bg-slate-100 hover:text-slate-600'">
-                    <i class="bi bi-funnel"></i>
+                    <x-bx-filter-alt class="w-4 h-4" />
                     <span x-show="activeFilterCount > 0" x-text="activeFilterCount"></span>
                 </button>
                 <button type="button" @click="activeDrawer = (activeDrawer === 'insights' ? null : 'insights')"
@@ -92,7 +91,7 @@
                     <x-bx-bar-chart-alt-2 class="w-5 h-5" />
                 </button>
                 <select
-                    class="h-9 rounded-xl border-slate-200 bg-white text-[10px] font-black text-slate-700 focus:ring-indigo-500"
+                    class="h-9 rounded-xl border border-slate-200 bg-white px-2.5 text-[10px] font-black text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-300"
                     wire:model.live="perPage">
                     <option value="10">10</option>
                     <option value="25">25</option>
@@ -101,13 +100,25 @@
             </div>
         </div>
 
-        @can('pr.create')
-            <a href="{{ route('purchase-requests.create') }}"
-                class="h-12 px-6 rounded-2xl bg-indigo-600 flex items-center justify-center gap-2 text-white shadow-lg shadow-indigo-100 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all font-bold text-sm uppercase tracking-widest whitespace-nowrap">
-                <i class="bi bi-plus-lg text-lg"></i>
-                New Request
-            </a>
-        @endcan
+        <div class="flex items-center gap-2">
+            @if (auth()->user()?->hasRole('super-admin'))
+                <button type="button" wire:click="exportCsv" wire:loading.attr="disabled"
+                    title="Export filtered records to CSV"
+                    class="h-12 px-5 rounded-2xl bg-emerald-600 flex items-center justify-center gap-2 text-white shadow-lg shadow-emerald-100 hover:bg-emerald-700 hover:-translate-y-0.5 transition-all font-bold text-xs uppercase tracking-widest whitespace-nowrap disabled:opacity-50 cursor-pointer">
+                    <x-bx-download class="w-4 h-4" wire:loading.remove wire:target="exportCsv" />
+                    <x-bx-loader-alt class="w-4 h-4 animate-spin" wire:loading wire:target="exportCsv" />
+                    <span>Export CSV</span>
+                </button>
+            @endif
+
+            @can('pr.create')
+                <a href="{{ route('purchase-requests.create') }}"
+                    class="h-12 px-6 rounded-2xl bg-indigo-600 flex items-center justify-center gap-2 text-white shadow-lg shadow-indigo-100 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all font-bold text-sm uppercase tracking-widest whitespace-nowrap">
+                    <x-bx-plus class="text-lg" />
+                    New Request
+                </a>
+            @endcan
+        </div>
     </div>
 
     {{-- STATS DASHBOARD --}}
@@ -127,7 +138,7 @@
                     class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Status</label>
                 <div class="relative">
                     <select x-model="fStatus" @change="applyFilter('fStatus', 'status', fStatus)"
-                        class="w-full form-select text-xs font-bold bg-white border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-300 uppercase transition-all cursor-pointer"
+                        class="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-300 uppercase transition-all cursor-pointer"
                         :class="fStatus ? 'border-indigo-300 text-indigo-700 bg-indigo-50' : ''">
                         <option value="">All Statuses</option>
                         @foreach ($statuses as $status)
@@ -146,7 +157,7 @@
                     Department</label>
                 <div class="relative">
                     <select x-model="fDept" @change="applyFilter('fDept', 'department', fDept)"
-                        class="w-full form-select text-xs font-bold bg-white border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-300 uppercase transition-all cursor-pointer"
+                        class="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-300 uppercase transition-all cursor-pointer"
                         :class="fDept ? 'border-indigo-300 text-indigo-700 bg-indigo-50' : ''">
                         <option value="">All To Departments</option>
                         @foreach ($departments as $dept)
@@ -164,7 +175,7 @@
                     class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Branch</label>
                 <div class="relative">
                     <select x-model="fBranch" @change="applyFilter('fBranch', 'branch', fBranch)"
-                        class="w-full form-select text-xs font-bold bg-white border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-300 uppercase transition-all cursor-pointer"
+                        class="w-full text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-300 uppercase transition-all cursor-pointer"
                         :class="fBranch ? 'border-indigo-300 text-indigo-700 bg-indigo-50' : ''">
                         <option value="">All Branches</option>
                         @foreach ($branches as $b)
@@ -253,7 +264,7 @@
                     <tr class="bg-white shadow-sm ring-1 ring-slate-100">
                         <th class="w-12 px-4 py-4 border-b border-slate-100 text-center">
                             <input type="checkbox" :checked="isAllSelected" @change="toggleAll()"
-                                class="form-checkbox h-4 w-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer transition-all">
+                                class="h-4 w-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer transition-all">
                         </th>
                         <th class="px-4 py-4 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
                             wire:click="sortBy('doc_num')">
@@ -264,9 +275,9 @@
                             @endif
                         </th>
                         <th class="px-4 py-4 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
-                            wire:click="sortBy('date_pr')">
+                            wire:click="sortBy('created_at')">
                             Requested
-                            @if ($sortField === 'date_pr')
+                            @if ($sortField === 'created_at')
                                 <i
                                     class="bx bx-sort-{{ $sortDirection === 'asc' ? 'up' : 'down' }} ml-1 text-indigo-500"></i>
                             @endif
@@ -318,7 +329,7 @@
                                                if (idx > -1) selectedIds.splice(idx, 1);
                                            }
                                        "
-                                    class="row-checkbox form-checkbox h-4 w-4 text-indigo-600 rounded border-slate-200 focus:ring-indigo-500 cursor-pointer transition-all">
+                                    class="row-checkbox h-4 w-4 text-indigo-600 rounded border-slate-200 focus:ring-indigo-500 cursor-pointer transition-all">
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex flex-col">
@@ -336,9 +347,9 @@
                             </td>
                             <td class="px-4 py-3">
                                 <div class="font-medium text-slate-700 text-xs">
-                                    {{ \Carbon\Carbon::parse($row->date_pr)->diffForHumans() }}</div>
+                                    {{ $row->created_at ? \Carbon\Carbon::parse($row->created_at)->timezone('Asia/Jakarta')->diffForHumans() : ($row->date_pr ? \Carbon\Carbon::parse($row->date_pr)->timezone('Asia/Jakarta')->diffForHumans() : '—') }}</div>
                                 <div class="text-[9px] text-slate-400">
-                                    {{ \Carbon\Carbon::parse($row->date_pr)->format('d-m-Y') }}</div>
+                                    {{ $row->created_at ? \Carbon\Carbon::parse($row->created_at)->timezone('Asia/Jakarta')->format('d-m-Y H:i') : ($row->date_pr ? \Carbon\Carbon::parse($row->date_pr)->timezone('Asia/Jakarta')->format('d-m-Y') : '—') }}</div>
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex flex-col gap-1">
