@@ -55,7 +55,7 @@
                         @click="$dispatch('open-edit-po-modal', { 
                             id: {{ $pr->id }}, 
                             doc: 'PR-{{ $pr->doc_num }}',
-                            po: '{{ addslashes($pr->po_number) }}'
+                            po: '{{ addslashes($pr->po_number ?? '') }}'
                         })"
                         class="flex items-center gap-2.5 px-3 py-2 text-sm text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors w-full text-left">
                         <x-bx-edit class="w-5 h-5 opacity-80" /> 
