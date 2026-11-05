@@ -65,6 +65,13 @@
 
             {{-- Top Actions --}}
             <div class="flex flex-wrap items-center gap-3">
+                <a href="{{ route('purchase-requests.export-pdf', $purchaseRequest->id) }}" target="_blank"
+                    class="group inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700"
+                    title="Export Purchase Request to PDF">
+                    <i class="bi bi-file-earmark-pdf text-lg text-emerald-600 group-hover:scale-110 transition-transform"></i>
+                    <span>Export PDF</span>
+                </a>
+
                 @can('approval.view-log')
                     <button type="button" @click="$dispatch('open-audit-drawer')"
                         class="group inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:text-indigo-600"

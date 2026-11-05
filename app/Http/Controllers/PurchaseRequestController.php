@@ -14,6 +14,7 @@ use App\Application\PurchaseRequest\UseCases\BatchRejectPurchaseRequests;
 use App\Application\PurchaseRequest\UseCases\RejectPurchaseRequest as RejectPR;
 use App\Application\PurchaseRequest\UseCases\ReturnPurchaseRequest;
 use App\Application\Signature\UseCases\GetDefaultActiveUserSignature;
+use App\Domain\PurchaseRequest\Services\PurchaseRequestPdfService;
 use App\Exports\PurchaseRequestWithDetailsExport;
 use App\Http\Requests\ApprovePurchaseRequest;
 use App\Http\Requests\RejectPurchaseRequest;
@@ -328,40 +329,16 @@ class PurchaseRequestController extends Controller
         }
     }
 
-    public function exportToPdf(int $id, GetPurchaseRequestDetail $query)
+    public function exportToPdf(Request $request, int $id, PurchaseRequestPdfService $pdfService)
     {
         $user = Auth::user();
+        abort_unless($user, 401);
 
-        // Use the centralized view model to fetch the exact same data structure as the 'show' detail page
-        $vm = $query->handle($id, $user);
+        if ($request->query('action') === 'stream' || $request->has('preview')) {
+            return $pdfService->stream($id, $user);
+        }
 
-        // Map digital signatures for the PDF footer
-        $signatures = $vm->purchaseRequest->signatures->mapWithKeys(function ($sig) {
-            return [$sig->section => $sig->signature_path];
-        })->toArray();
-
-        $pdf = Pdf::loadView(
-            'pdf/pr-pdf',
-            [
-                'purchaseRequest' => $vm->purchaseRequest,
-                'user' => $user,
-                'userCreatedBy' => $vm->meta['userCreatedBy'],
-                'filteredItemDetail' => $vm->filteredItemDetail,
-                'totals' => $vm->totals,
-                'departments' => $vm->departments,
-                'approval' => $vm->approval,
-                'signatures' => $signatures,
-            ]
-        )->setPaper('a4', 'landscape');
-
-        return $pdf->download(
-            'Purchase Request-' .
-                $vm->purchaseRequest->id .
-                ' (' .
-                $vm->purchaseRequest->pr_no .
-                ')' .
-                '.pdf',
-        );
+        return $pdfService->download($id, $user);
     }
 
     public function cancel(

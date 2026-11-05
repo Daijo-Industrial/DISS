@@ -245,7 +245,7 @@ class NavigationService
                         'label' => 'Purchase Requests',
                         'route' => 'purchase-requests.index',
                         'icon' => 'clipboard-document-list',
-                        'active' => request()->routeIs('purchase-requests.index'),
+                        'active' => request()->routeIs('purchase-requests.index') && request('status') !== 'APPROVED',
                         'permission' => ['pr.view-all', 'pr.view'],
                     ],
                     [
@@ -305,9 +305,9 @@ class NavigationService
                     [
                         'label' => 'Approved PRs',
                         'route' => 'purchase-requests.index',
-                        'params' => ['custom_status' => 'APPROVED'],
+                        'params' => ['status' => 'APPROVED'],
                         'icon' => 'clipboard-document-check',
-                        'active' => request()->routeIs('purchase-requests.index') && request('custom_status') === 'APPROVED',
+                        'active' => request()->routeIs('purchase-requests.index') && request('status') === 'APPROVED',
                         'permission' => 'pr.view-all',
                     ],
                     [

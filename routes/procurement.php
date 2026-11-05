@@ -49,6 +49,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('purchase-requests/{id}', [PurchaseRequestController::class, 'destroy'])->name('purchase-requests.destroy');
     Route::get('purchase-requests/export-excel', [PurchaseRequestController::class, 'exportExcel'])->name('purchase-requests.export-excel');
     Route::get('purchase-requests/{id}', [PurchaseRequestController::class, 'show'])->name('purchase-requests.show');
+    Route::get('purchase-requests/{id}/export-pdf', [PurchaseRequestController::class, 'exportToPdf'])->name('purchase-requests.export-pdf');
     Route::get('/purchase-requests/{id}/quick-view', [PurchaseRequestController::class, 'quickView'])->name('purchase-requests.quick-view');
     Route::post('purchase-requests/{purchaseRequest}/approve', [PurchaseRequestController::class, 'approve'])->name('purchase-requests.approve');
     Route::post('purchase-requests/{purchaseRequest}/reject', [PurchaseRequestController::class, 'reject'])->name('purchase-requests.reject');
