@@ -104,17 +104,13 @@
                             <tr>
                                 <td rowspan=2 align="center" style="vertical-align: middle;">{{ $i++ }}
                                 </td>
-                                <td rowspan=2 align="center" style="vertical-align: middle;">
-                                    {{ $material->material_code }}</td>
+                                <td rowspan=2 align="center" style="vertical-align: middle;" data-type="s" data-format="@">{{ $material->material_code }}</td>
                                 <td rowspan=2 align="center" style="vertical-align: middle;">
                                     {{ $material->material_name }}</td>
-                                <td rowspan=2 align="center" style="vertical-align: middle;">
-                                    {{ $material->item_no }}
-                                </td>
+                                <td rowspan=2 align="center" style="vertical-align: middle;" data-type="s" data-format="@">{{ $material->item_no }}</td>
                                 <td rowspan=2 align="center" style="vertical-align: middle;">{{ $material->item_desc ?? '' }}
                                 </td>
-                                <td rowspan=2 align="center" style="vertical-align: middle;">
-                                    {{ $material->vendor_code }}</td>
+                                <td rowspan=2 align="center" style="vertical-align: middle;" data-type="s" data-format="@">{{ $material->vendor_code }}</td>
                                 <td rowspan=2 align="center" style="vertical-align: middle;">
                                     {{ $material->unit_of_measure }}</td>
                                 <td rowspan=2 align="center" style="vertical-align: middle;">

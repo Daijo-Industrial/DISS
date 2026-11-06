@@ -94,7 +94,7 @@
                                 @if ($currentMaterialCode !== null)
                                     <tr>
                                         <td class="table-bordered" align="center" style="vertical-align: middle;">{{ $rowNumber++ }}</td>
-                                        <td class="table-bordered" align="left" style="vertical-align: middle;">{{ $currentMaterialCode }}</td>
+                                        <td class="table-bordered" align="left" style="vertical-align: middle;" data-type="s" data-format="@">{{ $currentMaterialCode }}</td>
                                         <td class="table-bordered" align="left" style="vertical-align: middle;">{{ $currentMaterialName }}</td>
                                         <td class="table-bordered" align="center" style="vertical-align: middle;">{{ $currentMaterialMeasure }}</td>
                                         @foreach ($monthlyTotals as $monthlyTotal)
@@ -132,7 +132,7 @@
                         @if ($currentMaterialCode !== null)
                             <tr>
                                 <td class="table-bordered" align="center" style="vertical-align: middle;">{{ $rowNumber++ }}</td>
-                                <td class="table-bordered" align="left" style="vertical-align: middle;">{{ $currentMaterialCode }}</td>
+                                <td class="table-bordered" align="left" style="vertical-align: middle;" data-type="s" data-format="@">{{ $currentMaterialCode }}</td>
                                 <td class="table-bordered" align="left" style="vertical-align: middle;">{{ $currentMaterialName }}</td>
                                 <td class="table-bordered" align="center" style="vertical-align: middle;">{{ $currentMaterialMeasure }}</td>
                                 @foreach ($monthlyTotals as $monthlyTotal)
