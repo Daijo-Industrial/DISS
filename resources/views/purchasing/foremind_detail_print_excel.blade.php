@@ -1,4 +1,3 @@
-<x-bootstrap-cdn />
 <!DOCTYPE html>
 <html lang="en">
 

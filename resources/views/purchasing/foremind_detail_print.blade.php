@@ -1,7 +1,6 @@
 @extends('new.layouts.app')
 
-@section('content')
-    <x-bootstrap-cdn />
+@push('head')
     <style>
         .print-container {
             background-color: #fff;
@@ -12,7 +11,7 @@
 
         .table-bordered th,
         .table-bordered td {
-            border: 1px solid #dee2e6 !important;
+            border: 1px solid #e2e8f0 !important;
             padding: 6px 8px !important;
             font-size: 12px;
             vertical-align: middle;
@@ -71,7 +70,9 @@
             }
         }
     </style>
+@endpush
 
+@section('content')
     <div class="print-container">
         <!-- Top Action Bar (hidden on print) -->
         <div class="no-print flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-200">
@@ -134,8 +135,8 @@
 
             <!-- Table content -->
             @if (!empty($materials) && $materials->isNotEmpty())
-                <div class="table-responsive overflow-x-auto">
-                    <table class="table table-bordered w-full text-left">
+                <div class="overflow-x-auto">
+                    <table class="table-bordered w-full text-left border-collapse">
                         <thead>
                             <tr>
                                 <th class="table-bordered">Material Code</th>
