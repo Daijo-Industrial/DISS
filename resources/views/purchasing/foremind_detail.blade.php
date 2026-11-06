@@ -7,6 +7,11 @@
         {{-- HEADER --}}
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
+                <nav class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5" aria-label="Breadcrumb">
+                    <a href="{{ route('home') }}" class="hover:text-blue-600 transition-colors">Dashboard</a>
+                    <i class="bi bi-chevron-right text-[10px]"></i>
+                    <span class="text-slate-600">Forecast Prediction</span>
+                </nav>
                 <h1 class="text-2xl font-bold text-slate-900">Forecast Reminder Detail</h1>
                 <p class="text-slate-600 mt-1">
                     Monitoring kebutuhan material per vendor berdasarkan forecast & quantity material.
@@ -53,7 +58,7 @@
         @endif
 
         {{-- FORM: INTERNAL VENDOR --}}
-        <form method="GET" action="/foremind-detail/print" target="_blank"
+        <form method="GET" action="{{ route('purchasing.foremind.print') }}" target="_blank"
             class="bg-white rounded-xl border border-slate-200 shadow-sm">
             @csrf
             <div class="p-6">
@@ -92,7 +97,7 @@
         </form>
 
         {{-- FORM: CUSTOMER VENDOR --}}
-        <form method="GET" action="/foremind-detail/printCustomer" target="_blank"
+        <form method="GET" action="{{ route('purchasing.foremind.printCustomer') }}" target="_blank"
             class="bg-white rounded-xl border border-slate-200 shadow-sm">
             @csrf
             <div class="p-6">
@@ -238,8 +243,8 @@
         </div>
 
         {{-- PAGINATION --}}
-        <div class="mt-6 flex justify-end">
-            {{ $materials->links() }}
+        <div class="mt-6">
+            {{ $materials->withQueryString()->links('vendor.pagination.tailwind') }}
         </div>
     </div>
 @endsection

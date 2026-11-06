@@ -55,7 +55,7 @@ class PurchasingController extends Controller
         $log = PurchasingUpdateLog::find(1);
 
         // Retrieve forecasts from the foremindFinal table
-        $forecasts = ForemindFinal::all();
+        $forecasts = foremindFinal::all();
         // Retrieve distinct vendor codes and names from forecast_material_predictions
         $predictionVendors = DB::table('forecast_material_predictions')
             ->select('vendor_code', 'vendor_name')
@@ -79,15 +79,15 @@ class PurchasingController extends Controller
 
                 // Find best matching contact record for these codes
                 $contactRecord = $contactsRaw->whereIn('vendor_code', $codes)->first(function ($c) {
-                    return !empty($c->persontocontact) || !empty($c->p_member);
+                    return ! empty($c->persontocontact) || ! empty($c->p_member);
                 }) ?? $contactsRaw->whereIn('vendor_code', $codes)->first();
 
                 return (object) [
-                    'vendor_code'     => $primaryCode,
-                    'vendor_name'     => $vendorName,
-                    'all_codes'       => $codes->toArray(),
-                    'codes_display'   => $codes->implode(', '),
-                    'p_member'        => $contactRecord?->p_member,
+                    'vendor_code' => $primaryCode,
+                    'vendor_name' => $vendorName,
+                    'all_codes' => $codes->toArray(),
+                    'codes_display' => $codes->implode(', '),
+                    'p_member' => $contactRecord?->p_member,
                     'persontocontact' => $contactRecord?->persontocontact,
                 ];
             })->sortBy('vendor_name', SORT_NATURAL | SORT_FLAG_CASE)->values();
@@ -108,7 +108,10 @@ class PurchasingController extends Controller
         sort($uniqueMonths);
 
         // Fetch your materials data from the database
-        $materials = DB::table('forecast_material_predictions')->paginate(10);
+        $materials = DB::table('forecast_material_predictions')
+            ->orderBy('material_code')
+            ->orderBy('item_no')
+            ->paginate(10);
         $values = [];
         $qforecast = [];
 
