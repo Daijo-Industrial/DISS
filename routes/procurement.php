@@ -12,6 +12,12 @@ use App\Livewire\DeliveryNote\DeliveryNoteForm;
 use App\Livewire\DeliveryNote\DeliveryNoteIndex;
 use App\Livewire\DeliveryNote\DeliveryNotePrint;
 use App\Livewire\DeliveryNoteShow;
+use App\Livewire\Invoice\InvoiceIndex;
+use App\Livewire\PurchaseOrder\CreatePurchaseOrderForm;
+use App\Livewire\PurchaseOrder\EditPurchaseOrderForm;
+use App\Livewire\PurchaseOrder\PurchaseOrderDashboard;
+use App\Livewire\PurchaseOrder\PurchaseOrderIndex;
+use App\Livewire\PurchaseOrder\PurchaseOrderShow;
 use App\Livewire\PurchaseRequest\PurchaseRequestIndex;
 use Illuminate\Support\Facades\Route;
 
@@ -70,23 +76,23 @@ Route::middleware('auth')->group(function () {
 
     // Purchase Orders
     // Livewire Index (Phase 2)
-    Route::get('purchaseOrders', \App\Livewire\PurchaseOrder\PurchaseOrderIndex::class)->name('po.index');
-    Route::get('purchaseOrder/create', \App\Livewire\PurchaseOrder\CreatePurchaseOrderForm::class)->name('po.create');
+    Route::get('purchaseOrders', PurchaseOrderIndex::class)->name('po.index');
+    Route::get('purchaseOrder/create', CreatePurchaseOrderForm::class)->name('po.create');
 
     Route::post('/purchaseOrder/sign', [PurchaseOrderController::class, 'sign'])->name('po.sign');
     Route::post('/purchaseOrder/reject-pdf', [PurchaseOrderController::class, 'rejectPDF'])->name('po.reject');
     Route::post('/purchaseOrder/rejectAll', [PurchaseOrderController::class, 'rejectAll'])->name('po.rejectAll');
     Route::get('/purchase-orders/export', [PurchaseOrderController::class, 'exportExcel'])->name('po.export');
-    Route::get('/purchaseOrder/{id}', \App\Livewire\PurchaseOrder\PurchaseOrderShow::class)->name('po.view');
+    Route::get('/purchaseOrder/{id}', PurchaseOrderShow::class)->name('po.view');
     Route::delete('/purchaseOrder/{id}', [PurchaseOrderController::class, 'destroy'])->name('po.destroy');
     Route::get('/download-pdf/{filename}', [PurchaseOrderController::class, 'downloadPDF'])->name('po.download');
-    Route::get('/invoices', \App\Livewire\Invoice\InvoiceIndex::class)->name('invoices.index');
-    Route::get('/purchaseOrder/{id}/edit', \App\Livewire\PurchaseOrder\EditPurchaseOrderForm::class)->name('po.edit');
+    Route::get('/invoices', InvoiceIndex::class)->name('invoices.index');
+    Route::get('/purchaseOrder/{id}/edit', EditPurchaseOrderForm::class)->name('po.edit');
 
     Route::post('purchase-orders/approve-selected', [PurchaseOrderController::class, 'approveSelected'])->name('purchase_orders.approve_selected');
     Route::post('purchase-orders/reject-selected', [PurchaseOrderController::class, 'rejectSelected'])->name('purchase_orders.reject_selected');
     // Livewire Dashboard (Phase 2)
-    Route::get('purchaseOrders/dashboard', \App\Livewire\PurchaseOrder\PurchaseOrderDashboard::class)->name('po.dashboard');
+    Route::get('purchaseOrders/dashboard', PurchaseOrderDashboard::class)->name('po.dashboard');
     Route::get('/purchase-orders/filter', [PurchaseOrderController::class, 'filter']);
     Route::get('/purchase-orders/vendor-monthly-totals', [PurchaseOrderController::class, 'vendorMonthlyTotals'])->name('po.vendor-monthly-totals');
     Route::get('/purchase-orders/vendor-details', [PurchaseOrderController::class, 'getVendorDetails']);
@@ -112,10 +118,10 @@ Route::middleware('auth')->group(function () {
 
     // Purchasing Details & Material
     Route::get('/foremind-detail', [PurchasingController::class, 'indexhome'])->name('purchasing_home');
-    Route::get('/foremind-detail/print', [PurchasingDetailController::class, 'index']);
-    Route::get('/foremind-detail/printCustomer', [PurchasingDetailController::class, 'indexcustomer']);
-    Route::get('/foremind-detail/print/excel/{vendor_code}', [PurchasingDetailController::class, 'exportExcel']);
-    Route::get('/foremind-detail/print/customer/excel/{vendor_code}', [PurchasingDetailController::class, 'exportExcelcustomer']);
+    Route::get('/foremind-detail/print', [PurchasingDetailController::class, 'index'])->name('purchasing.foremind.print');
+    Route::get('/foremind-detail/printCustomer', [PurchasingDetailController::class, 'indexcustomer'])->name('purchasing.foremind.printCustomer');
+    Route::get('/foremind-detail/print/excel/{vendor_code}', [PurchasingDetailController::class, 'exportExcel'])->name('purchasing.foremind.excel');
+    Route::get('/foremind-detail/print/customer/excel/{vendor_code}', [PurchasingDetailController::class, 'exportExcelcustomer'])->name('purchasing.foremind.customerExcel');
 
     Route::get('/purchasing/material/{vendor_code}', [PurchasingMaterialController::class, 'index'])->name('purchasing.material.index');
 
