@@ -28,6 +28,7 @@ Do not ship generic template-looking UI. Frontend output should look intentional
 - Safe gray-on-white styling with one decorative accent color
 - Dashboard-by-numbers layouts with sidebar + cards + charts and no point of view
 - Default font stacks used without a deliberate reason
+- Decorative emojis and AI-slop symbols (e.g. 🌅, 📊, 🚨, 📋, ⏳, ℹ️) in transactional emails, headers, tables, or system UI copy. Maintain concise, clear, professional, and direct communication.
 
 ### Required Qualities
 
