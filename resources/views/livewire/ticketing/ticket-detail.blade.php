@@ -43,6 +43,7 @@
                     $sla = $ticketData->getSlaStatus();
                 @endphp
 
+                {{-- Status Pill --}}
                 <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border {{ $ticketData->status->getBadgeColor() }}">
                     {{ $localizedStatus !== 'ticketing.status.' . $statusKey ? $localizedStatus : $ticketData->status->value }}
                 </span>
@@ -94,23 +95,36 @@
         <div class="lg:col-span-2 space-y-6">
 
             {{-- Description Card --}}
-            <div class="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs space-y-4">
-                <div class="prose prose-sm prose-slate max-w-none text-slate-800 leading-relaxed text-sm">
-                    {{ $ticketData->getCleanDescription() }}
+            <div class="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs space-y-4" x-data="{ copiedDesc: false }">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        {{ __('ticketing.concierge.form.details') }}
+                    </span>
+                    <button type="button"
+                        @click="navigator.clipboard.writeText(`{{ addslashes($ticketData->getCleanDescription()) }}`); copiedDesc = true; setTimeout(() => copiedDesc = false, 2000)"
+                        class="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer">
+                        <template x-if="!copiedDesc">
+                            <span class="inline-flex items-center gap-1">
+                                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                <span>{{ __('ticketing.detail.copy_description') }}</span>
+                            </span>
+                        </template>
+                        <template x-if="copiedDesc">
+                            <span class="inline-flex items-center gap-1 text-emerald-600">
+                                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span>{{ __('ticketing.detail.description_copied') }}</span>
+                            </span>
+                        </template>
+                    </button>
                 </div>
 
-                @if ($canManage && $ticketData->current_url && (str_starts_with($ticketData->current_url, 'http://') || str_starts_with($ticketData->current_url, 'https://') || str_starts_with($ticketData->current_url, '/')))
-                    <div class="pt-3 border-t border-slate-100 flex items-center gap-2 text-xs">
-                        <span class="text-slate-400 font-medium shrink-0">{{ __('ticketing.detail.page_url') }}</span>
-                        <a href="{{ $ticketData->current_url }}" target="_blank" rel="noopener noreferrer"
-                            class="text-indigo-600 hover:underline truncate inline-flex items-center gap-1 font-medium">
-                            <span>{{ $ticketData->current_url }}</span>
-                            <svg class="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                        </a>
-                    </div>
-                @endif
+                <div class="prose prose-sm prose-slate max-w-none text-slate-800 leading-relaxed text-sm font-sans">
+                    {{ $ticketData->getCleanDescription() }}
+                </div>
 
                 @if ($ticketData->screenshot_path)
                     <div class="pt-3 border-t border-slate-100">
@@ -345,12 +359,6 @@
                             </button>
                         </div>
                     </div>
-
-                    @if ($ticketData->device_info)
-                        <div class="pt-2 border-t border-slate-100 text-[11px] text-slate-400 font-mono break-all leading-tight">
-                            {{ $ticketData->device_info }}
-                        </div>
-                    @endif
                 </div>
             @else
                 {{-- Assigned IT Specialist Card (Visible to Requester) --}}
@@ -496,6 +504,65 @@
                     </div>
                 @endif
             </div>
+
+            {{-- Compact Collapsible Technical Context (IT Staff Only) --}}
+            @if ($canManage && ($ticketData->current_url || $ticketData->device_info))
+                <div class="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs space-y-3" x-data="{ openTech: false, copiedUrl: false, copiedDiag: false }">
+                    <button type="button" @click="openTech = !openTech"
+                        class="w-full flex items-center justify-between text-left cursor-pointer group">
+                        <div class="flex items-center gap-2">
+                            <div class="h-6 w-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                                </svg>
+                            </div>
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-700 group-hover:text-indigo-600 transition-colors">
+                                {{ __('ticketing.detail.technical_diagnostics_toggle') }}
+                            </span>
+                        </div>
+                        <svg class="h-4 w-4 text-slate-400 transform transition-transform" :class="{ 'rotate-180': openTech }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    <div x-show="openTech" x-cloak class="pt-2 border-t border-slate-100 space-y-3">
+                        @if ($ticketData->current_url)
+                            <div class="space-y-1">
+                                <div class="flex items-center justify-between text-[11px]">
+                                    <span class="text-slate-400 font-semibold">{{ __('ticketing.detail.page_url') }}</span>
+                                    <button type="button"
+                                        @click="navigator.clipboard.writeText('{{ $ticketData->current_url }}'); copiedUrl = true; setTimeout(() => copiedUrl = false, 2000)"
+                                        class="text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer">
+                                        <span x-show="!copiedUrl">{{ __('ticketing.detail.copy_url') }}</span>
+                                        <span x-show="copiedUrl" class="text-emerald-600 font-bold">{{ __('ticketing.detail.url_copied') }}</span>
+                                    </button>
+                                </div>
+                                <a href="{{ $ticketData->current_url }}" target="_blank" rel="noopener noreferrer"
+                                    class="text-indigo-600 hover:underline block text-xs font-mono break-all bg-slate-50 p-2 rounded-xl border border-slate-200/70">
+                                    {{ $ticketData->current_url }} &nearr;
+                                </a>
+                            </div>
+                        @endif
+
+                        @if ($ticketData->device_info)
+                            <div class="space-y-1">
+                                <div class="flex items-center justify-between text-[11px]">
+                                    <span class="text-slate-400 font-semibold">{{ __('ticketing.detail.device_info') }}</span>
+                                    <button type="button"
+                                        @click="navigator.clipboard.writeText(`{{ addslashes($ticketData->device_info) }}`); copiedDiag = true; setTimeout(() => copiedDiag = false, 2000)"
+                                        class="text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer">
+                                        <span x-show="!copiedDiag">{{ __('ticketing.detail.copy_diagnostics') }}</span>
+                                        <span x-show="copiedDiag" class="text-emerald-600 font-bold">{{ __('ticketing.detail.diagnostics_copied') }}</span>
+                                    </button>
+                                </div>
+                                <div class="p-2.5 rounded-xl bg-slate-900 text-slate-200 font-mono text-[10px] break-all leading-relaxed max-h-36 overflow-y-auto">
+                                    {{ $ticketData->device_info }}
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
 
             {{-- GitHub Issue (Quiet Link - IT Staff Only) --}}
             @if ($canManage && config('services.github.repo_url'))

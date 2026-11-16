@@ -254,27 +254,35 @@
         </div>
 
     {{-- ========================================================================= --}}
-    {{-- SECTION 2: IT HELPDESK QUEUE (AGENT TRIAGE MODE FOR IT STAFF)            --}}
+    {{-- SECTION 2: IT HELPDESK QUEUE (ACTION-FOCUSED TRIAGE MODE)               --}}
     {{-- ========================================================================= --}}
     @else
 
-        {{-- Control Center: Linear 2-Row Toolbar --}}
-        <div class="space-y-3">
-            {{-- Row 1: Scope Tabs & Secondary Filters --}}
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3">
-                {{-- Left: Scope Tabs --}}
-                <div class="flex items-center gap-1 overflow-x-auto no-scrollbar" role="group" aria-label="Scope Filter">
-                    <button type="button" wire:click="setScope('all')"
-                        aria-pressed="{{ $scopeFilter === 'all' ? 'true' : 'false' }}"
-                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 {{ $scopeFilter === 'all' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                        <span>{{ __('ticketing.list.all_tickets') }}</span>
-                        <span class="text-[10px] ml-1 opacity-70">({{ $counts['all'] }})</span>
+        {{-- Streamlined Action-Oriented Toolbar --}}
+        <div class="space-y-3" x-data="{ showAdvanced: @entangle('showAdvancedFilters') }">
+            {{-- Primary Bar: Core Action Tabs & Search --}}
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 border-b border-slate-100 pb-3">
+                {{-- Left: 3 Core Action Tabs (Highlights Action Items for IT) --}}
+                <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar" role="tablist" aria-label="Action Scope">
+                    {{-- Tab 1: Unassigned Action Queue (Default Landing) --}}
+                    <button type="button" wire:click="setScope('unassigned')"
+                        role="tab"
+                        aria-selected="{{ $scopeFilter === 'unassigned' ? 'true' : 'false' }}"
+                        class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all inline-flex items-center gap-2 cursor-pointer shrink-0 {{ $scopeFilter === 'unassigned' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                        <span>{{ __('ticketing.list.tab_unassigned') }}</span>
+                        @if ($counts['unassigned'] > 0)
+                            <span class="text-[10px] px-1.5 py-0.5 rounded-full font-bold {{ $scopeFilter === 'unassigned' ? 'bg-amber-400 text-slate-950' : 'bg-amber-100 text-amber-800' }}">
+                                {{ $counts['unassigned'] }}
+                            </span>
+                        @endif
                     </button>
 
+                    {{-- Tab 2: Assigned to Me --}}
                     <button type="button" wire:click="setScope('assigned_to_me')"
-                        aria-pressed="{{ $scopeFilter === 'assigned_to_me' ? 'true' : 'false' }}"
-                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 {{ $scopeFilter === 'assigned_to_me' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                        <span>{{ __('ticketing.list.assigned_to_me') }}</span>
+                        role="tab"
+                        aria-selected="{{ $scopeFilter === 'assigned_to_me' ? 'true' : 'false' }}"
+                        class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all inline-flex items-center gap-2 cursor-pointer shrink-0 {{ $scopeFilter === 'assigned_to_me' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                        <span>{{ __('ticketing.list.tab_assigned_to_me') }}</span>
                         @if ($counts['assigned_to_me'] > 0)
                             <span class="text-[10px] px-1.5 py-0.5 rounded-full font-bold {{ $scopeFilter === 'assigned_to_me' ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-700' }}">
                                 {{ $counts['assigned_to_me'] }}
@@ -282,102 +290,117 @@
                         @endif
                     </button>
 
-                    <button type="button" wire:click="setScope('unassigned')"
-                        aria-pressed="{{ $scopeFilter === 'unassigned' ? 'true' : 'false' }}"
-                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 {{ $scopeFilter === 'unassigned' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                        <span>{{ __('ticketing.list.unassigned_queue') }}</span>
-                        @if ($counts['unassigned'] > 0)
-                            <span class="text-[10px] px-1.5 py-0.5 rounded-full font-bold {{ $scopeFilter === 'unassigned' ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-700' }}">
-                                {{ $counts['unassigned'] }}
-                            </span>
-                        @endif
+                    {{-- Tab 3: All Active Incidents --}}
+                    <button type="button" wire:click="setScope('all')"
+                        role="tab"
+                        aria-selected="{{ $scopeFilter === 'all' ? 'true' : 'false' }}"
+                        class="px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all inline-flex items-center gap-2 cursor-pointer shrink-0 {{ $scopeFilter === 'all' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                        <span>{{ __('ticketing.list.tab_all_active') }}</span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded-full font-bold {{ $scopeFilter === 'all' ? 'bg-slate-800 text-slate-200' : 'bg-slate-200 text-slate-600' }}">
+                            {{ $counts['all_active'] }}
+                        </span>
                     </button>
                 </div>
 
-                {{-- Right: Compact Secondary Filters (Category, Priority) & Reset Action --}}
-                <div class="flex items-center gap-2 flex-wrap">
-                    <select wire:model.live="categoryFilter"
-                        class="rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/80 py-1.5 pl-2.5 pr-7 text-xs text-slate-700 font-medium focus:bg-white focus:border-slate-400 focus:outline-none transition-colors cursor-pointer">
-                        <option value="">{{ __('ticketing.list.all_categories') }}</option>
-                        @foreach ($categories as $cat)
-                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                        @endforeach
-                    </select>
+                {{-- Right: Search & Expandable Advanced Filters Toggle --}}
+                <div class="flex items-center gap-2.5">
+                    {{-- Search Bar --}}
+                    <div class="relative w-full sm:w-64 shrink-0">
+                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                            <svg class="h-4 w-4 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <input type="text" wire:model.live.debounce.300ms="search"
+                            placeholder="{{ __('ticketing.list.search_placeholder') }}"
+                            class="block w-full rounded-xl bg-slate-100/80 border border-transparent pl-9 pr-3.5 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-300 focus:outline-none transition-all">
+                    </div>
 
-                    @if ($search || $statusFilter || $categoryFilter || $scopeFilter !== 'all')
+                    {{-- Advanced Filters Toggle Button --}}
+                    @php
+                        $hasAdvancedFilters = !empty($categoryFilter) || (!empty($statusFilter) && $statusFilter !== '');
+                    @endphp
+                    <button type="button" wire:click="toggleAdvancedFilters"
+                        aria-expanded="{{ $showAdvancedFilters ? 'true' : 'false' }}"
+                        class="px-3 py-1.5 rounded-xl border text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 {{ $showAdvancedFilters || $hasAdvancedFilters ? 'bg-slate-900 text-white border-slate-900 shadow-xs' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50' }}">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                        </svg>
+                        <span>{{ __('ticketing.list.filters') }}</span>
+                        @if ($hasAdvancedFilters)
+                            <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
+                        @endif
+                    </button>
+
+                    @if ($search || $hasAdvancedFilters || $scopeFilter !== 'unassigned')
                         <button type="button" wire:click="resetFilters"
-                            class="text-xs font-medium text-slate-400 hover:text-rose-600 transition-colors inline-flex items-center gap-1 cursor-pointer pl-1">
+                            title="{{ __('ticketing.list.clear_filters') }}"
+                            class="text-xs font-medium text-slate-400 hover:text-rose-600 transition-colors inline-flex items-center gap-1 cursor-pointer">
                             <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
-                            <span>{{ __('ticketing.list.clear_filters') }}</span>
+                            <span class="hidden sm:inline">{{ __('ticketing.list.clear_filters') }}</span>
                         </button>
                     @endif
                 </div>
             </div>
 
-            {{-- Row 2: Search Input & Sleek Status Filter Chips --}}
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                {{-- Search Bar --}}
-                <div class="relative w-full md:w-80 shrink-0">
-                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <svg class="h-4 w-4 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd"
-                                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                                clip-rule="evenodd" />
-                        </svg>
+            {{-- Collapsible Advanced Filters Drawer (Hidden by Default) --}}
+            @if ($showAdvancedFilters)
+                <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3 transition-all"
+                    x-transition:enter="transition ease-out duration-150"
+                    x-transition:enter-start="opacity-0 -translate-y-1"
+                    x-transition:enter-end="opacity-100 translate-y-0">
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                        {{-- Filter 1: Category Selector --}}
+                        <div class="space-y-1 sm:w-64">
+                            <label class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                                {{ __('ticketing.list.filter_category') }}
+                            </label>
+                            <select wire:model.live="categoryFilter"
+                                class="w-full rounded-xl bg-white border border-slate-200/80 py-1.5 pl-2.5 pr-7 text-xs text-slate-800 font-medium focus:border-slate-400 focus:outline-none transition-colors cursor-pointer">
+                                <option value="">{{ __('ticketing.list.all_categories') }}</option>
+                                @foreach ($categories as $cat)
+                                    <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        {{-- Filter 2: Status & Archive Scope Selector --}}
+                        <div class="space-y-1 sm:w-72">
+                            <label class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+                                {{ __('ticketing.list.filter_status') }}
+                            </label>
+                            <select wire:model.live="statusFilter"
+                                class="w-full rounded-xl bg-white border border-slate-200/80 py-1.5 pl-2.5 pr-7 text-xs text-slate-800 font-medium focus:border-slate-400 focus:outline-none transition-colors cursor-pointer">
+                                <option value="">{{ __('ticketing.list.active_tickets_only') }}</option>
+                                <option value="all_history">{{ __('ticketing.list.all_tickets_history') }}</option>
+                                <option disabled>──────────</option>
+                                @foreach ($statuses as $st)
+                                    @php
+                                        $val = $st->value;
+                                        $sKey = strtolower(str_replace(' ', '_', $val));
+                                        $sLabel = __('ticketing.status.' . $sKey);
+                                    @endphp
+                                    <option value="{{ $val }}">{{ $sLabel !== 'ticketing.status.' . $sKey ? $sLabel : $val }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        {{-- Reset Action --}}
+                        @if ($hasAdvancedFilters)
+                            <div class="sm:pt-5">
+                                <button type="button" wire:click="resetFilters"
+                                    class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer">
+                                    {{ __('ticketing.list.clear_filters') }}
+                                </button>
+                            </div>
+                        @endif
                     </div>
-                    <input type="text" wire:model.live.debounce.300ms="search"
-                        placeholder="{{ __('ticketing.list.search_placeholder') }}"
-                        class="block w-full rounded-xl bg-slate-100/70 border border-transparent pl-9 pr-3.5 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-300 focus:outline-none transition-all">
                 </div>
-
-                {{-- Status Filter Chips (Linear Style) --}}
-                <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 no-scrollbar" role="group" aria-label="Status Filters">
-                    <button type="button" wire:click="setStatusFilter('')"
-                        aria-pressed="{{ empty($statusFilter) ? 'true' : 'false' }}"
-                        class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 {{ empty($statusFilter) ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100' }}">
-                        <span>{{ __('ticketing.list.all_statuses') }}</span>
-                    </button>
-
-                    @foreach ($statuses as $st)
-                        @php
-                            $val = $st->value;
-                            $sKey = strtolower(str_replace(' ', '_', $val));
-                            $sLabel = __('ticketing.status.' . $sKey);
-                            $countKey = match ($val) {
-                                'Open' => 'open',
-                                'In Progress' => 'in_progress',
-                                'On Hold' => 'on_hold',
-                                'Resolved' => 'resolved',
-                                'Closed' => 'closed',
-                                default => null,
-                            };
-                            $c = $countKey ? ($counts[$countKey] ?? 0) : 0;
-                            $dotColor = match ($val) {
-                                'Open' => 'bg-blue-500',
-                                'In Progress' => 'bg-emerald-500',
-                                'On Hold' => 'bg-amber-500',
-                                'Resolved' => 'bg-slate-400',
-                                'Closed' => 'bg-slate-300',
-                                default => 'bg-slate-400',
-                            };
-                            $isActive = ($statusFilter === $val);
-                        @endphp
-                        <button type="button" wire:click="setStatusFilter('{{ $val }}')"
-                            aria-pressed="{{ $isActive ? 'true' : 'false' }}"
-                            class="px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer shrink-0 {{ $isActive ? 'bg-slate-900 text-white font-semibold shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                            <span class="h-1.5 w-1.5 rounded-full {{ $dotColor }} shrink-0" aria-hidden="true"></span>
-                            <span>{{ $sLabel !== 'ticketing.status.' . $sKey ? $sLabel : $val }}</span>
-                            @if ($c > 0)
-                                <span class="text-[10px] px-1.5 py-0.5 rounded-full font-bold {{ $isActive ? 'bg-slate-800 text-slate-200' : 'bg-slate-200/80 text-slate-600' }}">
-                                    {{ $c }}
-                                </span>
-                            @endif
-                        </button>
-                    @endforeach
-                </div>
-            </div>
+            @endif
         </div>
 
         {{-- Linear High-Density Scannable Table --}}
@@ -404,6 +427,32 @@
                                 <h3 class="text-sm font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
                                     {{ $ticket->title }}
                                 </h3>
+
+                                {{-- Context Indicators (Screenshot, URL, Comments) --}}
+                                <div class="inline-flex items-center gap-1.5 ml-1 text-slate-400">
+                                    @if ($ticket->screenshot_path)
+                                        <span title="{{ __('ticketing.detail.has_screenshot') }}" class="hover:text-slate-600">
+                                            <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                        </span>
+                                    @endif
+                                    @if ($ticket->current_url)
+                                        <span title="{{ __('ticketing.detail.has_url') }}" class="hover:text-slate-600">
+                                            <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                            </svg>
+                                        </span>
+                                    @endif
+                                    @if ($ticket->activities_count > 0)
+                                        <span class="inline-flex items-center gap-0.5 text-[11px] font-semibold text-slate-400" title="{{ $ticket->activities_count }} {{ __('ticketing.detail.activities') }}">
+                                            <svg class="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                            </svg>
+                                            <span>{{ $ticket->activities_count }}</span>
+                                        </span>
+                                    @endif
+                                </div>
                             </div>
 
                             {{-- Clean Subtitle Metadata Line --}}
@@ -411,8 +460,11 @@
                                 <span class="text-slate-600 font-medium">{{ $ticket->category->name }}</span>
                                 <span class="text-slate-300">•</span>
                                 <span>{{ optional($ticket->reporter)->name ?? 'User' }}</span>
+                                @if ($ticket->reporter_id)
+                                    <span class="text-slate-400 font-mono text-[11px]">(NIK: {{ $ticket->reporter_id }})</span>
+                                @endif
                                 @if (optional(optional($ticket->reporter)->department)->name)
-                                    <span class="text-slate-400 hidden md:inline">({{ optional($ticket->reporter->department)->name }})</span>
+                                    <span class="text-slate-400 hidden md:inline">• {{ optional($ticket->reporter->department)->name }}</span>
                                 @endif
                                 <span class="text-slate-300 hidden sm:inline">•</span>
                                 <span class="text-slate-400 hidden sm:inline" title="{{ $ticket->created_at->format('M d, Y H:i') }}">
@@ -422,7 +474,7 @@
                         </div>
 
                         {{-- Right Section: SLA, Status, Assignee, Chevron --}}
-                        <div class="flex items-center gap-3 sm:gap-4 shrink-0">
+                        <div class="flex items-center gap-2.5 sm:gap-3 shrink-0">
                             {{-- SLA Status --}}
                             @if ($sla['state'] === 'breached')
                                 <span class="hidden md:inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 bg-rose-50 border border-rose-100 rounded-full px-2 py-0.5">
