@@ -5,7 +5,6 @@ A new support ticket has been submitted and requires attention from the IT team.
 
 **Summary:** {{ $ticket->title }}  
 **Category:** {{ $ticket->category->name ?? 'General' }}  
-**Priority:** {{ $ticket->priority->value ?? $ticket->priority }}  
 **Reporter:** {{ $ticket->reporter->Nama ?? $ticket->reporter_id }} (NIK: {{ $ticket->reporter_id }})  
 @if($ticket->reporter_email)
 **Contact Email:** {{ $ticket->reporter_email }}  
