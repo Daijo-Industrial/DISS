@@ -33,7 +33,7 @@ class AssignTicketToPIC
             'reason' => 'Ticket reassigned',
         ]);
 
-        TicketAssigned::dispatch($ticket, $oldAssigneeId, $newAssignee->id);
+        TicketAssigned::dispatch($ticket, $oldAssigneeId, $newAssignee->id, $assignedByUserId);
 
         return $ticket;
     }

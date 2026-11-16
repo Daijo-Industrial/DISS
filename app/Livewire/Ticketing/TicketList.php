@@ -9,9 +9,11 @@ use App\Domains\Ticketing\Entities\Ticket;
 use App\Domains\Ticketing\Entities\TicketCategory;
 use App\Domains\Ticketing\Enums\TicketPriority;
 use App\Domains\Ticketing\Enums\TicketStatus;
+use App\Infrastructure\Persistence\Eloquent\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -19,15 +21,47 @@ class TicketList extends Component
 {
     use WithPagination;
 
+    #[Url(as: 'q')]
     public string $search = '';
 
+    #[Url(as: 'status')]
     public string $statusFilter = '';
 
+    #[Url(as: 'priority')]
     public string $priorityFilter = '';
 
+    #[Url(as: 'category')]
     public string $categoryFilter = '';
 
+    #[Url(as: 'scope')]
     public string $scopeFilter = 'all'; // 'all', 'assigned_to_me', 'unassigned'
+
+    #[Url(as: 'mode')]
+    public string $viewMode = ''; // 'self_service' | 'agent_queue'
+
+    #[Url(as: 'tab')]
+    public string $selfServiceTab = 'active'; // 'active' | 'past'
+
+    public function mount(): void
+    {
+        $user = Auth::user();
+        $canManage = $this->canUserManage($user);
+
+        if (! $canManage) {
+            $this->viewMode = 'self_service';
+        } elseif (empty($this->viewMode)) {
+            $this->viewMode = 'agent_queue';
+        }
+    }
+
+    protected function canUserManage(?User $user): bool
+    {
+        return (bool) ($user && (
+            $user->hasRole('super-admin')
+            || $user->hasRole('admin')
+            || $user->hasAnyPermission(['ticketing.manage', 'ticketing.admin', 'system.admin'])
+        ));
+    }
 
     public function updatingSearch(): void
     {
@@ -51,6 +85,30 @@ class TicketList extends Component
 
     public function updatingScopeFilter(): void
     {
+        $this->resetPage();
+    }
+
+    public function updatingSelfServiceTab(): void
+    {
+        $this->resetPage();
+    }
+
+    public function setViewMode(string $mode): void
+    {
+        $user = Auth::user();
+        if ($mode === 'agent_queue' && ! $this->canUserManage($user)) {
+            $this->viewMode = 'self_service';
+
+            return;
+        }
+
+        $this->viewMode = $mode;
+        $this->resetPage();
+    }
+
+    public function setSelfServiceTab(string $tab): void
+    {
+        $this->selfServiceTab = in_array($tab, ['active', 'past'], true) ? $tab : 'active';
         $this->resetPage();
     }
 
@@ -81,11 +139,7 @@ class TicketList extends Component
     public function claimTicket(int $ticketId, AssignTicketToPIC $action): void
     {
         $user = Auth::user();
-        $canManage = $user && (
-            $user->hasRole('super-admin')
-            || $user->hasRole('admin')
-            || $user->hasAnyPermission(['ticketing.manage', 'ticketing.admin', 'system.admin'])
-        );
+        $canManage = $this->canUserManage($user);
 
         if (! $canManage) {
             abort(403);
@@ -105,34 +159,11 @@ class TicketList extends Component
     public function render(): View
     {
         $user = Auth::user();
-        $canManage = $user && (
-            $user->hasRole('super-admin')
-            || $user->hasRole('admin')
-            || $user->hasAnyPermission(['ticketing.manage', 'ticketing.admin', 'system.admin'])
-        );
+        $canManage = $this->canUserManage($user);
 
-        $baseQuery = Ticket::query()
-            ->when(! $canManage, function ($q) use ($user) {
-                $q->where(function ($sub) use ($user) {
-                    $nik = $user?->employee?->nik;
-                    $email = $user?->email;
+        // Enforce self_service for non-management
+        $effectiveMode = ($canManage && $this->viewMode === 'agent_queue') ? 'agent_queue' : 'self_service';
 
-                    if (! $nik && ! $email) {
-                        $sub->whereRaw('0 = 1');
-
-                        return;
-                    }
-
-                    if ($nik) {
-                        $sub->where('reporter_id', $nik);
-                    }
-                    if ($email) {
-                        $sub->orWhere('reporter_email', $email);
-                    }
-                });
-            });
-
-        // Single consolidated aggregate query for scope and status pill counts
         $openStatus = TicketStatus::OPEN->value;
         $inProgressStatus = TicketStatus::IN_PROGRESS->value;
         $onHoldStatus = TicketStatus::ON_HOLD->value;
@@ -140,59 +171,135 @@ class TicketList extends Component
         $closedStatus = TicketStatus::CLOSED->value;
         $criticalPriority = TicketPriority::CRITICAL->value;
 
-        $aggregates = (clone $baseQuery)
-            ->selectRaw("
-                COUNT(*) as total,
-                COUNT(CASE WHEN assigned_to = ? THEN 1 END) as assigned_to_me,
-                COUNT(CASE WHEN assigned_to IS NULL THEN 1 END) as unassigned,
-                COUNT(CASE WHEN status = '{$openStatus}' THEN 1 END) as open_count,
-                COUNT(CASE WHEN status = '{$inProgressStatus}' THEN 1 END) as in_progress_count,
-                COUNT(CASE WHEN status = '{$onHoldStatus}' THEN 1 END) as on_hold_count,
-                COUNT(CASE WHEN status = '{$resolvedStatus}' THEN 1 END) as resolved_count,
-                COUNT(CASE WHEN status = '{$closedStatus}' THEN 1 END) as closed_count,
-                COUNT(CASE WHEN priority = '{$criticalPriority}' THEN 1 END) as critical_count
-            ", [$user?->id ?? 0])
-            ->first();
+        // Base query closure for current user's personal tickets
+        $applyUserScope = function ($q) use ($user): void {
+            $q->where(function ($sub) use ($user): void {
+                $nik = $user?->employee?->nik;
+                $email = $user?->email;
 
-        $counts = [
-            'all' => (int) ($aggregates->total ?? 0),
-            'assigned_to_me' => $canManage ? (int) ($aggregates->assigned_to_me ?? 0) : 0,
-            'unassigned' => $canManage ? (int) ($aggregates->unassigned ?? 0) : 0,
-            'open' => (int) ($aggregates->open_count ?? 0),
-            'in_progress' => (int) ($aggregates->in_progress_count ?? 0),
-            'on_hold' => (int) ($aggregates->on_hold_count ?? 0),
-            'resolved' => (int) ($aggregates->resolved_count ?? 0),
-            'closed' => (int) ($aggregates->closed_count ?? 0),
-            'critical' => (int) ($aggregates->critical_count ?? 0),
+                if (! $nik && ! $email) {
+                    $sub->whereRaw('0 = 1');
+
+                    return;
+                }
+
+                if ($nik) {
+                    $sub->where('reporter_id', $nik);
+                }
+                if ($email) {
+                    $sub->orWhere('reporter_email', $email);
+                }
+            });
+        };
+
+        // Self-Service counts (Active vs Past)
+        $userTicketsBase = Ticket::query();
+        $applyUserScope($userTicketsBase);
+
+        $selfServiceAggregates = (clone $userTicketsBase)
+            ->selectRaw("
+                COUNT(CASE WHEN status IN ('{$openStatus}', '{$inProgressStatus}', '{$onHoldStatus}') THEN 1 END) as active_count,
+                COUNT(CASE WHEN status IN ('{$resolvedStatus}', '{$closedStatus}') THEN 1 END) as past_count
+            ")->first();
+
+        $selfServiceCounts = [
+            'active' => (int) ($selfServiceAggregates->active_count ?? 0),
+            'past' => (int) ($selfServiceAggregates->past_count ?? 0),
         ];
 
-        $query = (clone $baseQuery)->with(['reporter.department', 'assignee', 'category'])
-            ->when($this->search, function ($q) {
+        // IT Agent Queue counts
+        $counts = [
+            'all' => 0,
+            'assigned_to_me' => 0,
+            'unassigned' => 0,
+            'open' => 0,
+            'in_progress' => 0,
+            'on_hold' => 0,
+            'resolved' => 0,
+            'closed' => 0,
+            'critical' => 0,
+        ];
+
+        if ($canManage) {
+            $queueAggregates = Ticket::query()
+                ->selectRaw("
+                    COUNT(*) as total,
+                    COUNT(CASE WHEN assigned_to = ? THEN 1 END) as assigned_to_me,
+                    COUNT(CASE WHEN assigned_to IS NULL THEN 1 END) as unassigned,
+                    COUNT(CASE WHEN status = '{$openStatus}' THEN 1 END) as open_count,
+                    COUNT(CASE WHEN status = '{$inProgressStatus}' THEN 1 END) as in_progress_count,
+                    COUNT(CASE WHEN status = '{$onHoldStatus}' THEN 1 END) as on_hold_count,
+                    COUNT(CASE WHEN status = '{$resolvedStatus}' THEN 1 END) as resolved_count,
+                    COUNT(CASE WHEN status = '{$closedStatus}' THEN 1 END) as closed_count,
+                    COUNT(CASE WHEN priority = '{$criticalPriority}' THEN 1 END) as critical_count
+                ", [$user?->id ?? 0])
+                ->first();
+
+            $counts = [
+                'all' => (int) ($queueAggregates->total ?? 0),
+                'assigned_to_me' => (int) ($queueAggregates->assigned_to_me ?? 0),
+                'unassigned' => (int) ($queueAggregates->unassigned ?? 0),
+                'open' => (int) ($queueAggregates->open_count ?? 0),
+                'in_progress' => (int) ($queueAggregates->in_progress_count ?? 0),
+                'on_hold' => (int) ($queueAggregates->on_hold_count ?? 0),
+                'resolved' => (int) ($queueAggregates->resolved_count ?? 0),
+                'closed' => (int) ($queueAggregates->closed_count ?? 0),
+                'critical' => (int) ($queueAggregates->critical_count ?? 0),
+            ];
+        }
+
+        // Build main ticket query
+        $query = Ticket::query()->with(['reporter.department', 'assignee', 'category', 'latestActivity.user']);
+
+        if ($effectiveMode === 'self_service') {
+            $applyUserScope($query);
+
+            if ($this->selfServiceTab === 'past') {
+                $query->whereIn('status', [TicketStatus::RESOLVED, TicketStatus::CLOSED]);
+            } else {
+                $query->whereIn('status', [TicketStatus::OPEN, TicketStatus::IN_PROGRESS, TicketStatus::ON_HOLD]);
+            }
+
+            if ($this->search) {
                 $term = trim($this->search);
-                $q->where(function ($sub) use ($term) {
+                $query->where(function ($sub) use ($term): void {
+                    $sub->where('title', 'like', "%{$term}%")
+                        ->orWhere('ticket_number', 'like', "%{$term}%")
+                        ->orWhere('description', 'like', "%{$term}%");
+                });
+            }
+        } else {
+            // Agent queue mode
+            $query->when($this->search, function ($q): void {
+                $term = trim($this->search);
+                $q->where(function ($sub) use ($term): void {
                     $sub->where('title', 'like', "%{$term}%")
                         ->orWhere('ticket_number', 'like', "%{$term}%")
                         ->orWhere('reporter_id', 'like', "%{$term}%")
                         ->orWhere('reporter_email', 'like', "%{$term}%")
-                        ->orWhereHas('reporter', function ($repQ) use ($term) {
+                        ->orWhereHas('reporter', function ($repQ) use ($term): void {
                             $repQ->where('name', 'like', "%{$term}%");
                         });
                 });
             })
-            ->when($this->scopeFilter === 'assigned_to_me' && $user !== null, fn ($q) => $q->where('assigned_to', $user?->id))
-            ->when($this->scopeFilter === 'unassigned', fn ($q) => $q->whereNull('assigned_to'))
-            ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
-            ->when($this->priorityFilter, fn ($q) => $q->where('priority', $this->priorityFilter))
-            ->when($this->categoryFilter, fn ($q) => $q->where('category_id', $this->categoryFilter))
-            ->latest('created_at');
+                ->when($this->scopeFilter === 'assigned_to_me' && $user !== null, fn ($q) => $q->where('assigned_to', $user?->id))
+                ->when($this->scopeFilter === 'unassigned', fn ($q) => $q->whereNull('assigned_to'))
+                ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
+                ->when($this->priorityFilter, fn ($q) => $q->where('priority', $this->priorityFilter))
+                ->when($this->categoryFilter, fn ($q) => $q->where('category_id', $this->categoryFilter));
+        }
+
+        $tickets = $query->latest('created_at')->paginate(12);
 
         return view('livewire.ticketing.ticket-list', [
-            'tickets' => $query->paginate(15),
+            'tickets' => $tickets,
             'statuses' => TicketStatus::cases(),
             'priorities' => TicketPriority::cases(),
             'categories' => TicketCategory::where('is_active', true)->orderBy('name')->get(),
             'canManage' => $canManage,
+            'effectiveMode' => $effectiveMode,
             'counts' => $counts,
+            'selfServiceCounts' => $selfServiceCounts,
         ]);
     }
 }

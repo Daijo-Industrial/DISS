@@ -111,34 +111,24 @@
             @if ($activeTab === 'new')
                 {{-- Tab A: Simplified Ticket Form --}}
                 <div class="space-y-4">
-                    {{-- 1. Request Type Selector --}}
+                    {{-- 1. Issue Type Selector (Identical options view as Login Assistance) --}}
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1.5">{{ __('ticketing.concierge.form.request_type') }}</label>
-                        <div class="grid grid-cols-3 gap-2">
-                            <button type="button" wire:click="$set('request_type', 'bug')"
-                                class="flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all cursor-pointer {{ $request_type === 'bug' ? 'border-rose-300 bg-rose-50 text-rose-700 font-bold shadow-sm ring-1 ring-rose-400' : 'border-slate-200 bg-slate-50/70 text-slate-600 hover:bg-slate-100 font-semibold' }}">
-                                <svg class="h-5 w-5 mb-1 {{ $request_type === 'bug' ? 'text-rose-600' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                </svg>
-                                <span class="text-xs leading-tight">{{ __('ticketing.concierge.form.type_bug') }}</span>
-                            </button>
-
-                            <button type="button" wire:click="$set('request_type', 'feature')"
-                                class="flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all cursor-pointer {{ $request_type === 'feature' ? 'border-indigo-300 bg-indigo-50 text-indigo-700 font-bold shadow-sm ring-1 ring-indigo-400' : 'border-slate-200 bg-slate-50/70 text-slate-600 hover:bg-slate-100 font-semibold' }}">
-                                <svg class="h-5 w-5 mb-1 {{ $request_type === 'feature' ? 'text-indigo-600' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                                </svg>
-                                <span class="text-xs leading-tight">{{ __('ticketing.concierge.form.type_feature') }}</span>
-                            </button>
-
-                            <button type="button" wire:click="$set('request_type', 'other')"
-                                class="flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all cursor-pointer {{ $request_type === 'other' ? 'border-sky-300 bg-sky-50 text-sky-700 font-bold shadow-sm ring-1 ring-sky-400' : 'border-slate-200 bg-slate-50/70 text-slate-600 hover:bg-slate-100 font-semibold' }}">
-                                <svg class="h-5 w-5 mb-1 {{ $request_type === 'other' ? 'text-sky-600' : 'text-slate-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span class="text-xs leading-tight">{{ __('ticketing.concierge.form.type_other') }}</span>
-                            </button>
-                        </div>
+                        <label for="concierge_issue_type" class="block text-xs font-bold text-slate-700 mb-1">
+                            {{ __('ticketing.login_help.issue_type') }} <span class="text-rose-500">*</span>
+                        </label>
+                        <select wire:model.live="issue_type" id="concierge_issue_type" required
+                            class="block w-full rounded-xl border border-slate-200 py-2.5 px-3 text-xs focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 shadow-sm cursor-pointer">
+                            <option value="Password Reset / Account Locked">{{ __('ticketing.login_help.options.password_reset') }}</option>
+                            <option value="New Employee Account Setup">{{ __('ticketing.login_help.options.account_setup') }}</option>
+                            <option value="Login Error / Access Denied">{{ __('ticketing.login_help.options.login_error') }}</option>
+                            <option value="Hardware / Computer / Printer">{{ __('ticketing.login_help.options.hardware') }}</option>
+                            <option value="Network / Wi-Fi / Connectivity">{{ __('ticketing.login_help.options.network') }}</option>
+                            <option value="Software / Application Issue">{{ __('ticketing.login_help.options.software') }}</option>
+                            <option value="General Inquiry / Other IT Issue">{{ __('ticketing.login_help.options.other') }}</option>
+                        </select>
+                        @error('issue_type')
+                            <span class="text-xs text-rose-500 mt-1 block font-semibold">{{ $message }}</span>
+                        @enderror
                     </div>
 
                     {{-- 2. Optional Manual Topic / Title Field --}}

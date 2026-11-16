@@ -95,11 +95,11 @@
 
             {{-- Description Card --}}
             <div class="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs space-y-4">
-                <div class="prose prose-sm prose-slate max-w-none text-slate-800 leading-relaxed text-sm whitespace-pre-line">
+                <div class="prose prose-sm prose-slate max-w-none text-slate-800 leading-relaxed text-sm">
                     {{ $ticketData->getCleanDescription() }}
                 </div>
 
-                @if ($ticketData->current_url && (str_starts_with($ticketData->current_url, 'http://') || str_starts_with($ticketData->current_url, 'https://') || str_starts_with($ticketData->current_url, '/')))
+                @if ($canManage && $ticketData->current_url && (str_starts_with($ticketData->current_url, 'http://') || str_starts_with($ticketData->current_url, 'https://') || str_starts_with($ticketData->current_url, '/')))
                     <div class="pt-3 border-t border-slate-100 flex items-center gap-2 text-xs">
                         <span class="text-slate-400 font-medium shrink-0">{{ __('ticketing.detail.page_url') }}</span>
                         <a href="{{ $ticketData->current_url }}" target="_blank" rel="noopener noreferrer"
@@ -265,92 +265,154 @@
         {{-- Right: Clean Metadata Sidebar --}}
         <div class="space-y-5">
 
-            {{-- Reporter Contact Card (Apple Contact Style) --}}
-            <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs space-y-4">
-                <div class="flex items-center gap-3">
-                    <div class="h-10 w-10 rounded-full bg-slate-100 text-slate-700 font-semibold text-xs flex items-center justify-center shrink-0">
-                        {{ substr(optional($ticketData->reporter)->name ?? optional($ticketData->reporter)->nama ?? 'U', 0, 2) }}
-                    </div>
-                    <div class="min-w-0 flex-1">
-                        <div class="text-sm font-semibold text-slate-900 truncate">
-                            {{ optional($ticketData->reporter)->name ?? optional($ticketData->reporter)->nama ?? ($ticketData->reporter_id ?? 'Unknown') }}
+            @if ($canManage)
+                {{-- Reporter Contact Card (Visible to IT Staff) --}}
+                <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs space-y-4">
+                    <div class="flex items-center gap-3">
+                        <div class="h-10 w-10 rounded-full bg-slate-100 text-slate-700 font-semibold text-xs flex items-center justify-center shrink-0">
+                            {{ substr(optional($ticketData->reporter)->name ?? optional($ticketData->reporter)->nama ?? 'U', 0, 2) }}
                         </div>
-                        <div class="text-xs text-slate-400 truncate">
-                            @if ($ticketData->reporter_id)
-                                <span>NIK: {{ $ticketData->reporter_id }}</span>
-                            @endif
-                            @php
-                                $deptLabel = optional(optional($ticketData->reporter)->department)->name
-                                    ?? optional($ticketData->reporter)->dept_code
-                                    ?? optional($ticketData->reporter)->departemen;
-                            @endphp
-                            @if ($deptLabel)
-                                <span>• {{ $deptLabel }}</span>
-                            @endif
+                        <div class="min-w-0 flex-1">
+                            <div class="text-sm font-semibold text-slate-900 truncate">
+                                {{ optional($ticketData->reporter)->name ?? optional($ticketData->reporter)->nama ?? ($ticketData->reporter_id ?? 'Unknown') }}
+                            </div>
+                            <div class="text-xs text-slate-400 truncate">
+                                @if ($ticketData->reporter_id)
+                                    <span>NIK: {{ $ticketData->reporter_id }}</span>
+                                @endif
+                                @php
+                                    $deptLabel = optional(optional($ticketData->reporter)->department)->name
+                                        ?? optional($ticketData->reporter)->dept_code
+                                        ?? optional($ticketData->reporter)->departemen;
+                                @endphp
+                                @if ($deptLabel)
+                                    <span>• {{ $deptLabel }}</span>
+                                @endif
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {{-- Direct Contact Icon Actions (Apple Style) --}}
-                <div class="pt-2 border-t border-slate-100 flex items-center justify-around">
-                    @if ($ticketData->reporter_email)
-                        <a href="mailto:{{ $ticketData->reporter_email }}"
-                            title="Email: {{ $ticketData->reporter_email }}"
-                            class="h-9 w-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors">
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                        </a>
-                    @endif
+                    {{-- Direct Contact Icon Actions (Apple Style) --}}
+                    <div class="pt-2 border-t border-slate-100 flex items-center justify-around">
+                        @if ($ticketData->reporter_email)
+                            <a href="mailto:{{ $ticketData->reporter_email }}"
+                                title="Email: {{ $ticketData->reporter_email }}"
+                                class="h-9 w-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                            </a>
+                        @endif
 
-                    @if ($ticketData->whatsapp_url)
-                        <a href="{{ $ticketData->whatsapp_url }}" target="_blank" rel="noopener noreferrer"
-                            title="{{ __('ticketing.detail.chat_whatsapp') }}"
-                            class="h-9 w-9 rounded-full bg-slate-100 hover:bg-emerald-50 hover:text-emerald-600 text-slate-600 flex items-center justify-center transition-colors">
-                            <svg class="h-4 w-4 fill-current" viewBox="0 0 24 24">
-                                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766 0-3.18-2.587-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.102-.115.434-.506.549-.68.116-.173.232-.144.39-.086.159.058 1.011.477 1.184.564.173.087.289.13.332.203.043.072.043.419-.101.824z" />
-                            </svg>
-                        </a>
-                    @endif
+                        @if ($ticketData->whatsapp_url)
+                            <a href="{{ $ticketData->whatsapp_url }}" target="_blank" rel="noopener noreferrer"
+                                title="{{ __('ticketing.detail.chat_whatsapp') }}"
+                                class="h-9 w-9 rounded-full bg-slate-100 hover:bg-emerald-50 hover:text-emerald-600 text-slate-600 flex items-center justify-center transition-colors">
+                                <svg class="h-4 w-4 fill-current" viewBox="0 0 24 24">
+                                    <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766 0-3.18-2.587-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.861.174.086.275.072.376-.044.102-.115.434-.506.549-.68.116-.173.232-.144.39-.086.159.058 1.011.477 1.184.564.173.087.289.13.332.203.043.072.043.419-.101.824z" />
+                                </svg>
+                            </a>
+                        @endif
 
-                    @if ($ticketData->contact_phone)
-                        <a href="tel:{{ $ticketData->contact_phone }}"
-                            title="{{ __('ticketing.detail.call') }}: {{ $ticketData->contact_phone }}"
-                            class="h-9 w-9 rounded-full bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 flex items-center justify-center transition-colors">
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                            </svg>
-                        </a>
-                    @endif
-
-                    {{-- Copy ID Action --}}
-                    <div x-data="{ copied: false }">
-                        <button type="button"
-                            @click="navigator.clipboard.writeText('{{ $ticketData->ticket_number }}'); copied = true; setTimeout(() => copied = false, 2000)"
-                            title="{{ __('ticketing.detail.copy_id') }}"
-                            class="h-9 w-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors cursor-pointer">
-                            <template x-if="!copied">
+                        @if ($ticketData->contact_phone)
+                            <a href="tel:{{ $ticketData->contact_phone }}"
+                                title="{{ __('ticketing.detail.call') }}: {{ $ticketData->contact_phone }}"
+                                class="h-9 w-9 rounded-full bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 flex items-center justify-center transition-colors">
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                                 </svg>
-                            </template>
-                            <template x-if="copied">
-                                <svg class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                </svg>
-                            </template>
-                        </button>
-                    </div>
-                </div>
+                            </a>
+                        @endif
 
-                @if ($ticketData->device_info)
-                    <div class="pt-2 border-t border-slate-100 text-[11px] text-slate-400 font-mono break-all leading-tight">
-                        {{ $ticketData->device_info }}
+                        {{-- Copy ID Action --}}
+                        <div x-data="{ copied: false }">
+                            <button type="button"
+                                @click="navigator.clipboard.writeText('{{ $ticketData->ticket_number }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                                title="{{ __('ticketing.detail.copy_id') }}"
+                                class="h-9 w-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors cursor-pointer">
+                                <template x-if="!copied">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                </template>
+                                <template x-if="copied">
+                                    <svg class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </template>
+                            </button>
+                        </div>
                     </div>
-                @endif
-            </div>
+
+                    @if ($ticketData->device_info)
+                        <div class="pt-2 border-t border-slate-100 text-[11px] text-slate-400 font-mono break-all leading-tight">
+                            {{ $ticketData->device_info }}
+                        </div>
+                    @endif
+                </div>
+            @else
+                {{-- Assigned IT Specialist Card (Visible to Requester) --}}
+                <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">
+                            {{ __('ticketing.detail.assignee') }}
+                        </span>
+                        {{-- Copy Ticket # Action --}}
+                        <div x-data="{ copied: false }">
+                            <button type="button"
+                                @click="navigator.clipboard.writeText('{{ $ticketData->ticket_number }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                                title="{{ __('ticketing.detail.copy_id') }}"
+                                class="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer">
+                                <template x-if="!copied">
+                                    <span class="inline-flex items-center gap-1">
+                                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                        <span>{{ __('ticketing.detail.copy_id') }}</span>
+                                    </span>
+                                </template>
+                                <template x-if="copied">
+                                    <span class="inline-flex items-center gap-1 text-emerald-600">
+                                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        <span>{{ __('ticketing.detail.copied') }}</span>
+                                    </span>
+                                </template>
+                            </button>
+                        </div>
+                    </div>
+
+                    @if ($ticketData->assignee)
+                        <div class="flex items-center gap-3 pt-1">
+                            <div class="h-10 w-10 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center shrink-0 uppercase">
+                                {{ substr($ticketData->assignee->name, 0, 2) }}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="text-sm font-semibold text-slate-900 truncate">
+                                    {{ $ticketData->assignee->name }}
+                                </div>
+                                <div class="text-xs text-slate-400 truncate">
+                                    {{ $ticketData->assignee->email ?? 'IT Support Specialist' }}
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        <div class="p-3 rounded-xl bg-amber-50/70 border border-amber-200/60 space-y-1">
+                            <div class="flex items-center gap-1.5 text-xs font-semibold text-amber-800">
+                                <span class="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                <span>{{ __('ticketing.list.in_triage_queue') }}</span>
+                            </div>
+                            <p class="text-[11px] text-amber-700/80 leading-relaxed">
+                                {{ __('ticketing.track.no_activities') }}
+                            </p>
+                        </div>
+                    @endif
+                </div>
+            @endif
 
             {{-- Properties Card (Apple Key-Value Style) --}}
             <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs space-y-4">
@@ -372,23 +434,6 @@
                         </select>
                     @else
                         <div class="text-xs font-semibold text-slate-900">{{ $ticketData->category->name }}</div>
-                    @endif
-                </div>
-
-                {{-- Priority --}}
-                <div class="space-y-1">
-                    <label class="text-xs text-slate-400 font-medium">{{ __('ticketing.detail.change_priority') }}</label>
-                    @if ($canManage)
-                        <select wire:change="updatePriority($event.target.value)"
-                            class="block w-full rounded-xl bg-slate-50 border border-slate-200/80 py-1.5 px-3 text-xs font-medium text-slate-900 focus:bg-white focus:outline-none cursor-pointer">
-                            @foreach (\App\Domains\Ticketing\Enums\TicketPriority::cases() as $pCase)
-                                <option value="{{ $pCase->value }}" {{ $ticketData->priority->value === $pCase->value ? 'selected' : '' }}>
-                                    {{ __('ticketing.concierge.priorities.' . strtolower($pCase->value)) }}
-                                </option>
-                            @endforeach
-                        </select>
-                    @else
-                        <div class="text-xs font-semibold text-slate-900">{{ __('ticketing.concierge.priorities.' . strtolower($ticketData->priority->value)) }}</div>
                     @endif
                 </div>
 

@@ -17,10 +17,13 @@ class TicketAssigned
 
     public int $newAssigneeId;
 
-    public function __construct(Ticket $ticket, ?int $oldAssigneeId, int $newAssigneeId)
+    public ?int $assignedByUserId;
+
+    public function __construct(Ticket $ticket, ?int $oldAssigneeId, int $newAssigneeId, ?int $assignedByUserId = null)
     {
         $this->ticket = $ticket;
         $this->oldAssigneeId = $oldAssigneeId;
         $this->newAssigneeId = $newAssigneeId;
+        $this->assignedByUserId = $assignedByUserId;
     }
 }

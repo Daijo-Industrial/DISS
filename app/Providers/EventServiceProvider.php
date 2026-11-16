@@ -4,11 +4,13 @@ namespace App\Providers;
 
 use App\Application\PurchaseOrder\Listeners\HandlePurchaseOrderApprovalNotifications;
 use App\Application\PurchaseRequest\Listeners\HandlePurchaseRequestApprovalNotifications;
+use App\Domains\Ticketing\Events\TicketAssigned;
 use App\Domains\Ticketing\Events\TicketCreated;
 use App\Domains\Ticketing\Events\TicketResolved;
 use App\Events\ApprovalCompleted;
 use App\Listeners\BroadcastNotificationPushed;
 use App\Listeners\SendNewTicketNotification;
+use App\Listeners\SendTicketAssignedNotification;
 use App\Listeners\SendTicketResolvedNotification;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
@@ -31,6 +33,9 @@ class EventServiceProvider extends ServiceProvider
         ],
         TicketCreated::class => [
             SendNewTicketNotification::class,
+        ],
+        TicketAssigned::class => [
+            SendTicketAssignedNotification::class,
         ],
         TicketResolved::class => [
             SendTicketResolvedNotification::class,

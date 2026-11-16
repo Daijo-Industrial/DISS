@@ -105,7 +105,7 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
-    'support_address' => env('IT_SUPPORT_EMAIL', env('MAIL_FROM_ADDRESS', 'it-support@daijo.co.id')),
+    'support_address' => env('IT_SUPPORT_EMAIL', env('MAIL_FROM_ADDRESS', 'it-support@company.com')),
 
     /*
     |--------------------------------------------------------------------------

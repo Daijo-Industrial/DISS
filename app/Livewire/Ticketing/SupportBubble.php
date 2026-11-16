@@ -21,7 +21,9 @@ class SupportBubble extends Component
     public string $activeTab = 'new'; // 'new' or 'my_tickets'
 
     // New Ticket Form
-    public string $request_type = 'bug'; // 'bug', 'feature', 'other'
+    public string $issue_type = 'Software / Application Issue';
+
+    public string $request_type = 'bug'; // 'bug', 'feature', 'other' (backwards-compatible)
 
     public string $custom_title = '';
 
@@ -60,6 +62,26 @@ class SupportBubble extends Component
         }
     }
 
+    public function updatedIssueType($val)
+    {
+        if (stripos($val, 'Software') !== false) {
+            $this->request_type = 'bug';
+        } elseif (stripos($val, 'Inquiry') !== false || stripos($val, 'Other') !== false) {
+            $this->request_type = 'other';
+        } else {
+            $this->request_type = 'bug';
+        }
+    }
+
+    public function updatedRequestType($val)
+    {
+        $this->issue_type = match ($val) {
+            'feature' => 'Software / Application Issue',
+            'other' => 'General Inquiry / Other IT Issue',
+            default => 'Software / Application Issue',
+        };
+    }
+
     public function removeScreenshot()
     {
         $this->screenshot = null;
@@ -67,16 +89,29 @@ class SupportBubble extends Component
 
     public function resolveDefaultCategoryId(): int
     {
-        $targetName = match ($this->request_type) {
-            'feature' => 'Feature Request',
-            'other' => 'General Inquiry / Other',
-            default => 'Software / Application Bug',
-        };
+        $activeCategories = TicketCategory::where('is_active', true);
+        $type = $this->issue_type ?: $this->request_type;
 
-        $category = TicketCategory::where('name', $targetName)->first();
+        $category = null;
+
+        if (stripos($type, 'Hardware') !== false || stripos($type, 'Printer') !== false) {
+            $category = (clone $activeCategories)->where('name', 'like', '%Hardware%')->first();
+        } elseif (stripos($type, 'Network') !== false || stripos($type, 'Wi-Fi') !== false || stripos($type, 'Connectivity') !== false) {
+            $category = (clone $activeCategories)->where('name', 'like', '%Network%')->first();
+        } elseif ($type === 'feature' || stripos($type, 'Feature') !== false) {
+            $category = (clone $activeCategories)->where('name', 'like', '%Feature%')->first();
+        } elseif (stripos($type, 'Software') !== false || stripos($type, 'Application') !== false || $type === 'bug') {
+            $category = (clone $activeCategories)->where('name', 'like', '%Software%')->first();
+        } elseif (stripos($type, 'Inquiry') !== false || stripos($type, 'Other') !== false || $type === 'other') {
+            $category = (clone $activeCategories)->where(function ($q) {
+                $q->where('name', 'like', '%General%')->orWhere('name', 'like', '%Other%');
+            })->first();
+        }
 
         if (! $category) {
-            $category = TicketCategory::where('is_active', true)->first();
+            $category = (clone $activeCategories)->where(function ($q) {
+                $q->where('name', 'like', '%Access%')->orWhere('name', 'like', '%Permission%');
+            })->first() ?? (clone $activeCategories)->first() ?? TicketCategory::first();
         }
 
         return $category ? $category->id : 1;
@@ -104,7 +139,8 @@ class SupportBubble extends Component
     public function submitTicket(CreateTicket $action)
     {
         $this->validate([
-            'request_type' => 'required|in:bug,feature,other',
+            'issue_type' => 'nullable|string|max:100',
+            'request_type' => 'nullable|string|max:100',
             'custom_title' => 'nullable|string|max:255',
             'title' => 'nullable|string|max:255',
             'description' => 'required|string',
@@ -135,7 +171,7 @@ class SupportBubble extends Component
             $prefix = match ($this->request_type) {
                 'feature' => '[Feature]',
                 'other' => '[Support]',
-                default => '[Bug]',
+                default => ! empty($this->issue_type) ? "[{$this->issue_type}]" : '[Bug]',
             };
             $snippet = Str::limit(trim($this->description), 50, '...');
             $finalTitle = "{$prefix} {$snippet}";
@@ -153,7 +189,9 @@ class SupportBubble extends Component
             $deviceInfo
         );
 
-        $this->reset(['request_type', 'custom_title', 'title', 'description', 'category_id', 'priority', 'screenshot']);
+        $this->reset(['custom_title', 'title', 'description', 'category_id', 'priority', 'screenshot']);
+        $this->issue_type = 'Software / Application Issue';
+        $this->request_type = 'bug';
         $this->activeTab = 'my_tickets';
 
         session()->flash('success', __('ticketing.concierge.messages.ticket_submitted'));
