@@ -1,5 +1,5 @@
 <x-mail::message>
-# 📌 Ticket #{{ $ticket->ticket_number }} Update
+# Ticket #{{ $ticket->ticket_number }} Update
 
 Hello {{ $ticket->reporter->Nama ?? 'Colleague' }},
 

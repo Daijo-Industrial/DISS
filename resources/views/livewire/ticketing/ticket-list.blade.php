@@ -1,15 +1,61 @@
-<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
+<div class="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 lg:px-8 space-y-6">
 
-    {{-- Header & Subtitle --}}
+    {{-- Flash Notifications --}}
+    @if (session()->has('success'))
+        <div class="px-4 py-3 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs font-semibold flex items-center justify-between shadow-xs">
+            <div class="flex items-center gap-2">
+                <svg class="h-4 w-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{{ session('success') }}</span>
+            </div>
+            <button type="button" @click="$el.parentElement.remove()" class="text-emerald-500 hover:text-emerald-700 cursor-pointer">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    @endif
+
+    {{-- Top Header & Dual Mode Switcher (Visible to IT Staff) --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold tracking-tight text-slate-900">{{ __('ticketing.list.title') }}</h1>
-            <p class="text-xs text-slate-500 mt-0.5">{{ __('ticketing.list.subtitle') }}</p>
+            <h1 class="text-2xl font-bold tracking-tight text-slate-900">
+                {{ $effectiveMode === 'agent_queue' ? __('ticketing.list.title') : __('ticketing.list.mode_self_service') }}
+            </h1>
+            <p class="text-xs text-slate-500 mt-0.5">
+                {{ $effectiveMode === 'agent_queue' ? __('ticketing.list.subtitle') : __('ticketing.list.hero_subtitle') }}
+            </p>
         </div>
-        <div class="flex items-center gap-3">
-            <span class="text-xs text-slate-400 font-medium">
-                {{ $tickets->total() }} {{ strtolower(__('ticketing.list.ticket')) }}
-            </span>
+
+        <div class="flex items-center gap-3 flex-wrap">
+            {{-- Mode Switcher for IT Staff --}}
+            @if ($canManage)
+                <div class="inline-flex items-center p-1 rounded-xl bg-slate-100 border border-slate-200/80 shadow-xs" role="tablist">
+                    <button type="button"
+                        wire:click="setViewMode('self_service')"
+                        role="tab"
+                        aria-selected="{{ $effectiveMode === 'self_service' ? 'true' : 'false' }}"
+                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all inline-flex items-center gap-1.5 cursor-pointer {{ $effectiveMode === 'self_service' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900' }}">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span>{{ __('ticketing.list.mode_self_service') }}</span>
+                    </button>
+                    <button type="button"
+                        wire:click="setViewMode('agent_queue')"
+                        role="tab"
+                        aria-selected="{{ $effectiveMode === 'agent_queue' ? 'true' : 'false' }}"
+                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all inline-flex items-center gap-1.5 cursor-pointer {{ $effectiveMode === 'agent_queue' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900' }}">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        <span>{{ __('ticketing.list.mode_agent_queue') }}</span>
+                    </button>
+                </div>
+            @endif
+
+            {{-- New Ticket Primary Button --}}
             <button type="button"
                 class="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
                 @click.stop="$dispatch('open-support-bubble', { tab: 'new' })">
@@ -21,37 +67,312 @@
         </div>
     </div>
 
-    {{-- Flash Notifications --}}
-    @if (session()->has('success'))
-        <div class="px-4 py-3 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs font-semibold flex items-center justify-between shadow-xs">
-            <div class="flex items-center gap-2">
-                <svg class="h-4 w-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-                <span>{{ session('success') }}</span>
-            </div>
-            <button type="button" @click="$el.parentElement.remove()" class="text-emerald-500 hover:text-emerald-700">
-                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
-        </div>
-    @endif
+    {{-- ========================================================================= --}}
+    {{-- SECTION 1: EMPLOYEE SELF-SERVICE PORTAL (CLEAN STEPPER CARDS)            --}}
+    {{-- ========================================================================= --}}
+    @if ($effectiveMode === 'self_service')
 
-    {{-- Control Center: Unified Apple / Linear 2-Row Toolbar --}}
-    <div class="space-y-3">
-        {{-- Row 1: Scope Tabs (Linear / Apple Text Tabs) & Secondary Filters --}}
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3">
-            {{-- Left: Scope Tabs --}}
-            <div class="flex items-center gap-1 overflow-x-auto no-scrollbar" role="group" aria-label="Scope Filter">
-                <button type="button" wire:click="setScope('all')"
-                    aria-pressed="{{ $scopeFilter === 'all' ? 'true' : 'false' }}"
-                    class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 {{ $scopeFilter === 'all' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                    <span>{{ __('ticketing.list.all_tickets') }}</span>
-                    <span class="text-[10px] ml-1 opacity-70">({{ $counts['all'] }})</span>
+        {{-- Help-Center Hero Banner --}}
+        <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white p-6 sm:p-8 shadow-xs border border-slate-800/80">
+            <div class="absolute -right-10 -bottom-10 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
+            <div class="absolute -left-10 -top-10 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
+
+            <div class="relative z-10 max-w-2xl space-y-4">
+                <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/10 text-white/90 text-[11px] font-medium backdrop-blur-xs">
+                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>IT Service Desk & Support</span>
+                </div>
+
+                <div class="space-y-1.5">
+                    <h2 class="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                        {{ __('ticketing.list.hero_greeting', ['name' => auth()->user()->name]) }}
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-300">
+                        {{ __('ticketing.list.hero_subtitle') }}
+                    </p>
+                </div>
+
+                {{-- Hero Search & Submit Action --}}
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+                    <div class="relative flex-1">
+                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                            <svg class="h-4 w-4 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <input type="text"
+                            wire:model.live.debounce.300ms="search"
+                            placeholder="{{ __('ticketing.list.search_placeholder') }}"
+                            class="block w-full rounded-xl bg-white/10 hover:bg-white/15 focus:bg-white text-xs text-white focus:text-slate-900 placeholder:text-slate-400 border border-white/10 focus:border-white pl-10 pr-4 py-2.5 transition-all outline-none">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Self-Service Simple Tab Bar (Active vs Past) --}}
+        <div class="flex items-center justify-between border-b border-slate-200/80 pb-3">
+            <div class="flex items-center gap-2" role="tablist" aria-label="Ticket Scope">
+                <button type="button"
+                    wire:click="setSelfServiceTab('active')"
+                    role="tab"
+                    aria-selected="{{ $selfServiceTab === 'active' ? 'true' : 'false' }}"
+                    class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all inline-flex items-center gap-2 cursor-pointer {{ $selfServiceTab === 'active' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                    <span>{{ __('ticketing.list.tab_active') }}</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded-full font-bold {{ $selfServiceTab === 'active' ? 'bg-slate-800 text-slate-200' : 'bg-slate-200 text-slate-700' }}">
+                        {{ $selfServiceCounts['active'] }}
+                    </span>
                 </button>
 
-                @if ($canManage)
+                <button type="button"
+                    wire:click="setSelfServiceTab('past')"
+                    role="tab"
+                    aria-selected="{{ $selfServiceTab === 'past' ? 'true' : 'false' }}"
+                    class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all inline-flex items-center gap-2 cursor-pointer {{ $selfServiceTab === 'past' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                    <span>{{ __('ticketing.list.tab_past') }}</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded-full font-bold {{ $selfServiceTab === 'past' ? 'bg-slate-800 text-slate-200' : 'bg-slate-200 text-slate-700' }}">
+                        {{ $selfServiceCounts['past'] }}
+                    </span>
+                </button>
+            </div>
+
+            @if ($search)
+                <button type="button" wire:click="$set('search', '')"
+                    class="text-xs font-medium text-slate-400 hover:text-rose-600 transition-colors inline-flex items-center gap-1 cursor-pointer">
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <span>{{ __('ticketing.list.clear_filters') }}</span>
+                </button>
+            @endif
+        </div>
+
+        {{-- Ticket Cards with 3-Stage Progress Stepper --}}
+        <div class="space-y-4">
+            @forelse($tickets as $ticket)
+                @php
+                    $val = $ticket->status->value;
+                    $statusKey = strtolower(str_replace(' ', '_', $val));
+                    $localizedStatus = __('ticketing.status.' . $statusKey);
+
+                    // Determine stepper stage completion:
+                    // Stage 1: Submitted (always true)
+                    // Stage 2: Under Review / In Progress (true if not Open)
+                    // Stage 3: Resolved (true if Resolved or Closed)
+                    $isStage2Active = in_array($val, ['In Progress', 'On Hold', 'Resolved', 'Closed'], true);
+                    $isStage3Active = in_array($val, ['Resolved', 'Closed'], true);
+                    $isOnHold = ($val === 'On Hold');
+                    $sla = $ticket->getSlaStatus();
+                @endphp
+
+                <div class="rounded-2xl border border-slate-200/80 bg-white hover:border-slate-300 hover:shadow-xs transition-all p-5 sm:p-6 space-y-4">
+                    {{-- Card Header: Meta Tags & Status Badge --}}
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-mono text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-lg border border-slate-200/60">
+                                {{ $ticket->ticket_number }}
+                            </span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-50 text-slate-600 border border-slate-200/60">
+                                {{ $ticket->category->name }}
+                            </span>
+                            <span class="text-xs text-slate-400">
+                                • {{ $ticket->created_at->diffForHumans() }}
+                            </span>
+                        </div>
+
+                        <div class="flex items-center gap-2 shrink-0">
+                            @if ($ticket->priority->value === 'Critical')
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                    {{ __('ticketing.concierge.priorities.critical') }}
+                                </span>
+                            @endif
+
+                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border {{ $ticket->status->getBadgeColor() }}">
+                                {{ $localizedStatus !== 'ticketing.status.' . $statusKey ? $localizedStatus : $val }}
+                            </span>
+                        </div>
+                    </div>
+
+                    {{-- Title & Description Snippet --}}
+                    <div>
+                        <h3 wire:click="gotoDetail({{ $ticket->id }})"
+                            tabindex="0"
+                            role="link"
+                            @keydown.enter="$wire.gotoDetail({{ $ticket->id }})"
+                            class="text-base font-semibold text-slate-900 hover:text-indigo-600 transition-colors cursor-pointer line-clamp-1">
+                            {{ $ticket->title }}
+                        </h3>
+                        @if ($ticket->description)
+                            <p class="mt-1 text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                                {{ Str::limit(strip_tags($ticket->description), 140) }}
+                            </p>
+                        @endif
+                    </div>
+
+                    {{-- 3-Stage Progress Stepper --}}
+                    <div class="py-2">
+                        <div class="relative flex items-center justify-between">
+                            {{-- Connecting Track --}}
+                            <div class="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-0.5 bg-slate-100 -z-0"></div>
+                            <div class="absolute left-6 top-1/2 -translate-y-1/2 h-0.5 bg-indigo-600 transition-all duration-500 -z-0"
+                                style="width: {{ $isStage3Active ? 'calc(100% - 3rem)' : ($isStage2Active ? 'calc(50% - 1.5rem)' : '0%') }}"></div>
+
+                            {{-- Step 1: Submitted --}}
+                            <div class="relative z-10 flex flex-col items-center text-center">
+                                <div class="h-7 w-7 rounded-full bg-indigo-600 text-white flex items-center justify-center ring-4 ring-white shadow-xs">
+                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                                <span class="text-[11px] font-semibold text-slate-900 mt-1.5">{{ __('ticketing.list.stage_submitted') }}</span>
+                                <span class="text-[10px] text-slate-400 hidden sm:inline">{{ $ticket->created_at->format('M d, H:i') }}</span>
+                            </div>
+
+                            {{-- Step 2: In Progress / Under Review (or On Hold) --}}
+                            <div class="relative z-10 flex flex-col items-center text-center">
+                                @if ($isStage3Active)
+                                    <div class="h-7 w-7 rounded-full bg-indigo-600 text-white flex items-center justify-center ring-4 ring-white shadow-xs">
+                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </div>
+                                    <span class="text-[11px] font-semibold text-slate-900 mt-1.5">{{ __('ticketing.list.stage_in_progress') }}</span>
+                                @elseif ($isOnHold)
+                                    <div class="h-7 w-7 rounded-full bg-amber-500 text-white flex items-center justify-center ring-4 ring-white shadow-xs animate-pulse">
+                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                    </div>
+                                    <span class="text-[11px] font-semibold text-amber-700 mt-1.5">{{ __('ticketing.list.stage_on_hold') }}</span>
+                                @elseif ($isStage2Active)
+                                    <div class="h-7 w-7 rounded-full bg-blue-600 text-white flex items-center justify-center ring-4 ring-white shadow-xs">
+                                        <span class="h-2 w-2 rounded-full bg-white animate-pulse"></span>
+                                    </div>
+                                    <span class="text-[11px] font-semibold text-blue-700 mt-1.5">{{ __('ticketing.list.stage_in_progress') }}</span>
+                                @else
+                                    <div class="h-7 w-7 rounded-full bg-slate-100 text-slate-400 border border-slate-200 flex items-center justify-center ring-4 ring-white">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-slate-300"></span>
+                                    </div>
+                                    <span class="text-[11px] font-medium text-slate-400 mt-1.5">{{ __('ticketing.list.stage_in_progress') }}</span>
+                                @endif
+                                <span class="text-[10px] text-slate-400 hidden sm:inline">
+                                    {{ $ticket->assignee ? $ticket->assignee->name : __('ticketing.list.in_triage_queue') }}
+                                </span>
+                            </div>
+
+                            {{-- Step 3: Resolved --}}
+                            <div class="relative z-10 flex flex-col items-center text-center">
+                                @if ($isStage3Active)
+                                    <div class="h-7 w-7 rounded-full bg-emerald-600 text-white flex items-center justify-center ring-4 ring-white shadow-xs">
+                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </div>
+                                    <span class="text-[11px] font-semibold text-emerald-700 mt-1.5">{{ __('ticketing.list.stage_resolved') }}</span>
+                                    <span class="text-[10px] text-slate-400 hidden sm:inline">
+                                        {{ $ticket->resolved_at ? $ticket->resolved_at->format('M d, H:i') : '' }}
+                                    </span>
+                                @else
+                                    <div class="h-7 w-7 rounded-full bg-slate-100 text-slate-400 border border-slate-200 flex items-center justify-center ring-4 ring-white">
+                                        <span class="h-1.5 w-1.5 rounded-full bg-slate-300"></span>
+                                    </div>
+                                    <span class="text-[11px] font-medium text-slate-400 mt-1.5">{{ __('ticketing.list.stage_resolved') }}</span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Card Footer: Assignee Info, Latest Update & Detail CTA --}}
+                    <div class="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs">
+                        <div class="flex items-center gap-2 min-w-0">
+                            @if ($ticket->assignee)
+                                <div class="h-6 w-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold uppercase shrink-0">
+                                    {{ substr($ticket->assignee->name, 0, 2) }}
+                                </div>
+                                <span class="text-slate-600 font-medium truncate">
+                                    {{ $ticket->assignee->name }}
+                                </span>
+                            @else
+                                <span class="inline-flex items-center gap-1.5 text-slate-500 font-medium">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
+                                    <span>{{ __('ticketing.list.in_triage_queue') }}</span>
+                                </span>
+                            @endif
+
+                            @if ($ticket->latestActivity)
+                                <span class="text-slate-300 hidden md:inline">•</span>
+                                <span class="text-slate-400 hidden md:inline truncate max-w-sm" title="{{ $ticket->latestActivity->comment }}">
+                                    {{ __('ticketing.list.latest_update') }}: {{ Str::limit($ticket->latestActivity->comment ?? __('ticketing.detail.update_status'), 45) }}
+                                </span>
+                            @endif
+                        </div>
+
+                        <div class="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                            <button type="button"
+                                wire:click="gotoDetail({{ $ticket->id }})"
+                                class="inline-flex items-center gap-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer">
+                                <span>{{ __('ticketing.list.view_details') }}</span>
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <div class="rounded-2xl border border-slate-200/80 bg-white p-12 text-center shadow-xs">
+                    <div class="h-12 w-12 rounded-2xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-3">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-sm font-semibold text-slate-900">
+                        {{ $selfServiceTab === 'past' ? __('ticketing.list.empty_past_title') : __('ticketing.list.empty_self_service_title') }}
+                    </h3>
+                    <p class="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+                        {{ $selfServiceTab === 'past' ? __('ticketing.list.empty_past_subtitle') : __('ticketing.list.empty_self_service_subtitle') }}
+                    </p>
+
+                    @if ($search)
+                        <div class="mt-3">
+                            <button type="button" wire:click="$set('search', '')"
+                                class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer">
+                                {{ __('ticketing.list.clear_filters') }}
+                            </button>
+                        </div>
+                    @else
+                        <div class="mt-4">
+                            <button type="button"
+                                @click.stop="$dispatch('open-support-bubble', { tab: 'new' })"
+                                class="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 text-xs font-semibold shadow-xs transition-colors cursor-pointer">
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                                </svg>
+                                <span>{{ __('ticketing.list.submit_request') }}</span>
+                            </button>
+                        </div>
+                    @endif
+                </div>
+            @endforelse
+        </div>
+
+    {{-- ========================================================================= --}}
+    {{-- SECTION 2: IT HELPDESK QUEUE (AGENT TRIAGE MODE FOR IT STAFF)            --}}
+    {{-- ========================================================================= --}}
+    @else
+
+        {{-- Control Center: Linear 2-Row Toolbar --}}
+        <div class="space-y-3">
+            {{-- Row 1: Scope Tabs & Secondary Filters --}}
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3">
+                {{-- Left: Scope Tabs --}}
+                <div class="flex items-center gap-1 overflow-x-auto no-scrollbar" role="group" aria-label="Scope Filter">
+                    <button type="button" wire:click="setScope('all')"
+                        aria-pressed="{{ $scopeFilter === 'all' ? 'true' : 'false' }}"
+                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 {{ $scopeFilter === 'all' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                        <span>{{ __('ticketing.list.all_tickets') }}</span>
+                        <span class="text-[10px] ml-1 opacity-70">({{ $counts['all'] }})</span>
+                    </button>
+
                     <button type="button" wire:click="setScope('assigned_to_me')"
                         aria-pressed="{{ $scopeFilter === 'assigned_to_me' ? 'true' : 'false' }}"
                         class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 {{ $scopeFilter === 'assigned_to_me' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
@@ -73,241 +394,240 @@
                             </span>
                         @endif
                     </button>
-                @endif
-            </div>
-
-            {{-- Right: Compact Secondary Filters (Category, Priority) & Reset Action --}}
-            <div class="flex items-center gap-2 flex-wrap">
-                <select wire:model.live="categoryFilter"
-                    class="rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/80 py-1.5 pl-2.5 pr-7 text-xs text-slate-700 font-medium focus:bg-white focus:border-slate-400 focus:outline-none transition-colors cursor-pointer">
-                    <option value="">{{ __('ticketing.list.all_categories') }}</option>
-                    @foreach ($categories as $cat)
-                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                    @endforeach
-                </select>
-
-                <select wire:model.live="priorityFilter"
-                    class="rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/80 py-1.5 pl-2.5 pr-7 text-xs text-slate-700 font-medium focus:bg-white focus:border-slate-400 focus:outline-none transition-colors cursor-pointer">
-                    <option value="">{{ __('ticketing.list.all_priorities') }}</option>
-                    @foreach ($priorities as $pri)
-                        <option value="{{ $pri->value }}">{{ __('ticketing.concierge.priorities.' . strtolower($pri->value)) }}</option>
-                    @endforeach
-                </select>
-
-                @if ($search || $statusFilter || $priorityFilter || $categoryFilter || $scopeFilter !== 'all')
-                    <button type="button" wire:click="resetFilters"
-                        class="text-xs font-medium text-slate-400 hover:text-rose-600 transition-colors inline-flex items-center gap-1 cursor-pointer pl-1">
-                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                        <span>{{ __('ticketing.list.clear_filters') }}</span>
-                    </button>
-                @endif
-            </div>
-        </div>
-
-        {{-- Row 2: Search Input & Sleek Status Filter Chips --}}
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            {{-- Search Bar --}}
-            <div class="relative w-full md:w-80 shrink-0">
-                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                    <svg class="h-4 w-4 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd"
-                            d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                            clip-rule="evenodd" />
-                    </svg>
                 </div>
-                <input type="text" wire:model.live.debounce.300ms="search"
-                    placeholder="{{ __('ticketing.list.search_placeholder') }}"
-                    class="block w-full rounded-xl bg-slate-100/70 border border-transparent pl-9 pr-3.5 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-300 focus:outline-none transition-all">
+
+                {{-- Right: Compact Secondary Filters (Category, Priority) & Reset Action --}}
+                <div class="flex items-center gap-2 flex-wrap">
+                    <select wire:model.live="categoryFilter"
+                        class="rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/80 py-1.5 pl-2.5 pr-7 text-xs text-slate-700 font-medium focus:bg-white focus:border-slate-400 focus:outline-none transition-colors cursor-pointer">
+                        <option value="">{{ __('ticketing.list.all_categories') }}</option>
+                        @foreach ($categories as $cat)
+                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                        @endforeach
+                    </select>
+
+                    <select wire:model.live="priorityFilter"
+                        class="rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/80 py-1.5 pl-2.5 pr-7 text-xs text-slate-700 font-medium focus:bg-white focus:border-slate-400 focus:outline-none transition-colors cursor-pointer">
+                        <option value="">{{ __('ticketing.list.all_priorities') }}</option>
+                        @foreach ($priorities as $pri)
+                            <option value="{{ $pri->value }}">{{ __('ticketing.concierge.priorities.' . strtolower($pri->value)) }}</option>
+                        @endforeach
+                    </select>
+
+                    @if ($search || $statusFilter || $priorityFilter || $categoryFilter || $scopeFilter !== 'all')
+                        <button type="button" wire:click="resetFilters"
+                            class="text-xs font-medium text-slate-400 hover:text-rose-600 transition-colors inline-flex items-center gap-1 cursor-pointer pl-1">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            <span>{{ __('ticketing.list.clear_filters') }}</span>
+                        </button>
+                    @endif
+                </div>
             </div>
 
-            {{-- Status Filter Chips (Linear Style) --}}
-            <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 no-scrollbar" role="group" aria-label="Status Filters">
-                <button type="button" wire:click="setStatusFilter('')"
-                    aria-pressed="{{ empty($statusFilter) ? 'true' : 'false' }}"
-                    class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 {{ empty($statusFilter) ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100' }}">
-                    <span>{{ __('ticketing.list.all_statuses') }}</span>
-                </button>
+            {{-- Row 2: Search Input & Sleek Status Filter Chips --}}
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                {{-- Search Bar --}}
+                <div class="relative w-full md:w-80 shrink-0">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                        <svg class="h-4 w-4 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <input type="text" wire:model.live.debounce.300ms="search"
+                        placeholder="{{ __('ticketing.list.search_placeholder') }}"
+                        class="block w-full rounded-xl bg-slate-100/70 border border-transparent pl-9 pr-3.5 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-slate-300 focus:outline-none transition-all">
+                </div>
 
-                @foreach ($statuses as $st)
-                    @php
-                        $val = $st->value;
-                        $sKey = strtolower(str_replace(' ', '_', $val));
-                        $sLabel = __('ticketing.status.' . $sKey);
-                        $countKey = match ($val) {
-                            'Open' => 'open',
-                            'In Progress' => 'in_progress',
-                            'On Hold' => 'on_hold',
-                            'Resolved' => 'resolved',
-                            'Closed' => 'closed',
-                            default => null,
-                        };
-                        $c = $countKey ? ($counts[$countKey] ?? 0) : 0;
-                        $dotColor = match ($val) {
-                            'Open' => 'bg-blue-500',
-                            'In Progress' => 'bg-emerald-500',
-                            'On Hold' => 'bg-amber-500',
-                            'Resolved' => 'bg-slate-400',
-                            'Closed' => 'bg-slate-300',
-                            default => 'bg-slate-400',
-                        };
-                        $isActive = ($statusFilter === $val);
-                    @endphp
-                    <button type="button" wire:click="setStatusFilter('{{ $val }}')"
-                        aria-pressed="{{ $isActive ? 'true' : 'false' }}"
-                        class="px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer shrink-0 {{ $isActive ? 'bg-slate-900 text-white font-semibold shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
-                        <span class="h-1.5 w-1.5 rounded-full {{ $dotColor }} shrink-0" aria-hidden="true"></span>
-                        <span>{{ $sLabel !== 'ticketing.status.' . $sKey ? $sLabel : $val }}</span>
-                        @if ($c > 0)
-                            <span class="text-[10px] px-1.5 py-0.5 rounded-full font-bold {{ $isActive ? 'bg-slate-800 text-slate-200' : 'bg-slate-200/80 text-slate-600' }}">
-                                {{ $c }}
-                            </span>
-                        @endif
+                {{-- Status Filter Chips (Linear Style) --}}
+                <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 no-scrollbar" role="group" aria-label="Status Filters">
+                    <button type="button" wire:click="setStatusFilter('')"
+                        aria-pressed="{{ empty($statusFilter) ? 'true' : 'false' }}"
+                        class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer shrink-0 {{ empty($statusFilter) ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100' }}">
+                        <span>{{ __('ticketing.list.all_statuses') }}</span>
                     </button>
-                @endforeach
 
-                @if ($counts['critical'] > 0)
-                    <button type="button" wire:click="setPriorityFilter('Critical')"
-                        aria-pressed="{{ $priorityFilter === 'Critical' ? 'true' : 'false' }}"
-                        class="px-2.5 py-1 rounded-lg border transition-all inline-flex items-center gap-1.5 cursor-pointer text-xs font-medium shrink-0 {{ $priorityFilter === 'Critical' ? 'bg-rose-600 text-white border-rose-600 shadow-xs' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100' }}">
-                        <span class="h-1.5 w-1.5 rounded-full {{ $priorityFilter === 'Critical' ? 'bg-white' : 'bg-rose-500' }}" aria-hidden="true"></span>
-                        <span>{{ __('ticketing.concierge.priorities.critical') }}</span>
-                        <span class="text-[10px] px-1.5 py-0.5 rounded-full font-bold {{ $priorityFilter === 'Critical' ? 'bg-rose-700 text-white' : 'bg-rose-200/80 text-rose-800' }}">
-                            {{ $counts['critical'] }}
-                        </span>
-                    </button>
-                @endif
-            </div>
-        </div>
-    </div>
-
-    {{-- Apple-Style Fluid Ticket List (Zero Horizontal Scrolling) --}}
-    <div class="rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
-        <div class="divide-y divide-slate-100">
-            @forelse($tickets as $ticket)
-                @php
-                    $statusKey = strtolower(str_replace(' ', '_', $ticket->status->value));
-                    $localizedStatus = __('ticketing.status.' . $statusKey);
-                    $sla = $ticket->getSlaStatus();
-                @endphp
-                <div wire:click="gotoDetail({{ $ticket->id }})"
-                    tabindex="0"
-                    role="link"
-                    @keydown.enter="$wire.gotoDetail({{ $ticket->id }})"
-                    class="group px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4 hover:bg-slate-50/80 transition-colors cursor-pointer focus:outline-none focus:bg-slate-50/80">
-
-                    {{-- Left Section: Title and Metadata (Simplified, No duplicate status dot) --}}
-                    <div class="min-w-0 flex-1">
-                        <div class="flex items-center gap-2 flex-wrap mb-1">
-                            <span class="font-mono text-xs font-semibold text-slate-400 shrink-0">
-                                {{ $ticket->ticket_number }}
-                            </span>
-                            <h3 class="text-sm font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
-                                {{ $ticket->title }}
-                            </h3>
-                            @if ($ticket->priority->value === 'Critical')
-                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                                    {{ __('ticketing.concierge.priorities.critical') }}
+                    @foreach ($statuses as $st)
+                        @php
+                            $val = $st->value;
+                            $sKey = strtolower(str_replace(' ', '_', $val));
+                            $sLabel = __('ticketing.status.' . $sKey);
+                            $countKey = match ($val) {
+                                'Open' => 'open',
+                                'In Progress' => 'in_progress',
+                                'On Hold' => 'on_hold',
+                                'Resolved' => 'resolved',
+                                'Closed' => 'closed',
+                                default => null,
+                            };
+                            $c = $countKey ? ($counts[$countKey] ?? 0) : 0;
+                            $dotColor = match ($val) {
+                                'Open' => 'bg-blue-500',
+                                'In Progress' => 'bg-emerald-500',
+                                'On Hold' => 'bg-amber-500',
+                                'Resolved' => 'bg-slate-400',
+                                'Closed' => 'bg-slate-300',
+                                default => 'bg-slate-400',
+                            };
+                            $isActive = ($statusFilter === $val);
+                        @endphp
+                        <button type="button" wire:click="setStatusFilter('{{ $val }}')"
+                            aria-pressed="{{ $isActive ? 'true' : 'false' }}"
+                            class="px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer shrink-0 {{ $isActive ? 'bg-slate-900 text-white font-semibold shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' }}">
+                            <span class="h-1.5 w-1.5 rounded-full {{ $dotColor }} shrink-0" aria-hidden="true"></span>
+                            <span>{{ $sLabel !== 'ticketing.status.' . $sKey ? $sLabel : $val }}</span>
+                            @if ($c > 0)
+                                <span class="text-[10px] px-1.5 py-0.5 rounded-full font-bold {{ $isActive ? 'bg-slate-800 text-slate-200' : 'bg-slate-200/80 text-slate-600' }}">
+                                    {{ $c }}
                                 </span>
                             @endif
-                        </div>
+                        </button>
+                    @endforeach
 
-                        {{-- Clean Subtitle Metadata Line --}}
-                        <div class="flex items-center gap-1.5 text-xs text-slate-500 font-normal truncate">
-                            <span class="text-slate-600 font-medium">{{ $ticket->category->name }}</span>
-                            <span class="text-slate-300">•</span>
-                            <span>{{ optional($ticket->reporter)->name ?? 'User' }}</span>
-                            @if (optional(optional($ticket->reporter)->department)->name)
-                                <span class="text-slate-400 hidden md:inline">({{ optional($ticket->reporter->department)->name }})</span>
-                            @endif
-                            <span class="text-slate-300 hidden sm:inline">•</span>
-                            <span class="text-slate-400 hidden sm:inline" title="{{ $ticket->created_at->format('M d, Y H:i') }}">
-                                {{ $ticket->created_at->diffForHumans() }}
+                    @if ($counts['critical'] > 0)
+                        <button type="button" wire:click="setPriorityFilter('Critical')"
+                            aria-pressed="{{ $priorityFilter === 'Critical' ? 'true' : 'false' }}"
+                            class="px-2.5 py-1 rounded-lg border transition-all inline-flex items-center gap-1.5 cursor-pointer text-xs font-medium shrink-0 {{ $priorityFilter === 'Critical' ? 'bg-rose-600 text-white border-rose-600 shadow-xs' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100' }}">
+                            <span class="h-1.5 w-1.5 rounded-full {{ $priorityFilter === 'Critical' ? 'bg-white' : 'bg-rose-500' }}" aria-hidden="true"></span>
+                            <span>{{ __('ticketing.concierge.priorities.critical') }}</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded-full font-bold {{ $priorityFilter === 'Critical' ? 'bg-rose-700 text-white' : 'bg-rose-200/80 text-rose-800' }}">
+                                {{ $counts['critical'] }}
                             </span>
-                        </div>
-                    </div>
+                        </button>
+                    @endif
+                </div>
+            </div>
+        </div>
 
-                    {{-- Right Section: Status Pill, SLA Urgency, Assignee, and Chevron --}}
-                    <div class="flex items-center gap-3 sm:gap-4 shrink-0">
-                        {{-- SLA Status (Quiet & Contextual) --}}
-                        @if ($sla['state'] === 'breached')
-                            <span class="hidden md:inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 bg-rose-50 border border-rose-100 rounded-full px-2 py-0.5">
-                                <span class="h-1.5 w-1.5 rounded-full bg-rose-600 animate-pulse"></span>
-                                <span>{{ $sla['remaining'] }}</span>
-                            </span>
-                        @elseif($sla['state'] === 'due_soon')
-                            <span class="hidden md:inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 bg-amber-50 border border-amber-100 rounded-full px-2 py-0.5">
-                                <span class="h-1.5 w-1.5 rounded-full bg-amber-600 animate-pulse"></span>
-                                <span>{{ $sla['remaining'] }}</span>
-                            </span>
-                        @endif
+        {{-- Linear High-Density Scannable Table --}}
+        <div class="rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
+            <div class="divide-y divide-slate-100">
+                @forelse($tickets as $ticket)
+                    @php
+                        $statusKey = strtolower(str_replace(' ', '_', $ticket->status->value));
+                        $localizedStatus = __('ticketing.status.' . $statusKey);
+                        $sla = $ticket->getSlaStatus();
+                    @endphp
+                    <div wire:click="gotoDetail({{ $ticket->id }})"
+                        tabindex="0"
+                        role="link"
+                        @keydown.enter="$wire.gotoDetail({{ $ticket->id }})"
+                        class="group px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4 hover:bg-slate-50/80 transition-colors cursor-pointer focus:outline-none focus:bg-slate-50/80">
 
-                        {{-- Status Pill --}}
-                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border {{ $ticket->status->getBadgeColor() }}">
-                            {{ $localizedStatus !== 'ticketing.status.' . $statusKey ? $localizedStatus : $ticket->status->value }}
-                        </span>
+                        {{-- Left Section: Title and Metadata --}}
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2 flex-wrap mb-1">
+                                <span class="font-mono text-xs font-semibold text-slate-400 shrink-0">
+                                    {{ $ticket->ticket_number }}
+                                </span>
+                                <h3 class="text-sm font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
+                                    {{ $ticket->title }}
+                                </h3>
+                                @if ($ticket->priority->value === 'Critical')
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                        {{ __('ticketing.concierge.priorities.critical') }}
+                                    </span>
+                                @endif
+                            </div>
 
-                        {{-- Assignee Avatar or Unassigned Tag --}}
-                        @if ($ticket->assignee)
-                            <div class="flex items-center gap-1.5" title="{{ __('ticketing.detail.assignee') }}: {{ $ticket->assignee->name }}">
-                                <div class="h-6 w-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold uppercase shrink-0">
-                                    {{ substr($ticket->assignee->name, 0, 2) }}
-                                </div>
-                                <span class="text-xs text-slate-600 font-medium hidden lg:inline truncate max-w-[100px]">
-                                    {{ $ticket->assignee->name }}
+                            {{-- Clean Subtitle Metadata Line --}}
+                            <div class="flex items-center gap-1.5 text-xs text-slate-500 font-normal truncate">
+                                <span class="text-slate-600 font-medium">{{ $ticket->category->name }}</span>
+                                <span class="text-slate-300">•</span>
+                                <span>{{ optional($ticket->reporter)->name ?? 'User' }}</span>
+                                @if (optional(optional($ticket->reporter)->department)->name)
+                                    <span class="text-slate-400 hidden md:inline">({{ optional($ticket->reporter->department)->name }})</span>
+                                @endif
+                                <span class="text-slate-300 hidden sm:inline">•</span>
+                                <span class="text-slate-400 hidden sm:inline" title="{{ $ticket->created_at->format('M d, Y H:i') }}">
+                                    {{ $ticket->created_at->diffForHumans() }}
                                 </span>
                             </div>
-                        @else
-                            <div class="flex items-center gap-1">
-                                <span class="text-[11px] text-slate-400 font-medium hidden sm:inline">
-                                    {{ __('ticketing.detail.unassigned') }}
+                        </div>
+
+                        {{-- Right Section: SLA, Status, Assignee, Chevron --}}
+                        <div class="flex items-center gap-3 sm:gap-4 shrink-0">
+                            {{-- SLA Status --}}
+                            @if ($sla['state'] === 'breached')
+                                <span class="hidden md:inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 bg-rose-50 border border-rose-100 rounded-full px-2 py-0.5">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-rose-600 animate-pulse"></span>
+                                    <span>{{ $sla['remaining'] }}</span>
                                 </span>
-                                @if ($canManage)
+                            @elseif($sla['state'] === 'due_soon')
+                                <span class="hidden md:inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 bg-amber-50 border border-amber-100 rounded-full px-2 py-0.5">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-amber-600 animate-pulse"></span>
+                                    <span>{{ $sla['remaining'] }}</span>
+                                </span>
+                            @endif
+
+                            {{-- Status Pill --}}
+                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border {{ $ticket->status->getBadgeColor() }}">
+                                {{ $localizedStatus !== 'ticketing.status.' . $statusKey ? $localizedStatus : $ticket->status->value }}
+                            </span>
+
+                            {{-- Assignee Avatar or Unassigned Tag --}}
+                            @if ($ticket->assignee)
+                                <div class="flex items-center gap-1.5" title="{{ __('ticketing.detail.assignee') }}: {{ $ticket->assignee->name }}">
+                                    <div class="h-6 w-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold uppercase shrink-0">
+                                        {{ substr($ticket->assignee->name, 0, 2) }}
+                                    </div>
+                                    <span class="text-xs text-slate-600 font-medium hidden lg:inline truncate max-w-[100px]">
+                                        {{ $ticket->assignee->name }}
+                                    </span>
+                                </div>
+                            @else
+                                <div class="flex items-center gap-1">
+                                    <span class="text-[11px] text-slate-400 font-medium hidden sm:inline">
+                                        {{ __('ticketing.detail.unassigned') }}
+                                    </span>
                                     <button type="button"
                                         wire:click.stop="claimTicket({{ $ticket->id }})"
                                         title="{{ __('ticketing.list.claim_ticket') }}"
                                         class="rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-0.5 text-[11px] font-semibold transition-colors cursor-pointer">
                                         {{ __('ticketing.list.claim') }}
                                     </button>
-                                @endif
+                                </div>
+                            @endif
+
+                            {{-- Disclosure Chevron --}}
+                            <svg class="h-4 w-4 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </div>
+
+                    </div>
+                @empty
+                    <div class="px-6 py-16 text-center">
+                        <div class="h-10 w-10 rounded-2xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-2.5">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                        </div>
+                        <h3 class="text-sm font-semibold text-slate-800">{{ __('ticketing.list.empty_title') }}</h3>
+                        <p class="mt-1 text-xs text-slate-400 max-w-sm mx-auto">{{ __('ticketing.list.empty_subtitle') }}</p>
+                        @if ($search || $statusFilter || $priorityFilter || $categoryFilter || $scopeFilter !== 'all')
+                            <div class="mt-3">
+                                <button type="button" wire:click="resetFilters"
+                                    class="text-xs font-semibold text-slate-900 underline hover:text-slate-600 transition-colors cursor-pointer">
+                                    {{ __('ticketing.list.clear_filters') }}
+                                </button>
                             </div>
                         @endif
-
-                        {{-- Apple Subtle Disclosure Chevron --}}
-                        <svg class="h-4 w-4 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
                     </div>
-
-                </div>
-            @empty
-                <div class="px-6 py-16 text-center">
-                    <div class="h-10 w-10 rounded-2xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-2.5">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                    </div>
-                    <h3 class="text-sm font-semibold text-slate-800">{{ __('ticketing.list.empty_title') }}</h3>
-                    <p class="mt-1 text-xs text-slate-400 max-w-sm mx-auto">{{ __('ticketing.list.empty_subtitle') }}</p>
-                    @if ($search || $statusFilter || $priorityFilter || $categoryFilter || $scopeFilter !== 'all')
-                        <div class="mt-3">
-                            <button type="button" wire:click="resetFilters"
-                                class="text-xs font-semibold text-slate-900 underline hover:text-slate-600 transition-colors cursor-pointer">
-                                {{ __('ticketing.list.clear_filters') }}
-                            </button>
-                        </div>
-                    @endif
-                </div>
-            @endforelse
+                @endforelse
+            </div>
         </div>
 
-        {{-- Clean Pagination --}}
-        @if ($tickets->hasPages())
-            <div class="border-t border-slate-100 px-6 py-3 bg-slate-50/50">
-                {{ $tickets->links() }}
-            </div>
-        @endif
-    </div>
+    @endif
+
+    {{-- Clean Unified Pagination --}}
+    @if ($tickets->hasPages())
+        <div class="border-t border-slate-100 pt-3">
+            {{ $tickets->links() }}
+        </div>
+    @endif
 </div>

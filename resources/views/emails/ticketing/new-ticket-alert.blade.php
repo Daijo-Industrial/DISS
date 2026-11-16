@@ -1,5 +1,5 @@
 <x-mail::message>
-# 🎫 New IT Support Ticket: #{{ $ticket->ticket_number }}
+# New IT Support Ticket: #{{ $ticket->ticket_number }}
 
 A new support ticket has been submitted and requires attention from the IT team.
 
