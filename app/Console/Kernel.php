@@ -2,6 +2,11 @@
 
 namespace App\Console;
 
+use App\Infrastructure\Persistence\Eloquent\Models\Department;
+use App\Jobs\UpdateDepartmentComplianceSnapshot;
+use App\Models\PurchaseOrder;
+use App\Models\User;
+use App\Notifications\MonthlyPOStatus;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -30,11 +35,11 @@ class Kernel extends ConsoleKernel
         $schedule
             ->call(function () {
                 // Replace with the actual user or fetch users dynamically
-                $user = \App\Models\User::where('email', 'benny@daijo.co.id')->first();
+                $user = User::where('email', 'benny@daijo.co.id')->first();
 
                 if ($user) {
-                    $poCount = \App\Models\PurchaseOrder::approvedForCurrentMonth()->count();
-                    $user->notify(new \App\Notifications\MonthlyPOStatus($poCount));
+                    $poCount = PurchaseOrder::approvedForCurrentMonth()->count();
+                    $user->notify(new MonthlyPOStatus($poCount));
                 }
             })
             ->monthlyOn(20, '00:30');
@@ -53,7 +58,20 @@ class Kernel extends ConsoleKernel
             ->dailyAt('07:30')
             ->timezone('Asia/Jakarta');
 
-        //! under development
+        // IT Support morning operations digest (Mon-Sat 07:30 WIB)
+        $schedule->command('ticketing:daily-digest')
+            ->days([
+                Schedule::MONDAY,
+                Schedule::TUESDAY,
+                Schedule::WEDNESDAY,
+                Schedule::THURSDAY,
+                Schedule::FRIDAY,
+                Schedule::SATURDAY,
+            ])
+            ->dailyAt('07:30')
+            ->timezone('Asia/Jakarta');
+
+        // ! under development
         // $schedule
         //     ->command('notify:missing-reports')
         //     ->weekdays()
@@ -64,8 +82,8 @@ class Kernel extends ConsoleKernel
 
         // Hourly refresh all department snapshots (lightweight)
         $schedule->call(function () {
-            \App\Infrastructure\Persistence\Eloquent\Models\Department::query()->pluck('id')->each(function ($id) {
-                \App\Jobs\UpdateDepartmentComplianceSnapshot::dispatch($id, writeMonthly: true);
+            Department::query()->pluck('id')->each(function ($id) {
+                UpdateDepartmentComplianceSnapshot::dispatch($id, writeMonthly: true);
             });
         })->hourly();
 

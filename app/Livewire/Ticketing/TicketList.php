@@ -7,7 +7,6 @@ namespace App\Livewire\Ticketing;
 use App\Domains\Ticketing\Actions\AssignTicketToPIC;
 use App\Domains\Ticketing\Entities\Ticket;
 use App\Domains\Ticketing\Entities\TicketCategory;
-use App\Domains\Ticketing\Enums\TicketPriority;
 use App\Domains\Ticketing\Enums\TicketStatus;
 use App\Infrastructure\Persistence\Eloquent\Models\User;
 use Illuminate\Contracts\View\View;
@@ -27,20 +26,19 @@ class TicketList extends Component
     #[Url(as: 'status')]
     public string $statusFilter = '';
 
-    #[Url(as: 'priority')]
-    public string $priorityFilter = '';
-
     #[Url(as: 'category')]
     public string $categoryFilter = '';
 
     #[Url(as: 'scope')]
-    public string $scopeFilter = 'all'; // 'all', 'assigned_to_me', 'unassigned'
+    public string $scopeFilter = 'unassigned'; // 'unassigned', 'assigned_to_me', 'all'
 
     #[Url(as: 'mode')]
     public string $viewMode = ''; // 'self_service' | 'agent_queue'
 
     #[Url(as: 'tab')]
     public string $selfServiceTab = 'active'; // 'active' | 'past'
+
+    public bool $showAdvancedFilters = false;
 
     public function mount(): void
     {
@@ -73,11 +71,6 @@ class TicketList extends Component
         $this->resetPage();
     }
 
-    public function updatingPriorityFilter(): void
-    {
-        $this->resetPage();
-    }
-
     public function updatingCategoryFilter(): void
     {
         $this->resetPage();
@@ -91,6 +84,11 @@ class TicketList extends Component
     public function updatingSelfServiceTab(): void
     {
         $this->resetPage();
+    }
+
+    public function toggleAdvancedFilters(): void
+    {
+        $this->showAdvancedFilters = ! $this->showAdvancedFilters;
     }
 
     public function setViewMode(string $mode): void
@@ -124,15 +122,10 @@ class TicketList extends Component
         $this->resetPage();
     }
 
-    public function setPriorityFilter(string $priority): void
-    {
-        $this->priorityFilter = ($this->priorityFilter === $priority) ? '' : $priority;
-        $this->resetPage();
-    }
-
     public function resetFilters(): void
     {
-        $this->reset(['search', 'statusFilter', 'priorityFilter', 'categoryFilter', 'scopeFilter']);
+        $this->reset(['search', 'statusFilter', 'categoryFilter']);
+        $this->scopeFilter = 'unassigned';
         $this->resetPage();
     }
 
@@ -169,7 +162,6 @@ class TicketList extends Component
         $onHoldStatus = TicketStatus::ON_HOLD->value;
         $resolvedStatus = TicketStatus::RESOLVED->value;
         $closedStatus = TicketStatus::CLOSED->value;
-        $criticalPriority = TicketPriority::CRITICAL->value;
 
         // Base query closure for current user's personal tickets
         $applyUserScope = function ($q) use ($user): void {
@@ -224,32 +216,32 @@ class TicketList extends Component
             $queueAggregates = Ticket::query()
                 ->selectRaw("
                     COUNT(*) as total,
-                    COUNT(CASE WHEN assigned_to = ? THEN 1 END) as assigned_to_me,
-                    COUNT(CASE WHEN assigned_to IS NULL THEN 1 END) as unassigned,
+                    COUNT(CASE WHEN assigned_to = ? AND status IN ('{$openStatus}', '{$inProgressStatus}', '{$onHoldStatus}') THEN 1 END) as assigned_to_me,
+                    COUNT(CASE WHEN assigned_to IS NULL AND status IN ('{$openStatus}', '{$inProgressStatus}', '{$onHoldStatus}') THEN 1 END) as unassigned,
+                    COUNT(CASE WHEN status IN ('{$openStatus}', '{$inProgressStatus}', '{$onHoldStatus}') THEN 1 END) as all_active,
                     COUNT(CASE WHEN status = '{$openStatus}' THEN 1 END) as open_count,
                     COUNT(CASE WHEN status = '{$inProgressStatus}' THEN 1 END) as in_progress_count,
                     COUNT(CASE WHEN status = '{$onHoldStatus}' THEN 1 END) as on_hold_count,
                     COUNT(CASE WHEN status = '{$resolvedStatus}' THEN 1 END) as resolved_count,
-                    COUNT(CASE WHEN status = '{$closedStatus}' THEN 1 END) as closed_count,
-                    COUNT(CASE WHEN priority = '{$criticalPriority}' THEN 1 END) as critical_count
+                    COUNT(CASE WHEN status = '{$closedStatus}' THEN 1 END) as closed_count
                 ", [$user?->id ?? 0])
                 ->first();
 
             $counts = [
-                'all' => (int) ($queueAggregates->total ?? 0),
+                'total' => (int) ($queueAggregates->total ?? 0),
                 'assigned_to_me' => (int) ($queueAggregates->assigned_to_me ?? 0),
                 'unassigned' => (int) ($queueAggregates->unassigned ?? 0),
+                'all_active' => (int) ($queueAggregates->all_active ?? 0),
                 'open' => (int) ($queueAggregates->open_count ?? 0),
                 'in_progress' => (int) ($queueAggregates->in_progress_count ?? 0),
                 'on_hold' => (int) ($queueAggregates->on_hold_count ?? 0),
                 'resolved' => (int) ($queueAggregates->resolved_count ?? 0),
                 'closed' => (int) ($queueAggregates->closed_count ?? 0),
-                'critical' => (int) ($queueAggregates->critical_count ?? 0),
             ];
         }
 
         // Build main ticket query
-        $query = Ticket::query()->with(['reporter.department', 'assignee', 'category', 'latestActivity.user']);
+        $query = Ticket::query()->with(['reporter.department', 'assignee', 'category', 'latestActivity.user'])->withCount('activities');
 
         if ($effectiveMode === 'self_service') {
             $applyUserScope($query);
@@ -269,7 +261,7 @@ class TicketList extends Component
                 });
             }
         } else {
-            // Agent queue mode
+            // Agent queue mode (Action-focused: defaults to unassigned active tickets)
             $query->when($this->search, function ($q): void {
                 $term = trim($this->search);
                 $q->where(function ($sub) use ($term): void {
@@ -284,8 +276,8 @@ class TicketList extends Component
             })
                 ->when($this->scopeFilter === 'assigned_to_me' && $user !== null, fn ($q) => $q->where('assigned_to', $user?->id))
                 ->when($this->scopeFilter === 'unassigned', fn ($q) => $q->whereNull('assigned_to'))
-                ->when($this->statusFilter, fn ($q) => $q->where('status', $this->statusFilter))
-                ->when($this->priorityFilter, fn ($q) => $q->where('priority', $this->priorityFilter))
+                ->when($this->statusFilter && $this->statusFilter !== 'all_history', fn ($q) => $q->where('status', $this->statusFilter))
+                ->when(! $this->statusFilter, fn ($q) => $q->whereIn('status', [TicketStatus::OPEN, TicketStatus::IN_PROGRESS, TicketStatus::ON_HOLD]))
                 ->when($this->categoryFilter, fn ($q) => $q->where('category_id', $this->categoryFilter));
         }
 
@@ -294,12 +286,12 @@ class TicketList extends Component
         return view('livewire.ticketing.ticket-list', [
             'tickets' => $tickets,
             'statuses' => TicketStatus::cases(),
-            'priorities' => TicketPriority::cases(),
             'categories' => TicketCategory::where('is_active', true)->orderBy('name')->get(),
             'canManage' => $canManage,
             'effectiveMode' => $effectiveMode,
             'counts' => $counts,
             'selfServiceCounts' => $selfServiceCounts,
+            'showAdvancedFilters' => $this->showAdvancedFilters,
         ]);
     }
 }

@@ -18,14 +18,19 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class TicketDetail extends Component
 {
+    use WithFileUploads;
+
     public Ticket $ticket;
 
     public string $githubIssueUrlInput = '';
 
     public string $newComment = '';
+
+    public $attachment = null;
 
     #[Locked]
     public bool $canManage = false;
@@ -70,6 +75,11 @@ class TicketDetail extends Component
         $this->dispatch('chat-scrolled');
     }
 
+    public function removeAttachment(): void
+    {
+        $this->attachment = null;
+    }
+
     public function postComment(AddTicketComment $action): void
     {
         $user = Auth::user();
@@ -83,11 +93,26 @@ class TicketDetail extends Component
             abort(403);
         }
 
-        $this->validate(['newComment' => 'required|string']);
+        $this->validate([
+            'newComment' => 'nullable|string',
+            'attachment' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+        ]);
 
-        $action->execute($this->ticket, (int) Auth::id(), $this->newComment);
+        if (trim($this->newComment) === '' && ! $this->attachment) {
+            $this->addError('newComment', __('ticketing.detail.reply_required') !== 'ticketing.detail.reply_required' ? __('ticketing.detail.reply_required') : 'Please enter a reply or attach an image.');
+
+            return;
+        }
+
+        $attachmentPath = null;
+        if ($this->attachment) {
+            $attachmentPath = $this->attachment->store('tickets/attachments', 'public');
+        }
+
+        $action->execute($this->ticket, (int) Auth::id(), $this->newComment, $attachmentPath);
 
         $this->newComment = '';
+        $this->attachment = null;
         $this->ticket->refresh();
         $this->dispatch('chat-scrolled');
     }
