@@ -129,10 +129,12 @@
                 @if ($ticketData->screenshot_path)
                     <div class="pt-3 border-t border-slate-100">
                         <span class="text-xs text-slate-400 font-medium block mb-2">{{ __('ticketing.detail.attached_screenshot') }}</span>
-                        <a href="{{ asset('storage/' . $ticketData->screenshot_path) }}" target="_blank" class="inline-block group">
+                        <button type="button"
+                            @click.prevent="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $ticketData->screenshot_path) }}', title: 'Ticket #{{ $ticketData->ticket_number }}', subtitle: '{{ addslashes($ticketData->title) }}' })"
+                            class="inline-block group cursor-pointer focus:outline-none text-left">
                             <img src="{{ asset('storage/' . $ticketData->screenshot_path) }}" alt="Ticket Screenshot"
                                 class="max-h-72 rounded-xl border border-slate-200 shadow-xs object-contain group-hover:opacity-90 transition-opacity">
-                        </a>
+                        </button>
                     </div>
                 @endif
             </div>
@@ -178,7 +180,7 @@
                     </div>
 
                     @forelse ($ticketData->activities as $activity)
-                        @if ($activity->type->value === 'comment')
+                        @if (in_array($activity->type->value, ['comment', 'attachment'], true))
                             @php
                                 $isMe = auth()->check() && (int) auth()->id() === (int) $activity->user_id;
                             @endphp
@@ -191,9 +193,26 @@
                                         <span>•</span>
                                         <span>{{ $activity->created_at->diffForHumans() }}</span>
                                     </div>
-                                    <div class="bg-slate-900 text-white rounded-2xl rounded-br-xs px-4 py-2.5 text-xs leading-relaxed max-w-xl shadow-xs">
-                                        {{ $activity->reason }}
-                                    </div>
+                                    @if ($activity->reason)
+                                        <div class="bg-slate-900 text-white rounded-2xl rounded-br-xs px-4 py-2.5 text-xs leading-relaxed max-w-xl shadow-xs break-words">
+                                            {{ $activity->reason }}
+                                        </div>
+                                    @endif
+                                    @if ($activity->new_state)
+                                        <div class="mt-1">
+                                            <button type="button"
+                                                @click.prevent="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $activity->new_state) }}', title: 'Ticket #{{ $ticketData->ticket_number }} ({{ __('ticketing.detail.me') }})', subtitle: '{{ addslashes($activity->reason ?? $ticketData->title) }}' })"
+                                                class="group block relative overflow-hidden rounded-xl border border-slate-200 shadow-2xs hover:opacity-95 transition-opacity max-w-sm text-left cursor-pointer focus:outline-none">
+                                                <img src="{{ asset('storage/' . $activity->new_state) }}" alt="{{ __('ticketing.detail.attachment') }}"
+                                                    class="max-h-60 w-auto object-cover rounded-xl" loading="lazy">
+                                                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                                    <span class="opacity-0 group-hover:opacity-100 bg-slate-900/80 text-white text-[10px] font-medium px-2 py-1 rounded-md transition-opacity">
+                                                        {{ __('ticketing.detail.view_image') }}
+                                                    </span>
+                                                </div>
+                                            </button>
+                                        </div>
+                                    @endif
                                 </div>
                             @else
                                 {{-- Incoming Message (Other Participant: Aligned Left) --}}
@@ -207,9 +226,26 @@
                                             <span>•</span>
                                             <span>{{ $activity->created_at->diffForHumans() }}</span>
                                         </div>
-                                        <div class="bg-slate-100/90 text-slate-800 rounded-2xl rounded-tl-xs px-4 py-2.5 text-xs leading-relaxed inline-block shadow-2xs">
-                                            {{ $activity->reason }}
-                                        </div>
+                                        @if ($activity->reason)
+                                            <div class="bg-slate-100/90 text-slate-800 rounded-2xl rounded-tl-xs px-4 py-2.5 text-xs leading-relaxed inline-block shadow-2xs break-words">
+                                                {{ $activity->reason }}
+                                            </div>
+                                        @endif
+                                        @if ($activity->new_state)
+                                            <div class="mt-1.5">
+                                                <button type="button"
+                                                    @click.prevent="$dispatch('open-lightbox', { src: '{{ asset('storage/' . $activity->new_state) }}', title: 'Ticket #{{ $ticketData->ticket_number }} ({{ optional($activity->user)->name ?? 'User' }})', subtitle: '{{ addslashes($activity->reason ?? $ticketData->title) }}' })"
+                                                    class="group block relative overflow-hidden rounded-xl border border-slate-200 shadow-2xs hover:opacity-95 transition-opacity max-w-sm text-left cursor-pointer focus:outline-none">
+                                                    <img src="{{ asset('storage/' . $activity->new_state) }}" alt="{{ __('ticketing.detail.attachment') }}"
+                                                        class="max-h-60 w-auto object-cover rounded-xl" loading="lazy">
+                                                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                                        <span class="opacity-0 group-hover:opacity-100 bg-slate-900/80 text-white text-[10px] font-medium px-2 py-1 rounded-md transition-opacity">
+                                                            {{ __('ticketing.detail.view_image') }}
+                                                        </span>
+                                                    </div>
+                                                </button>
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             @endif
@@ -250,20 +286,64 @@
 
                 {{-- Clean Comment Box (Chat Input Bar at Bottom) --}}
                 <div class="p-4 border-t border-slate-100 bg-slate-50/40">
-                    <form wire:submit.prevent="postComment" class="space-y-2">
-                        <textarea wire:model="newComment" wire:keydown.ctrl.enter="postComment" rows="2"
-                            aria-label="{{ __('ticketing.detail.reply_placeholder') }}"
-                            placeholder="{{ __('ticketing.detail.reply_placeholder') }}"
-                            class="block w-full rounded-xl bg-white border border-slate-200/80 p-3 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-300 resize-none transition-all"></textarea>
+                    <form wire:submit.prevent="postComment" class="space-y-3">
+                        {{-- Attachment Preview (if selected) --}}
+                        @if ($attachment)
+                            <div class="relative rounded-xl border border-indigo-200 bg-indigo-50/50 p-2.5 flex items-center justify-between shadow-2xs">
+                                <div class="flex items-center gap-2.5 overflow-hidden min-w-0">
+                                    <img src="{{ $attachment->temporaryUrl() }}" alt="Preview" class="h-10 w-10 object-cover rounded-lg border border-slate-200 shrink-0">
+                                    <div class="truncate text-xs">
+                                        <div class="font-medium text-slate-800 truncate">{{ $attachment->getClientOriginalName() }}</div>
+                                        <div class="text-[10px] text-slate-500">{{ round($attachment->getSize() / 1024) }} KB</div>
+                                    </div>
+                                </div>
+                                <button type="button" wire:click="removeAttachment"
+                                    class="text-rose-500 hover:text-rose-700 p-1.5 shrink-0 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                                    title="{{ __('ticketing.detail.remove_attachment') }}">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        @endif
+
+                        <div class="relative">
+                            <textarea wire:model="newComment" wire:keydown.ctrl.enter="postComment" rows="2"
+                                aria-label="{{ __('ticketing.detail.reply_placeholder') }}"
+                                placeholder="{{ __('ticketing.detail.reply_placeholder') }}"
+                                class="block w-full rounded-xl bg-white border border-slate-200/80 p-3 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-300 resize-none transition-all"></textarea>
+                        </div>
+
                         @error('newComment')
                             <span class="text-xs text-rose-500 block">{{ $message }}</span>
                         @enderror
-                        <div class="flex items-center justify-between">
-                            <span class="text-[11px] text-slate-400">
-                                {{ __('ticketing.detail.ctrl_enter_hint') }}
-                            </span>
+                        @error('attachment')
+                            <span class="text-xs text-rose-500 block">{{ $message }}</span>
+                        @enderror
+
+                        <div class="flex items-center justify-between pt-0.5">
+                            <div class="flex items-center gap-3">
+                                {{-- Attach Image Button --}}
+                                <label class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 cursor-pointer px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors shadow-2xs">
+                                    <svg class="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <span>{{ __('ticketing.detail.attach_image') }}</span>
+                                    <input type="file" wire:model="attachment" accept="image/png,image/jpeg,image/webp,image/jpg" class="sr-only">
+                                </label>
+
+                                <div wire:loading wire:target="attachment" class="flex items-center gap-1.5 text-xs text-indigo-600 font-medium">
+                                    <div class="h-3 w-3 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin"></div>
+                                    <span>{{ __('ticketing.detail.uploading') }}</span>
+                                </div>
+
+                                <span class="hidden sm:inline text-[11px] text-slate-400">
+                                    {{ __('ticketing.detail.ctrl_enter_hint') }}
+                                </span>
+                            </div>
+
                             <button type="submit"
-                                class="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-1.5 text-xs font-semibold shadow-xs transition-colors cursor-pointer">
+                                class="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 text-xs font-semibold shadow-xs transition-colors cursor-pointer">
                                 <span>{{ __('ticketing.detail.post_reply') }}</span>
                                 <div wire:loading wire:target="postComment"
                                     class="h-2.5 w-2.5 rounded-full border border-white border-t-transparent animate-spin">
