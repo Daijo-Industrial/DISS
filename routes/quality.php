@@ -9,9 +9,6 @@ use App\Http\Controllers\DefectCategoryController;
 use App\Http\Controllers\QaqcReportController;
 use App\Livewire\Admin\Verification\Defects\CatalogEdit;
 use App\Livewire\Admin\Verification\Defects\CatalogIndex;
-use App\Livewire\InspectionForm;
-use App\Livewire\InspectionIndex;
-use App\Livewire\InspectionShow;
 use App\Livewire\PartPriceLogImport;
 use App\Livewire\Verification\Dashboard as VerificationDashboard;
 use App\Livewire\Verification\Index as VerificationIndex;
@@ -26,7 +23,7 @@ use Maatwebsite\Excel\Facades\Excel;
 |--------------------------------------------------------------------------
 |
 | Routes for managing QA/QC reports, form adjustments, defect categories,
-| verification reports, and inspection reports.
+| verification reports.
 |
 | RECOMMENDED PERMISSIONS:
 | - quality.view-reports
@@ -150,12 +147,6 @@ Route::middleware('auth')->group(function () {
             Route::get('/{id}/edit', CatalogEdit::class)->name('edit');
         });
 });
-
-// Inspection Reports
-Route::get('/inspection-reports', InspectionIndex::class)->name('inspection-reports.index');
-Route::get('/inspection-report/create', InspectionForm::class)->name('inspection-reports.create');
-Route::get('/inspection-reports/dashboard', \App\Livewire\InspectionDashboard::class);
-Route::get('/inspection-reports/{inspection_report}', InspectionShow::class)->name('inspection-reports.show');
 
 // Department-specific QA/QC routes
 Route::middleware(['checkDepartment:QA,QC,ACCOUNTING,PPIC,STORE,LOGISTIC,DIRECTOR,PLASTIC INJECTION'])->group(function () {
